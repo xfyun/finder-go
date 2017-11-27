@@ -16,7 +16,7 @@ type OnServiceUpdateEvent func(string, Service) int
 
 func (f *ServiceFinder) RegisterService(name string) (int, error) {
 	err := new(errors.FinderError)
-	return Service_Success, err
+	return ServiceSuccess, err
 }
 
 func (f *ServiceFinder) UnRegisterService(name string) error {

@@ -50,5 +50,5 @@ func main() {
 }
 
 func onCfgUpdateEvent(c Config) int {
-	return Config_Success
+	return ConfigSuccess
 }
