@@ -16,11 +16,16 @@ type ConfigFinder struct {
 
 type OnCfgUpdateEvent func(Config) int
 
-func (f *ConfigFinder) UseConfig(name string, dynamic bool, event OnCfgUpdateEvent) error {
+func (f *ConfigFinder) UseConfig(name []string) ([]Config, error) {
 	err := new(errors.FinderError)
-	return err
+	return nil, err
 }
 
-func (f *ConfigFinder) DestroyConfig(name string) error {
+func (f *ConfigFinder) UseAndSubscribeConfig(name []string, event OnCfgUpdateEvent) ([]Config, error) {
+	err := new(errors.FinderError)
+	return nil, err
+}
+
+func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	return nil
 }

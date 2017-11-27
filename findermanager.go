@@ -11,6 +11,7 @@ type ServiceMeta struct {
 
 type BootConfig struct {
 	companionUrl string
+	cachePath    string
 	serviceMeta  ServiceMeta
 }
 
@@ -45,7 +46,8 @@ func main() {
 
 	}
 
-	f.configFinder.UseConfig("default.cfg", true, onCfgUpdateEvent)
+	configNames := []string{"default.cfg"}
+	f.configFinder.UseAndSubscribeConfig(configNames, onCfgUpdateEvent)
 	f.serviceFinder.RegisterService("sis", "172.27.0.16:9090")
 }
 
