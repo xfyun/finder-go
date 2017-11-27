@@ -14,7 +14,7 @@ type ServiceFinder struct {
 
 type OnServiceUpdateEvent func(string, Service) int
 
-func (f *ServiceFinder) RegisterService(name string) (int, error) {
+func (f *ServiceFinder) RegisterService(name string, addr string) (int, error) {
 	err := new(errors.FinderError)
 	return ServiceSuccess, err
 }

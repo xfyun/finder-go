@@ -45,8 +45,8 @@ func main() {
 
 	}
 
-	f.configFinder.UseConfig("", true, onCfgUpdateEvent)
-	f.serviceFinder.RegisterService("")
+	f.configFinder.UseConfig("default.cfg", true, onCfgUpdateEvent)
+	f.serviceFinder.RegisterService("sis", "172.27.0.16:9090")
 }
 
 func onCfgUpdateEvent(c Config) int {
