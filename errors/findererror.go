@@ -2,15 +2,16 @@ package errors
 
 import (
 	"fmt"
+	"finder-go/common"
 )
 
 type FinderError struct {
-	ret      string
-	function string
-	desc     string
+	Ret  common.ReturnCode
+	Func string
+	Desc string
 }
 
 func (fe *FinderError) Error() string {
 	format := `An error caught in %s, %s[%s].`
-	return fmt.Sprintf(format, fe.function, fe.desc, fe.ret)
+	return fmt.Sprintf(format, fe.Func, fe.Desc, fe.Ret)
 }

@@ -1,20 +1,16 @@
 package finder
 
-import "finder-go/errors"
-
-type Service struct {
-	name    string
-	version string
-	list    map[string]string
-}
+import (
+	"finder-go/common"
+	"finder-go/errors"
+	"finder-go/utils/zkutil"
+)
 
 type ServiceFinder struct {
-
+	zkManager *zkutil.ZkManager
 }
 
-type OnServiceUpdateEvent func(string, Service) int
-
-func (f *ServiceFinder) RegisterService(name string, addr string) (error) {
+func (f *ServiceFinder) RegisterService(name string, addr string) error {
 	err := new(errors.FinderError)
 	return err
 }
@@ -23,12 +19,12 @@ func (f *ServiceFinder) UnRegisterService(name string) error {
 	return nil
 }
 
-func (f *ServiceFinder) UseService(name []string) ([]Service, error) {
+func (f *ServiceFinder) UseService(name []string) ([]common.Service, error) {
 	err := new(errors.FinderError)
 	return nil, err
 }
 
-func (f *ServiceFinder) UseAndSubscribeService(name []string, event OnServiceUpdateEvent) ([]Service, error) {
+func (f *ServiceFinder) UseAndSubscribeService(name []string, event zkutil.OnServiceUpdateEvent) ([]common.Service, error) {
 	err := new(errors.FinderError)
 	return nil, err
 }
@@ -36,5 +32,3 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, event OnServiceUpd
 func (f *ServiceFinder) UnSubscribeService(name string) error {
 	return nil
 }
-
-

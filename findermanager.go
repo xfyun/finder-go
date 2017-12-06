@@ -1,56 +1,81 @@
 package finder
 
-import "finder-go/zk"
+import (
+	"finder-go/common"
+	"finder-go/utils/fileutil"
+	"finder-go/utils/stringutil"
+	"finder-go/utils/zkutil"
+	"os"
+)
 
-type ServiceMeta struct {
-	project string
-	group   string
-	service string
-	version string
-}
-
-type BootConfig struct {
-	companionUrl string
-	cachePath    string
-	serviceMeta  ServiceMeta
-}
-
+// FinderManager for controll all
 type FinderManager struct {
-	configFinder  *ConfigFinder
-	serviceFinder *ServiceFinder
-	zkManager     *zk.ZkManager
+	config        *common.BootConfig
+	ConfigFinder  *ConfigFinder
+	ServiceFinder *ServiceFinder
+	zkManager     *zkutil.ZkManager
 }
 
-func NewFinder(config BootConfig) (*FinderManager, error) {
+func checkCachePath(path string) (string, error) {
+	if stringutil.IsNullOrEmpty(path) {
+		p, err := os.Getwd()
+		if err == nil {
+			p += (fileutil.GetSystemSeparator() + common.DefaultCacheDir)
+			path = p
+		} else {
+			return path, err
+		}
+	}
+
+	return path, nil
+}
+
+func createCacheDir(path string) error {
+	exist, err := fileutil.ExistPath(path)
+	if err == nil && !exist {
+		err = os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	} else {
+		return err
+	}
+
+	return nil
+}
+
+// NewFinder for creating an instance
+func NewFinder(config common.BootConfig) (*FinderManager, error) {
+	// 检查缓存路径，如果传入cachePath是空，则使用默认路径
+	p, err := checkCachePath(config.CachePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建缓存目录
+	err = createCacheDir(p)
+	if err != nil {
+		return nil, err
+	}
+	config.CachePath = p
+	// 初始化finder
 	fm := new(FinderManager)
-	fm.configFinder = new(ConfigFinder)
-	fm.serviceFinder = new(ServiceFinder)
+	fm.config = &config
+	// 初始化zk
+	fm.zkManager, err = zkutil.NewZkManager(fm.config)
+	if err != nil {
+		return nil, err
+	}
+	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager}
+	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager}
+
+	if err != nil {
+		return nil, err
+	}
 
 	return fm, nil
 }
 
-func main() {
-	config := BootConfig{
-		companionUrl:"http://xxx.xxx.xx/",
-		serviceMeta:ServiceMeta{
-			project:"7s",
-			group:"set1",
-			service:"sis",
-			version:"1.0.1",
-		},
-	}
-
-	f, err := NewFinder(config)
-
-	if (err != nil) {
-
-	}
-
-	configNames := []string{"default.cfg"}
-	f.configFinder.UseAndSubscribeConfig(configNames, onCfgUpdateEvent)
-	f.serviceFinder.RegisterService("sis", "172.27.0.16:9090")
-}
-
-func onCfgUpdateEvent(c Config) int {
-	return ConfigSuccess
+func onCfgUpdateEvent(c common.Config) int {
+	return common.ConfigSuccess
 }
