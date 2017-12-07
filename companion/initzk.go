@@ -20,6 +20,14 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	if r.Ret != 0 {
+		err = &errors.FinderError{
+			Ret:  common.ZkGetInfo,
+			Func: "GetZkInfo",
+			Desc: r.Msg,
+		}
+		return nil, err
+	}
 
 	ok := true
 	if _, ok = r.Data["config_path"]; !ok {

@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type OnCfgUpdateEvent func(common.Config)
+type OnCfgUpdateEvent func(common.Config) bool
 
 type ConfigChangedEventPool struct {
 	sync.RWMutex

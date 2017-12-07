@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type OnServiceUpdateEvent func(common.Service)
+type OnServiceUpdateEvent func(common.Service) bool
 
 type ServiceChangedEventPool struct {
 	sync.RWMutex

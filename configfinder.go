@@ -32,7 +32,13 @@ func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
 		if err != nil {
 			// todo
 		} else {
-			configFiles = append(configFiles, common.Config{Name: n, File: data})
+			var fData []byte
+			_, fData, err = zkutil.DecodeValue(data)
+			if err != nil {
+				// todo
+			} else {
+				configFiles = append(configFiles, common.Config{Name: n, File: fData})
+			}
 		}
 	}
 
@@ -56,14 +62,21 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, event zkutil.OnCfgUp
 		if err != nil {
 			// todo
 		} else {
-			configFiles = append(configFiles, common.Config{Name: n, File: data})
-			err = f.zkManager.GetNodeDataW(f.zkManager.MetaData.ConfigRootPath+"/"+n, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-				//	configFiles = append(configFiles, common.Config{Name: n, File: data})
-				return nil
-			})
+			var fData []byte
+			_, fData, err = zkutil.DecodeValue(data)
 			if err != nil {
 				// todo
+			} else {
+				configFiles = append(configFiles, common.Config{Name: n, File: fData})
+				err = f.zkManager.GetNodeDataW(f.zkManager.MetaData.ConfigRootPath+"/"+n, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
+					//	configFiles = append(configFiles, common.Config{Name: n, File: data})
+					return nil
+				})
+				if err != nil {
+					// todo
+				}
 			}
+
 		}
 
 		zkutil.ConfigEventPool.Append(n, event)

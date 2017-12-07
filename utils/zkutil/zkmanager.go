@@ -212,12 +212,22 @@ func onEventNodeCreated(e *zk.Event) {
 func onEventNodeDataChanged(c curator.CuratorFramework, e curator.CuratorEvent) error {
 	event, ok := ConfigEventPool.Get()[e.Name()]
 	if ok {
-		c := common.Config{
-			Name: e.Name(),
-			File: e.Data(),
-		}
+		pushId, fData, err := DecodeValue(e.Data())
+		if err != nil {
+			// todo
+		} else {
+			c := common.Config{
+				PushId: pushId,
+				Name:   e.Name(),
+				File:   fData,
+			}
 
-		event(c)
+			ok := event(c)
+			if ok {
+
+			}
+			// todo feedback
+		}
 	}
 
 	return nil

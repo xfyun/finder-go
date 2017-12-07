@@ -39,8 +39,9 @@ func main() {
 	// 	fmt.Println(err)
 	// }
 
-	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test.toml", "default.toml"}, func(c common.Config) {
+	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "default.toml"}, func(c common.Config) bool {
 		fmt.Println(c.Name, " has changed:\r\n", string(c.File))
+		return true
 	})
 
 	if err != nil {

@@ -27,8 +27,9 @@ type ZkInfo struct {
 }
 
 type Config struct {
-	Name string
-	File []byte
+	PushId string
+	Name   string
+	File   []byte
 }
 
 type ServiceItem struct {
