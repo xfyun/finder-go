@@ -69,6 +69,9 @@ func NewZkManager(config *common.BootConfig) (*ZkManager, error) {
 }
 
 func checkConfig(c *common.BootConfig) {
+	if c.TickerDuration <= 0 {
+		c.ZkConnectTimeout = 30 * time.Second
+	}
 	if c.ZkConnectTimeout <= 0 {
 		c.ZkConnectTimeout = 3 * time.Second
 	}
