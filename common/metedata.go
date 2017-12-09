@@ -7,6 +7,7 @@ type ServiceMeteData struct {
 	Group   string
 	Service string
 	Version string
+	Address string
 }
 
 type BootConfig struct {
@@ -27,19 +28,27 @@ type ZkInfo struct {
 }
 
 type Config struct {
-	PushId string
-	Name   string
-	File   []byte
+	Name string
+	File []byte
+}
+
+type ServiceItemConfig struct {
+	Weight  int  `json:"weight"`
+	IsValid bool `json:"is_valid"`
 }
 
 type ServiceItem struct {
-	Addr    string
-	Weight  int
-	IsValid bool
+	Addr   string
+	Config *ServiceItemConfig
+}
+
+type ServiceConfig struct {
+	ProxyMode       string `json:"proxy_mode"`
+	LoadBalanceMode string `json:"lb_mode"`
 }
 
 type Service struct {
 	Name       string
 	ServerList []ServiceItem
-	Extra      map[string]string
+	Config     *ServiceConfig
 }

@@ -56,21 +56,22 @@ func addListeners(zm *ZkManager) {
 		case zk.EventNodeDeleted:
 			fmt.Println("watchevent:", e.WatchedEvent())
 		case zk.EventNodeDataChanged:
-			fmt.Println("watchevent:", e.WatchedEvent())
+			fmt.Println("watchevent:", e.WatchedEvent(), e.Data())
 			err := zm.GetNodeDataW(e.Path(), onEventNodeDataChanged)
 			if err != nil {
-
+				// todo
 			}
 		case zk.EventNodeChildrenChanged:
-			fmt.Println("watchevent:", e.WatchedEvent())
+			fmt.Println("watchevent:", e.WatchedEvent(), e.Children(), e.Data())
 			err := zm.GetChildrenW(e.Path(), onEventNodeChildrenChanged)
 			if err != nil {
-
+				// todo
 			}
 		}
 
 		return nil
 	})
+
 	zm.AddConnectionListener(connListener)
 	zm.AddListener(listener)
 }

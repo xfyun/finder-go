@@ -2,6 +2,7 @@ package finder
 
 import (
 	"finder-go/common"
+	"finder-go/errors"
 	"finder-go/utils/fileutil"
 	"finder-go/utils/stringutil"
 	"finder-go/utils/zkutil"
@@ -67,7 +68,7 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 		return nil, err
 	}
 	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager}
-	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager}
+	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config}
 
 	if err != nil {
 		return nil, err
@@ -77,5 +78,5 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 }
 
 func onCfgUpdateEvent(c common.Config) int {
-	return common.ConfigSuccess
+	return errors.ConfigSuccess
 }

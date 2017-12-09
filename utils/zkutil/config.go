@@ -5,21 +5,19 @@ import (
 	"sync"
 )
 
-type OnCfgUpdateEvent func(common.Config) bool
-
 type ConfigChangedEventPool struct {
 	sync.RWMutex
-	pool map[string]OnCfgUpdateEvent
+	pool map[string]common.InternalConfigChangedHandler
 }
 
 func NewConfigChangedEventPool() *ConfigChangedEventPool {
 	p := new(ConfigChangedEventPool)
-	p.pool = make(map[string]OnCfgUpdateEvent)
+	p.pool = make(map[string]common.InternalConfigChangedHandler)
 
 	return p
 }
 
-func (p *ConfigChangedEventPool) Get() map[string]OnCfgUpdateEvent {
+func (p *ConfigChangedEventPool) Get() map[string]common.InternalConfigChangedHandler {
 	p.RLock()
 	defer p.RUnlock()
 	return p.pool
@@ -35,7 +33,7 @@ func (p *ConfigChangedEventPool) Contains(key string) bool {
 	return false
 }
 
-func (p *ConfigChangedEventPool) Append(key string, value OnCfgUpdateEvent) {
+func (p *ConfigChangedEventPool) Append(key string, value common.InternalConfigChangedHandler) {
 	p.Lock()
 	p.pool[key] = value
 	p.Unlock()

@@ -2,11 +2,10 @@ package errors
 
 import (
 	"fmt"
-	"finder-go/common"
 )
 
 type FinderError struct {
-	Ret  common.ReturnCode
+	Ret  ReturnCode
 	Func string
 	Desc string
 }

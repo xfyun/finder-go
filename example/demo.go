@@ -15,11 +15,11 @@ func main() {
 	}
 	cachePath += "/findercache"
 	config := common.BootConfig{
-		CompanionUrl:     "http://127.0.0.1:9090",
+		CompanionUrl:     "http://10.1.86.223:9080",
 		CachePath:        cachePath,
 		TickerDuration:   5000,
-		ZkSessionTimeout: 30 * time.Second,
-		ZkConnectTimeout: 3 * time.Second,
+		ZkSessionTimeout: 300 * time.Second,
+		ZkConnectTimeout: 300 * time.Second,
 		ZkMaxSleepTime:   15 * time.Second,
 		ZkMaxRetryNum:    3,
 		MeteData: common.ServiceMeteData{
@@ -27,6 +27,7 @@ func main() {
 			Group:   "default",
 			Service: "xrpc",
 			Version: "1.0.0",
+			Address: "127.0.0.1:9091",
 		},
 	}
 
@@ -34,15 +35,84 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	// configList, err := finder.ConfigFinder.UseConfig([]string{"test.toml"})
+
+	//testUseConfigAsync(f)
+	testServiceAsync(f)
+
+}
+
+func testServiceAsync(f *finder.FinderManager) {
+	var err error
+	err = f.ServiceFinder.RegisterService()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("RegisterService is ok.")
+	}
+	time.Sleep(time.Second * 2)
+
+	var serviceList []common.Service
+	serviceList, err = f.ServiceFinder.UseService([]string{"xrpc"})
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, s := range serviceList {
+			fmt.Println(s.Name, ":")
+			for _, item := range s.ServerList {
+				fmt.Println("addr:", item.Addr)
+				fmt.Println("weight:", item.Config.Weight)
+				fmt.Println("is_valid:", item.Config.IsValid)
+			}
+		}
+
+		time.Sleep(time.Second * 2)
+	}
+
+	handler := new(ServiceChangedHandle)
+	serviceList, err = f.ServiceFinder.UseAndSubscribeService([]string{"xrpc"}, handler)
+
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, s := range serviceList {
+			fmt.Println(s.Name, ":")
+			for _, item := range s.ServerList {
+				fmt.Println("addr:", item.Addr)
+				fmt.Println("weight:", item.Config.Weight)
+				fmt.Println("is_valid:", item.Config.IsValid)
+			}
+		}
+
+		time.Sleep(time.Second * 2)
+	}
+
+	count := 0
+	for {
+		count++
+		if count > 200 {
+			//f.ConfigFinder.UnSubscribeConfig("default.toml")
+		}
+		if count > 600 {
+			err = f.ServiceFinder.UnRegisterService()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println("UnRegisterService is ok.")
+			}
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
+}
+
+func testUseConfigAsync(f *finder.FinderManager) {
+
+	// configFiles, err := f.ConfigFinder.UseConfig([]string{"test.toml"})
 	// if err != nil {
 	// 	fmt.Println(err)
 	// }
-
-	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "test3.toml"}, func(c common.Config) bool {
-		fmt.Println(c.Name, " has changed:\r\n", string(c.File))
-		return true
-	})
+	handler := new(ConfigChangedHandle)
+	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
 
 	if err != nil {
 		fmt.Println(err)
@@ -54,13 +124,12 @@ func main() {
 	count := 0
 	for {
 		count++
-		if count > 20 {
+		if count > 200 {
 			f.ConfigFinder.UnSubscribeConfig("default.toml")
 		}
-		if count > 60 {
+		if count > 600 {
 			break
 		}
 		time.Sleep(time.Second * 1)
 	}
-
 }

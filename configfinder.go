@@ -8,6 +8,10 @@ import (
 	"github.com/curator-go/curator"
 )
 
+var (
+	configEventPrefix = "config_"
+)
+
 type AsyncConfigCallback func([]common.Config)
 
 type ConfigFinder struct {
@@ -18,13 +22,13 @@ func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
-			Ret:  common.ConfigMissName,
+			Ret:  errors.ConfigMissName,
 			Func: "UseConfig",
 		}
 
 		return nil, err
 	}
-	configFiles := make([]common.Config, len(name))
+	configFiles := make([]common.Config, 0)
 	var data []byte
 	for _, n := range name {
 		data, err = f.zkManager.GetNodeData(f.zkManager.MetaData.ConfigRootPath + "/" + n)
@@ -32,7 +36,7 @@ func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
 			// todo
 		} else {
 			var fData []byte
-			_, fData, err = zkutil.DecodeValue(data)
+			_, fData, err = common.DecodeValue(data)
 			if err != nil {
 				// todo
 			} else {
@@ -44,11 +48,11 @@ func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
 	return configFiles, err
 }
 
-func (f *ConfigFinder) UseAndSubscribeConfig(name []string, event zkutil.OnCfgUpdateEvent) ([]common.Config, error) {
+func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) ([]common.Config, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
-			Ret:  common.ConfigMissName,
+			Ret:  errors.ConfigMissName,
 			Func: "UseAndSubscribeConfig",
 		}
 
@@ -58,12 +62,12 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, event zkutil.OnCfgUp
 	fileChan := make(chan *common.Config)
 	for _, n := range name {
 		err = f.zkManager.GetNodeDataW(f.zkManager.MetaData.ConfigRootPath+"/"+n, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-			pushId, fData, err := zkutil.DecodeValue(e.Data())
+			_, file, err := common.DecodeValue(e.Data())
 			if err != nil {
 				fileChan <- &common.Config{}
 				return err
 			}
-			fileChan <- &common.Config{PushId: pushId, Name: e.Name(), File: fData}
+			fileChan <- &common.Config{Name: e.Name(), File: file}
 			return nil
 		})
 		if err != nil {
@@ -72,17 +76,18 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, event zkutil.OnCfgUp
 			continue
 		}
 
-		zkutil.ConfigEventPool.Append(n, event)
+		interHandle := ConfigHandle{ChangedHandler: handler}
+		zkutil.ConfigEventPool.Append(common.ConfigEventPrefix+n, &interHandle)
 	}
 
-	return waitResult(fileChan, len(name)), nil
+	return waitConfigResult(fileChan, len(name)), nil
 }
 
 func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
-			Ret:  common.ConfigMissName,
+			Ret:  errors.ConfigMissName,
 			Func: "UnSubscribeConfig",
 		}
 		return err
@@ -93,48 +98,7 @@ func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	return nil
 }
 
-func (f *ConfigFinder) useAndSubscribeConfig(name []string, event zkutil.OnCfgUpdateEvent) ([]common.Config, error) {
-	var err error
-	if len(name) == 0 {
-		err = &errors.FinderError{
-			Ret:  common.ConfigMissName,
-			Func: "UseAndSubscribeConfig",
-		}
-		return nil, err
-	}
-
-	var data []byte
-	configFiles := make([]common.Config, 0)
-	for _, n := range name {
-		data, err = f.zkManager.GetNodeData(f.zkManager.MetaData.ConfigRootPath + "/" + n)
-		if err != nil {
-			// todo
-		} else {
-			var fData []byte
-			var pushId string
-			pushId, fData, err = zkutil.DecodeValue(data)
-			if err != nil {
-				// todo
-			} else {
-				configFiles = append(configFiles, common.Config{PushId: pushId, Name: n, File: fData})
-				err = f.zkManager.GetNodeDataW(f.zkManager.MetaData.ConfigRootPath+"/"+n, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-					//	configFiles = append(configFiles, common.Config{Name: n, File: data})
-					return nil
-				})
-				if err != nil {
-					// todo
-				}
-			}
-
-		}
-
-		zkutil.ConfigEventPool.Append(n, event)
-	}
-
-	return configFiles, err
-}
-
-func waitResult(fileChan chan *common.Config, fileNum int) []common.Config {
+func waitConfigResult(fileChan chan *common.Config, fileNum int) []common.Config {
 	configFiles := make([]common.Config, 0)
 	index := 0
 	for {

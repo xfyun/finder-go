@@ -2,23 +2,30 @@ package common
 
 const DefaultCacheDir = "findercache"
 
-type ReturnCode int
+type ServiceChangedHandler interface {
+	OnServiceInstanceConfigChanged(name string, instance string, config ServiceItemConfig) bool
+	OnServiceConfigChanged(name string, config ServiceConfig) bool
+	OnServiceInstanceChanged(name string, instances []ServiceItem) bool
+}
+
+type ConfigChangedHandler interface {
+	OnConfigFileChanged(config Config) bool
+}
+
+type InternalServiceChangedHandler interface {
+	OnServiceInstanceConfigChanged(name string, instance string, data []byte)
+	OnServiceConfigChanged(name string, data []byte)
+	OnServiceInstanceChanged(name string, instances []string)
+}
+
+type InternalConfigChangedHandler interface {
+	OnConfigFileChanged(name string, data []byte)
+}
 
 const (
-	ConfigSuccess     = iota // 0 获取配置成功
-	ConfigReadFailure        // 1 读数据失败
-	ConfigLoadFailure        // 2 加载配置失败
-)
-
-const (
-	Success        ReturnCode = 0
-	InvalidParam   ReturnCode = 10000 + iota
-	ConfigMissName ReturnCode = 10100 + iota
-	ZkMissRootPath ReturnCode = 10200 + iota
-	ZkMissAddr
-	ZkGetInfo
-)
-
-const (
-	ServiceSuccess = iota // 0 服务发现模块函数调用成功
+	ConfigEventPrefix          = "config_"
+	ServiceEventPrefix         = "service_"
+	ServiceConfEventPrefix     = "service_conf_"
+	ServiceProviderEventPrefix = "service_provider_"
+	ServiceConsumerEventPrefix = "service_consumer_"
 )

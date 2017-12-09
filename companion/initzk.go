@@ -22,7 +22,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	}
 	if r.Ret != 0 {
 		err = &errors.FinderError{
-			Ret:  common.ZkGetInfo,
+			Ret:  errors.ZkGetInfo,
 			Func: "GetZkInfo",
 			Desc: r.Msg,
 		}
@@ -32,7 +32,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	ok := true
 	if _, ok = r.Data["config_path"]; !ok {
 		err = &errors.FinderError{
-			Ret:  common.ZkMissRootPath,
+			Ret:  errors.ZkMissRootPath,
 			Func: "GetZkInfo",
 			Desc: "miss config path",
 		}
@@ -42,7 +42,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 
 	if _, ok = r.Data["service_path"]; !ok {
 		err = &errors.FinderError{
-			Ret:  common.ZkMissRootPath,
+			Ret:  errors.ZkMissRootPath,
 			Func: "GetZkInfo",
 			Desc: "miss service path",
 		}
@@ -53,7 +53,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	var zkAddr []string
 	if _, ok = r.Data["zk_addr"]; !ok {
 		err = &errors.FinderError{
-			Ret:  common.ZkMissAddr,
+			Ret:  errors.ZkMissAddr,
 			Func: "GetZkInfo",
 			Desc: "miss zk_info",
 		}
@@ -66,7 +66,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 		zkAddr = convert(value)
 		if len(zkAddr) == 0 {
 			err = &errors.FinderError{
-				Ret:  common.ZkMissAddr,
+				Ret:  errors.ZkMissAddr,
 				Func: "GetZkInfo",
 				Desc: "convert failure",
 			}

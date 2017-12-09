@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/curator-go/curator"
@@ -19,6 +20,7 @@ var (
 	zkExit           chan bool
 	ConfigEventPool  *ConfigChangedEventPool
 	ServiceEventPool *ServiceChangedEventPool
+	ConsumeEventPool *ServiceChangedEventPool
 )
 
 func init() {
@@ -160,9 +162,8 @@ func (zm *ZkManager) GetChildrenW(path string, c curator.BackgroundCallback) err
 	return err
 }
 
-func (zm *ZkManager) GetChildren(path string) error {
-	_, err := zm.zkClient.GetChildren().ForPath(path)
-	return err
+func (zm *ZkManager) GetChildren(path string) ([]string, error) {
+	return zm.zkClient.GetChildren().ForPath(path)
 }
 
 func (zm *ZkManager) RemoveInRecursive(path string) error {
@@ -195,14 +196,10 @@ func onZkInfoChanged(zm *ZkManager) {
 }
 
 func onEventNodeChildrenChanged(c curator.CuratorFramework, e curator.CuratorEvent) error {
-	event, ok := ServiceEventPool.Get()[e.Name()]
+	serviceEvent, ok := ServiceEventPool.Get()[e.Name()]
 	if ok {
-		s := common.Service{
-			Name:       e.Name(),
-			ServerList: getServiceItems(c, e.Path(), e.Children()),
-		}
-
-		event(s)
+		serviceEvent.OnServiceInstanceChanged(getServiceName(e.Path(), 1), e.Children())
+		return nil
 	}
 
 	return nil
@@ -213,24 +210,25 @@ func onEventNodeCreated(e *zk.Event) {
 }
 
 func onEventNodeDataChanged(c curator.CuratorFramework, e curator.CuratorEvent) error {
-	event, ok := ConfigEventPool.Get()[e.Name()]
+	configEvent, ok := ConfigEventPool.Get()[common.ConfigEventPrefix+e.Name()]
 	if ok {
-		pushId, fData, err := DecodeValue(e.Data())
-		if err != nil {
-			// todo
-		} else {
-			c := common.Config{
-				PushId: pushId,
-				Name:   e.Name(),
-				File:   fData,
-			}
-
-			ok := event(c)
-			if ok {
-
-			}
-			// todo feedback
-		}
+		configEvent.OnConfigFileChanged(e.Name(), e.Data())
+		return nil
+	}
+	serviceEvent, ok := ServiceEventPool.Get()[common.ServiceProviderEventPrefix+e.Name()]
+	if ok {
+		serviceEvent.OnServiceConfigChanged(getServiceName(e.Path(), 2), e.Data())
+		return nil
+	}
+	// serviceEvent, ok := ServiceEventPool.Get()[serviceConsumerEventPrefix+e.Name()]
+	// if ok {
+	// 	serviceEvent.OnServiceConfigChanged(getServiceName(e.Path(), 2), e.Data())
+	// 	return nil
+	// }
+	serviceEvent, ok = ServiceEventPool.Get()[common.ServiceConfEventPrefix+e.Name()]
+	if ok {
+		serviceEvent.OnServiceInstanceConfigChanged(getServiceName(e.Path(), 1), e.Name(), e.Data())
+		return nil
 	}
 
 	return nil
@@ -244,19 +242,13 @@ func onEventNotWatching(e *zk.Event) {
 
 }
 
-func getServiceItems(c curator.CuratorFramework, parentPath string, children []string) []common.ServiceItem {
-	serverList := make([]common.ServiceItem, 0)
-	// var data []byte
-	// var err error
-	for _, n := range children {
-		// data, err = c.GetData().ForPath(parentPath + "/" + n)
-		// if err != nil {
-		// 	continue
-		// }
-		serverList = append(serverList, common.ServiceItem{Addr: n, Weight: 100, IsValid: true})
+func getServiceName(path string, deep int) string {
+	items := strings.Split(path, "/")
+	if len(items) >= 3 {
+		return items[len(items)-1-deep]
 	}
 
-	return serverList
+	return ""
 }
 
 func watchZkAddr(zm *ZkManager) {

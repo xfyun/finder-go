@@ -9,17 +9,17 @@ type OnServiceUpdateEvent func(common.Service) bool
 
 type ServiceChangedEventPool struct {
 	sync.RWMutex
-	pool map[string]OnServiceUpdateEvent
+	pool map[string]common.InternalServiceChangedHandler
 }
 
 func NewServiceChangedEventPool() *ServiceChangedEventPool {
 	p := new(ServiceChangedEventPool)
-	p.pool = make(map[string]OnServiceUpdateEvent)
+	p.pool = make(map[string]common.InternalServiceChangedHandler)
 
 	return p
 }
 
-func (p *ServiceChangedEventPool) Get() map[string]OnServiceUpdateEvent {
+func (p *ServiceChangedEventPool) Get() map[string]common.InternalServiceChangedHandler {
 	p.RLock()
 	defer p.RUnlock()
 	return p.pool
@@ -35,7 +35,7 @@ func (p *ServiceChangedEventPool) Contains(key string) bool {
 	return false
 }
 
-func (p *ServiceChangedEventPool) Append(key string, value OnServiceUpdateEvent) {
+func (p *ServiceChangedEventPool) Append(key string, value common.InternalServiceChangedHandler) {
 	p.Lock()
 	p.pool[key] = value
 	p.Unlock()
