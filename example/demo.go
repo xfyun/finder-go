@@ -36,8 +36,8 @@ func main() {
 		fmt.Println(err)
 	}
 
-	//testUseConfigAsync(f)
-	testServiceAsync(f)
+	testUseConfigAsync(f)
+	//testServiceAsync(f)
 
 }
 

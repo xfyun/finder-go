@@ -8,7 +8,7 @@ import (
 type ServiceChangedHandle struct {
 }
 
-func (s *ServiceChangedHandle) OnServiceInstanceConfigChanged(name string, instance string, config common.ServiceItemConfig) bool {
+func (s *ServiceChangedHandle) OnServiceInstanceConfigChanged(name string, instance string, config common.ServiceInstanceConfig) bool {
 	fmt.Println(name, " update begin:")
 	fmt.Println("name:", name)
 	fmt.Println("addr:", instance)
@@ -23,6 +23,6 @@ func (s *ServiceChangedHandle) OnServiceConfigChanged(name string, config common
 	return true
 }
 
-func (s *ServiceChangedHandle) OnServiceInstanceChanged(name string, instances []common.ServiceItem) bool {
+func (s *ServiceChangedHandle) OnServiceInstanceChanged(name string, instances []common.ServiceInstance) bool {
 	return true
 }

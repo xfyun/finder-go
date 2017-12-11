@@ -178,12 +178,12 @@ func createTempNode(zm *zkutil.ZkManager, path string, data []byte) error {
 }
 
 func getDefaultServiceItemConfig(addr string) ([]byte, error) {
-	defaultServiceItemConfig := common.ServiceItemConfig{
+	defaultServiceInstanceConfig := common.ServiceInstanceConfig{
 		Weight:  100,
 		IsValid: true,
 	}
 
-	data, err := json.Marshal(defaultServiceItemConfig)
+	data, err := json.Marshal(defaultServiceInstanceConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +197,7 @@ func getDefaultServiceItemConfig(addr string) ([]byte, error) {
 	return encodedData, nil
 }
 
-func getServiceItem(zm *zkutil.ZkManager, path string, addr string) (*common.ServiceItem, error) {
+func getServiceInstance(zm *zkutil.ZkManager, path string, addr string) (*common.ServiceInstance, error) {
 	data, err := zm.GetNodeData(path + "/" + addr)
 	if err != nil {
 		return nil, err
@@ -210,31 +210,30 @@ func getServiceItem(zm *zkutil.ZkManager, path string, addr string) (*common.Ser
 	}
 
 	fmt.Println(string(item))
-	serviceItemConfig := &common.ServiceItemConfig{}
-	err = json.Unmarshal(item, serviceItemConfig)
+	serviceInstanceConfig := &common.ServiceInstanceConfig{}
+	err = json.Unmarshal(item, serviceInstanceConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceItem := new(common.ServiceItem)
-	serviceItem.Addr = addr
-	serviceItem.Config = serviceItemConfig
+	serviceInstance := new(common.ServiceInstance)
+	serviceInstance.Addr = addr
+	serviceInstance.Config = serviceInstanceConfig
 
-	return serviceItem, nil
+	return serviceInstance, nil
 }
 
 func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList []string) common.Service {
-	var service = common.Service{Name: name, ServerList: make([]common.ServiceItem, 0), Config: &common.ServiceConfig{}}
+	var service = common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
-		var serviceItem *common.ServiceItem
-		serviceItem, err := getServiceItem(zm, servicePath, addr)
+		serviceInstance, err := getServiceInstance(zm, servicePath, addr)
 		if err != nil {
 			fmt.Println(err)
 			// todo
 			continue
 		}
 
-		service.ServerList = append(service.ServerList, *serviceItem)
+		service.ServerList = append(service.ServerList, *serviceInstance)
 	}
 	// todo
 	service.Config.ProxyMode = "default"
@@ -244,17 +243,16 @@ func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList 
 }
 
 func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string, addrList []string, interHandle *ServiceHandle) common.Service {
-	var service = common.Service{Name: name, ServerList: make([]common.ServiceItem, 0), Config: &common.ServiceConfig{}}
+	var service = common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
-		var serviceItem *common.ServiceItem
-		serviceItem, err := getServiceItem(zm, servicePath, addr)
+		serviceInstance, err := getServiceInstance(zm, servicePath, addr)
 		if err != nil {
 			fmt.Println(err)
 			// todo
 			continue
 		}
 
-		service.ServerList = append(service.ServerList, *serviceItem)
+		service.ServerList = append(service.ServerList, *serviceInstance)
 	}
 	// todo
 	service.Config.ProxyMode = "default"
@@ -263,22 +261,22 @@ func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string
 	return service
 }
 
-func getServiceItemWithWatcher(zm *zkutil.ZkManager, servicePath string, addr string, interHandle *ServiceHandle) (*common.ServiceItem, error) {
-	serviceItemChan := make(chan *common.ServiceItem)
+func getServiceInstanceWithWatcher(zm *zkutil.ZkManager, servicePath string, addr string, interHandle *ServiceHandle) (*common.ServiceInstance, error) {
+	serviceInstanceChan := make(chan *common.ServiceInstance)
 	err := zm.GetNodeDataW(servicePath+"/"+addr, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
 		_, item, err := common.DecodeValue(e.Data())
 		if err != nil {
-			serviceItemChan <- &common.ServiceItem{}
+			serviceInstanceChan <- &common.ServiceInstance{}
 			return err
 		}
-		serviceItem := new(common.ServiceItem)
-		err = json.Unmarshal(item, serviceItem)
+		serviceInstance := new(common.ServiceInstance)
+		err = json.Unmarshal(item, serviceInstance)
 		if err != nil {
-			serviceItemChan <- &common.ServiceItem{}
+			serviceInstanceChan <- &common.ServiceInstance{}
 			return err
 		}
 
-		serviceItemChan <- serviceItem
+		serviceInstanceChan <- serviceInstance
 		return nil
 	})
 	if err != nil {
@@ -286,7 +284,7 @@ func getServiceItemWithWatcher(zm *zkutil.ZkManager, servicePath string, addr st
 	}
 	zkutil.ServiceEventPool.Append(common.ServiceProviderEventPrefix, interHandle)
 
-	return waitServiceItemResult(serviceItemChan), nil
+	return waitServiceInstanceResult(serviceInstanceChan), nil
 }
 
 func waitServiceResult(serviceChan chan *common.Service, serviceNum int) []common.Service {
@@ -307,16 +305,16 @@ func waitServiceResult(serviceChan chan *common.Service, serviceNum int) []commo
 	}
 }
 
-func waitServiceItemResult(serviceItemChan chan *common.ServiceItem) *common.ServiceItem {
-	serviceItem := new(common.ServiceItem)
+func waitServiceInstanceResult(serviceInstanceChan chan *common.ServiceInstance) *common.ServiceInstance {
+	serviceInstance := new(common.ServiceInstance)
 	for {
 		select {
-		case s := <-serviceItemChan:
+		case s := <-serviceInstanceChan:
 			if len(s.Addr) > 0 {
-				serviceItem = s
+				serviceInstance = s
 			}
-			close(serviceItemChan)
-			return serviceItem
+			close(serviceInstanceChan)
+			return serviceInstance
 		}
 	}
 }

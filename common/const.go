@@ -3,9 +3,9 @@ package common
 const DefaultCacheDir = "findercache"
 
 type ServiceChangedHandler interface {
-	OnServiceInstanceConfigChanged(name string, instance string, config ServiceItemConfig) bool
+	OnServiceInstanceConfigChanged(name string, instance string, config ServiceInstanceConfig) bool
 	OnServiceConfigChanged(name string, config ServiceConfig) bool
-	OnServiceInstanceChanged(name string, instances []ServiceItem) bool
+	OnServiceInstanceChanged(name string, instances []ServiceInstance) bool
 }
 
 type ConfigChangedHandler interface {

@@ -32,14 +32,14 @@ type Config struct {
 	File []byte
 }
 
-type ServiceItemConfig struct {
+type ServiceInstanceConfig struct {
 	Weight  int  `json:"weight"`
 	IsValid bool `json:"is_valid"`
 }
 
-type ServiceItem struct {
+type ServiceInstance struct {
 	Addr   string
-	Config *ServiceItemConfig
+	Config *ServiceInstanceConfig
 }
 
 type ServiceConfig struct {
@@ -49,6 +49,6 @@ type ServiceConfig struct {
 
 type Service struct {
 	Name       string
-	ServerList []ServiceItem
+	ServerList []ServiceInstance
 	Config     *ServiceConfig
 }
