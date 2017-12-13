@@ -39,13 +39,40 @@ func (f *ServiceFinder) RegisterService() error {
 	return register(f.zkManager, parentPath, f.config.MeteData.Address, data)
 }
 
+func (f *ServiceFinder) RegisterServiceWithAddr(addr string) error {
+	var err error
+	if stringutil.IsNullOrEmpty(addr) {
+		err = &errors.FinderError{
+			Ret:  errors.ServiceMissAddr,
+			Func: "RegisterService",
+		}
+
+		return err
+	}
+
+	var data []byte
+	data, err = getDefaultServiceItemConfig(addr)
+	if err != nil {
+		return err
+	}
+	parentPath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
+
+	return register(f.zkManager, parentPath, addr, data)
+}
+
 func (f *ServiceFinder) UnRegisterService() error {
 	servicePath := fmt.Sprintf("%s/%s/provider/%s", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service, f.config.MeteData.Address)
 
 	return f.zkManager.RemoveInRecursive(servicePath)
 }
 
-func (f *ServiceFinder) UseService(name []string) ([]common.Service, error) {
+func (f *ServiceFinder) UnRegisterServiceWithAddr(addr string) error {
+	servicePath := fmt.Sprintf("%s/%s/provider/%s", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service, addr)
+
+	return f.zkManager.RemoveInRecursive(servicePath)
+}
+
+func (f *ServiceFinder) UseService(name []string) ([]*common.Service, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
@@ -57,7 +84,7 @@ func (f *ServiceFinder) UseService(name []string) ([]common.Service, error) {
 	}
 
 	var addrList []string
-	serviceList := make([]common.Service, 0)
+	serviceList := make([]*common.Service, 0)
 	servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
 	for _, n := range name {
 		addrList, err = f.zkManager.GetChildren(servicePath)
@@ -71,7 +98,7 @@ func (f *ServiceFinder) UseService(name []string) ([]common.Service, error) {
 	return serviceList, err
 }
 
-func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.ServiceChangedHandler) ([]common.Service, error) {
+func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.ServiceChangedHandler) ([]*common.Service, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
@@ -83,7 +110,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 	}
 
 	serviceChan := make(chan *common.Service)
-	interHandle := &ServiceHandle{ChangedHandler: handler}
+	interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
 	servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
 	//handleChan := make(chan ServiceHandle)
 	for _, n := range name {
@@ -91,7 +118,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 			addrList := e.Children()
 			if len(addrList) > 0 {
 				service := getServiceWithWatcher(f.zkManager, servicePath, n, addrList, interHandle)
-				serviceChan <- &service
+				serviceChan <- service
 				return nil
 			}
 
@@ -223,8 +250,8 @@ func getServiceInstance(zm *zkutil.ZkManager, path string, addr string) (*common
 	return serviceInstance, nil
 }
 
-func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList []string) common.Service {
-	var service = common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
+func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList []string) *common.Service {
+	var service = &common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
 		serviceInstance, err := getServiceInstance(zm, servicePath, addr)
 		if err != nil {
@@ -242,10 +269,10 @@ func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList 
 	return service
 }
 
-func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string, addrList []string, interHandle *ServiceHandle) common.Service {
-	var service = common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
+func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string, addrList []string, interHandle *ServiceHandle) *common.Service {
+	var service = &common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
-		serviceInstance, err := getServiceInstance(zm, servicePath, addr)
+		serviceInstance, err := getServiceInstanceWithWatcher(zm, servicePath, addr, interHandle)
 		if err != nil {
 			fmt.Println(err)
 			// todo
@@ -269,8 +296,8 @@ func getServiceInstanceWithWatcher(zm *zkutil.ZkManager, servicePath string, add
 			serviceInstanceChan <- &common.ServiceInstance{}
 			return err
 		}
-		serviceInstance := new(common.ServiceInstance)
-		err = json.Unmarshal(item, serviceInstance)
+		serviceInstance := &common.ServiceInstance{Addr: addr, Config: new(common.ServiceInstanceConfig)}
+		err = json.Unmarshal(item, serviceInstance.Config)
 		if err != nil {
 			serviceInstanceChan <- &common.ServiceInstance{}
 			return err
@@ -282,20 +309,20 @@ func getServiceInstanceWithWatcher(zm *zkutil.ZkManager, servicePath string, add
 	if err != nil {
 		return nil, err
 	}
-	zkutil.ServiceEventPool.Append(common.ServiceProviderEventPrefix, interHandle)
+	zkutil.ServiceEventPool.Append(common.ServiceProviderEventPrefix+addr, interHandle)
 
 	return waitServiceInstanceResult(serviceInstanceChan), nil
 }
 
-func waitServiceResult(serviceChan chan *common.Service, serviceNum int) []common.Service {
-	serviceList := make([]common.Service, 0)
+func waitServiceResult(serviceChan chan *common.Service, serviceNum int) []*common.Service {
+	serviceList := make([]*common.Service, 0)
 	index := 0
 	for {
 		select {
 		case s := <-serviceChan:
 			index++
 			if len(s.Name) > 0 {
-				serviceList = append(serviceList, *s)
+				serviceList = append(serviceList, s)
 			}
 			if index == serviceNum {
 				close(serviceChan)

@@ -3,7 +3,10 @@ package main
 import (
 	"finder-go"
 	"finder-go/common"
+	"finder-go/utils/httputil"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"time"
 )
@@ -18,11 +21,11 @@ func main() {
 		CompanionUrl:     "http://10.1.86.223:9080",
 		CachePath:        cachePath,
 		TickerDuration:   5000,
-		ZkSessionTimeout: 300 * time.Second,
+		ZkSessionTimeout: 3 * time.Second,
 		ZkConnectTimeout: 300 * time.Second,
 		ZkMaxSleepTime:   15 * time.Second,
 		ZkMaxRetryNum:    3,
-		MeteData: common.ServiceMeteData{
+		MeteData: &common.ServiceMeteData{
 			Project: "test",
 			Group:   "default",
 			Service: "xrpc",
@@ -36,9 +39,37 @@ func main() {
 		fmt.Println(err)
 	}
 
-	testUseConfigAsync(f)
-	//testServiceAsync(f)
+	//testUseConfigAsync(f)
+	testServiceAsync(f)
 
+	//testConfigFeedback()
+
+}
+
+func testConfigFeedback() {
+	url := "http://10.1.200.75:9080/finder/push_config_feedback"
+	contentType := "application/x-www-form-urlencoded"
+	hc := &http.Client{
+		Transport: &http.Transport{
+			Dial: func(nw, addr string) (net.Conn, error) {
+				deadline := time.Now().Add(1 * time.Second)
+				c, err := net.DialTimeout(nw, addr, time.Second*1)
+				if err != nil {
+					return nil, err
+				}
+				c.SetDeadline(deadline)
+				return c, nil
+			},
+		},
+	}
+
+	params := []byte("pushId=123456&project=test&group=default&service=xrpc&version=1.0.0&config=default.cfg&addr=10.1.86.221:9091&update_status=1&update_time=1513044755&load_status=1&load_time=1513044757")
+	result, err := httputil.DoPost(hc, contentType, url, params)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(result))
 }
 
 func testServiceAsync(f *finder.FinderManager) {
@@ -51,7 +82,7 @@ func testServiceAsync(f *finder.FinderManager) {
 	}
 	time.Sleep(time.Second * 2)
 
-	var serviceList []common.Service
+	var serviceList []*common.Service
 	serviceList, err = f.ServiceFinder.UseService([]string{"xrpc"})
 	if err != nil {
 		fmt.Println(err)

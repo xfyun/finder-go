@@ -22,7 +22,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	}
 	if r.Ret != 0 {
 		err = &errors.FinderError{
-			Ret:  errors.ZkGetInfo,
+			Ret:  errors.ZkGetInfoError,
 			Func: "GetZkInfo",
 			Desc: r.Msg,
 		}

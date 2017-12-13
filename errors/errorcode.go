@@ -14,10 +14,15 @@ const (
 	ConfigMissName ReturnCode = 10100
 	ZkMissRootPath ReturnCode = 10200 + iota
 	ZkMissAddr
-	ZkGetInfo
+	ZkGetInfoError
 )
 
 const (
 	ServiceMissAddr ReturnCode = 10300 + iota
 	ServiceMissName
+)
+
+const (
+	FeedbackConfigError ReturnCode = 10400 + iota
+	FeedbackServiceError
 )

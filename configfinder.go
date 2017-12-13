@@ -15,10 +15,11 @@ var (
 type AsyncConfigCallback func([]common.Config)
 
 type ConfigFinder struct {
+	config    *common.BootConfig
 	zkManager *zkutil.ZkManager
 }
 
-func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
+func (f *ConfigFinder) UseConfig(name []string) ([]*common.Config, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
@@ -28,7 +29,7 @@ func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
 
 		return nil, err
 	}
-	configFiles := make([]common.Config, 0)
+	configFiles := make([]*common.Config, 0)
 	var data []byte
 	for _, n := range name {
 		data, err = f.zkManager.GetNodeData(f.zkManager.MetaData.ConfigRootPath + "/" + n)
@@ -40,7 +41,7 @@ func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
 			if err != nil {
 				// todo
 			} else {
-				configFiles = append(configFiles, common.Config{Name: n, File: fData})
+				configFiles = append(configFiles, &common.Config{Name: n, File: fData})
 			}
 		}
 	}
@@ -48,7 +49,7 @@ func (f *ConfigFinder) UseConfig(name []string) ([]common.Config, error) {
 	return configFiles, err
 }
 
-func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) ([]common.Config, error) {
+func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) ([]*common.Config, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
@@ -76,7 +77,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			continue
 		}
 
-		interHandle := ConfigHandle{ChangedHandler: handler}
+		interHandle := ConfigHandle{ChangedHandler: handler, config: f.config}
 		zkutil.ConfigEventPool.Append(common.ConfigEventPrefix+n, &interHandle)
 	}
 
@@ -98,15 +99,15 @@ func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	return nil
 }
 
-func waitConfigResult(fileChan chan *common.Config, fileNum int) []common.Config {
-	configFiles := make([]common.Config, 0)
+func waitConfigResult(fileChan chan *common.Config, fileNum int) []*common.Config {
+	configFiles := make([]*common.Config, 0)
 	index := 0
 	for {
 		select {
 		case c := <-fileChan:
 			index++
 			if len(c.Name) > 0 {
-				configFiles = append(configFiles, *c)
+				configFiles = append(configFiles, c)
 			}
 			if index == fileNum {
 				close(fileChan)

@@ -6,8 +6,31 @@ import (
 	"finder-go/utils/fileutil"
 	"finder-go/utils/stringutil"
 	"finder-go/utils/zkutil"
+	"net"
+	"net/http"
 	"os"
+	"time"
 )
+
+var (
+	hc *http.Client
+)
+
+func init() {
+	hc = &http.Client{
+		Transport: &http.Transport{
+			Dial: func(nw, addr string) (net.Conn, error) {
+				deadline := time.Now().Add(1 * time.Second)
+				c, err := net.DialTimeout(nw, addr, time.Second*1)
+				if err != nil {
+					return nil, err
+				}
+				c.SetDeadline(deadline)
+				return c, nil
+			},
+		},
+	}
+}
 
 // FinderManager for controll all
 type FinderManager struct {
@@ -67,7 +90,7 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager}
+	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config}
 	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config}
 
 	if err != nil {

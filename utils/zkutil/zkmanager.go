@@ -217,7 +217,7 @@ func onEventNodeDataChanged(c curator.CuratorFramework, e curator.CuratorEvent) 
 	}
 	serviceEvent, ok := ServiceEventPool.Get()[common.ServiceProviderEventPrefix+e.Name()]
 	if ok {
-		serviceEvent.OnServiceConfigChanged(getServiceName(e.Path(), 2), e.Data())
+		serviceEvent.OnServiceInstanceConfigChanged(getServiceName(e.Path(), 2), e.Name(), e.Data())
 		return nil
 	}
 	// serviceEvent, ok := ServiceEventPool.Get()[serviceConsumerEventPrefix+e.Name()]
@@ -227,7 +227,7 @@ func onEventNodeDataChanged(c curator.CuratorFramework, e curator.CuratorEvent) 
 	// }
 	serviceEvent, ok = ServiceEventPool.Get()[common.ServiceConfEventPrefix+e.Name()]
 	if ok {
-		serviceEvent.OnServiceInstanceConfigChanged(getServiceName(e.Path(), 1), e.Name(), e.Data())
+		serviceEvent.OnServiceConfigChanged(getServiceName(e.Path(), 1), e.Data())
 		return nil
 	}
 

@@ -18,7 +18,7 @@ type BootConfig struct {
 	ZkConnectTimeout time.Duration
 	ZkMaxSleepTime   time.Duration
 	ZkMaxRetryNum    int
-	MeteData         ServiceMeteData
+	MeteData         *ServiceMeteData
 }
 
 type ZkInfo struct {
@@ -51,4 +51,25 @@ type Service struct {
 	Name       string
 	ServerList []ServiceInstance
 	Config     *ServiceConfig
+}
+
+type ConfigFeedback struct {
+	PushID       string
+	ServiceMete  *ServiceMeteData
+	Config       string
+	UpdateTime   int64
+	UpdateStatus int
+	LoadTime     int64
+	LoadStatus   int
+}
+
+type ServiceFeedback struct {
+	PushID          string
+	ServiceMete     *ServiceMeteData
+	Provider        string
+	ProviderVersion string
+	UpdateTime      int64
+	UpdateStatus    int
+	LoadTime        int64
+	LoadStatus      int
 }
