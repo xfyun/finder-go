@@ -100,6 +100,11 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	return fm, nil
 }
 
+func DestroyFinder(finder *FinderManager) {
+	finder.zkManager.Destroy()
+	// todo
+}
+
 func onCfgUpdateEvent(c common.Config) int {
 	return errors.ConfigSuccess
 }
