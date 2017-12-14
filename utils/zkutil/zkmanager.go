@@ -196,9 +196,10 @@ func onZkInfoChanged(zm *ZkManager) {
 }
 
 func onEventNodeChildrenChanged(c curator.CuratorFramework, e curator.CuratorEvent) error {
-	serviceEvent, ok := ServiceEventPool.Get()[e.Name()]
+	serviceName := getServiceName(e.Path(), 1)
+	serviceEvent, ok := ServiceEventPool.Get()[common.ServiceEventPrefix+serviceName]
 	if ok {
-		serviceEvent.OnServiceInstanceChanged(getServiceName(e.Path(), 1), e.Children())
+		serviceEvent.OnServiceInstanceChanged(serviceName, e.Children())
 		return nil
 	}
 

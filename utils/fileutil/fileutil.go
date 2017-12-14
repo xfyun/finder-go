@@ -4,8 +4,8 @@ import "os"
 
 func ExistPath(path string) (bool, error) {
 	_, err := os.Stat(path)
-	if (err != nil) {
-		if (os.IsNotExist(err)) {
+	if err != nil {
+		if os.IsNotExist(err) {
 			return false, nil
 		}
 
@@ -18,7 +18,7 @@ func ExistPath(path string) (bool, error) {
 func GetSystemSeparator() string {
 	s := "/"
 
-	if (os.IsPathSeparator('\\')) {
+	if os.IsPathSeparator('\\') {
 		s = "\\"
 	}
 

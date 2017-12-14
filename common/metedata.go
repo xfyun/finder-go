@@ -13,6 +13,8 @@ type ServiceMeteData struct {
 type BootConfig struct {
 	CompanionUrl     string
 	CachePath        string
+	CacheConfig      bool
+	CacheService     bool
 	TickerDuration   time.Duration
 	ZkSessionTimeout time.Duration
 	ZkConnectTimeout time.Duration

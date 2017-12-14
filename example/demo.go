@@ -25,10 +25,17 @@ func main() {
 		ZkConnectTimeout: 300 * time.Second,
 		ZkMaxSleepTime:   15 * time.Second,
 		ZkMaxRetryNum:    3,
+		// MeteData: &common.ServiceMeteData{
+		// 	Project: "project",
+		// 	Group:   "group",
+		// 	Service: "xsf",
+		// 	Version: "1.0.0",
+		// 	Address: "127.0.0.1:9091",
+		// },
 		MeteData: &common.ServiceMeteData{
 			Project: "test",
 			Group:   "default",
-			Service: "xrpc",
+			Service: "xsf",
 			Version: "1.0.0",
 			Address: "127.0.0.1:9091",
 		},
@@ -83,7 +90,7 @@ func testServiceAsync(f *finder.FinderManager) {
 	time.Sleep(time.Second * 2)
 
 	var serviceList []*common.Service
-	serviceList, err = f.ServiceFinder.UseService([]string{"xrpc"})
+	serviceList, err = f.ServiceFinder.UseService([]string{"xrpc1"})
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -100,8 +107,7 @@ func testServiceAsync(f *finder.FinderManager) {
 	}
 
 	handler := new(ServiceChangedHandle)
-	serviceList, err = f.ServiceFinder.UseAndSubscribeService([]string{"xrpc"}, handler)
-
+	serviceList, err = f.ServiceFinder.UseAndSubscribeService([]string{"xsf1"}, handler)
 	if err != nil {
 		fmt.Println(err)
 	} else {

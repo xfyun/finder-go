@@ -12,8 +12,6 @@ var (
 	configEventPrefix = "config_"
 )
 
-type AsyncConfigCallback func([]common.Config)
-
 type ConfigFinder struct {
 	config    *common.BootConfig
 	zkManager *zkutil.ZkManager

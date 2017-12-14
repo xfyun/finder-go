@@ -85,8 +85,8 @@ func (f *ServiceFinder) UseService(name []string) ([]*common.Service, error) {
 
 	var addrList []string
 	serviceList := make([]*common.Service, 0)
-	servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
 	for _, n := range name {
+		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
 		addrList, err = f.zkManager.GetChildren(servicePath)
 		if err != nil {
 			// todo
@@ -111,9 +111,8 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 
 	serviceChan := make(chan *common.Service)
 	interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
-	servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
-	//handleChan := make(chan ServiceHandle)
 	for _, n := range name {
+		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
 		err = f.zkManager.GetChildrenW(servicePath, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
 			addrList := e.Children()
 			if len(addrList) > 0 {
