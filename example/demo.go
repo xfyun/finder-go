@@ -160,8 +160,7 @@ func testServiceAsync(f *finder.FinderManager) {
 	}
 	time.Sleep(time.Second * 2)
 
-	var serviceList []*common.Service
-	serviceList, err = f.ServiceFinder.UseService([]string{"xrpc"})
+	serviceList, err := f.ServiceFinder.UseService([]string{"xrpc"})
 	if err != nil {
 		fmt.Println(err)
 	} else {

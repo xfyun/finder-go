@@ -72,7 +72,7 @@ func (f *ServiceFinder) UnRegisterServiceWithAddr(addr string) error {
 	return f.zkManager.RemoveInRecursive(servicePath)
 }
 
-func (f *ServiceFinder) UseService(name []string) ([]*common.Service, error) {
+func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
@@ -84,7 +84,7 @@ func (f *ServiceFinder) UseService(name []string) ([]*common.Service, error) {
 	}
 
 	var addrList []string
-	serviceList := make([]*common.Service, 0)
+	serviceList := make(map[string]*common.Service)
 	for _, n := range name {
 		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
 		fmt.Println("useservice:", servicePath)
@@ -95,14 +95,14 @@ func (f *ServiceFinder) UseService(name []string) ([]*common.Service, error) {
 		} else if len(addrList) > 0 {
 			fmt.Println("sp", servicePath)
 			fmt.Println(addrList)
-			serviceList = append(serviceList, getService(f.zkManager, servicePath, n, addrList))
+			serviceList[n] = getService(f.zkManager, servicePath, n, addrList)
 		}
 	}
 
 	return serviceList, err
 }
 
-func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.ServiceChangedHandler) ([]*common.Service, error) {
+func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.ServiceChangedHandler) (map[string]*common.Service, error) {
 	var err error
 	if len(name) == 0 {
 		err = &errors.FinderError{
@@ -315,19 +315,18 @@ func getServiceInstanceWithWatcher(zm *zkutil.ZkManager, servicePath string, add
 	return waitServiceInstanceResult(serviceInstanceChan), nil
 }
 
-func waitServiceResult(serviceChan chan *common.Service, serviceNum int) []*common.Service {
-	serviceList := make([]*common.Service, 0)
+func waitServiceResult(serviceChan chan *common.Service, serviceNum int) map[string]*common.Service {
+	serviceList := make(map[string]*common.Service)
 	index := 0
 	for {
 		select {
 		case s := <-serviceChan:
 			index++
 			if len(s.Name) > 0 {
-				serviceList = append(serviceList, s)
+				serviceList[s.Name] = s
 			}
 			if index == serviceNum {
 				close(serviceChan)
-				fmt.Println(len(serviceList))
 				return serviceList
 			}
 		}
