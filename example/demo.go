@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"finder-go"
 	"finder-go/common"
 	"finder-go/utils/httputil"
@@ -47,10 +48,80 @@ func main() {
 	}
 
 	//testUseConfigAsync(f)
+	testCache(cachePath)
 	testServiceAsync(f)
 
 	//testConfigFeedback()
 
+}
+
+func testCache(cachepath string) {
+	configFile := `[test]\r\n\titem = "value"`
+	config := &common.Config{
+		Name: "default.cfg",
+		File: []byte(configFile),
+	}
+	err := finder.CacheConfig(cachepath, config)
+	if err != nil {
+		fmt.Println(err)
+	}
+	data, err := finder.GetConfigFromCache(cachepath, "default.cfg")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("default.cfg:", string(data))
+	}
+
+	zkInfo := &common.ZkInfo{
+		ZkAddr:          []string{"10.1.86.73:2181", "10.1.86.74:2181"},
+		ConfigRootPath:  "/polaris/config/",
+		ServiceRootPath: "polaris/service/",
+	}
+	err = finder.CacheZkInfo(cachepath, zkInfo)
+	if err != nil {
+		fmt.Println(err)
+	}
+	newZkInfo, err := finder.GetZkInfoFromCache(cachepath)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("ZkAddr:", newZkInfo.ZkAddr)
+		fmt.Println("ConfigRootPath:", newZkInfo.ConfigRootPath)
+		fmt.Println("ServiceRootPath:", newZkInfo.ServiceRootPath)
+	}
+
+	service := &common.Service{
+		Name:       "xrpc",
+		ServerList: []common.ServiceInstance{},
+		Config: &common.ServiceConfig{
+			ProxyMode:       "default",
+			LoadBalanceMode: "default",
+		},
+	}
+	instance := common.ServiceInstance{
+		Addr: "127.0.0.0:9091",
+		Config: &common.ServiceInstanceConfig{
+			Weight:  100,
+			IsValid: true,
+		},
+	}
+	service.ServerList = append(service.ServerList, instance)
+
+	err = finder.CacheService(cachepath, service)
+	if err != nil {
+		fmt.Println(err)
+	}
+	newService, err := finder.GetServiceFromCache(cachepath, "xrpc")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		data, err := json.Marshal(newService)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("newService", string(data))
+		}
+	}
 }
 
 func testConfigFeedback() {
@@ -90,7 +161,7 @@ func testServiceAsync(f *finder.FinderManager) {
 	time.Sleep(time.Second * 2)
 
 	var serviceList []*common.Service
-	serviceList, err = f.ServiceFinder.UseService([]string{"xrpc1"})
+	serviceList, err = f.ServiceFinder.UseService([]string{"xrpc"})
 	if err != nil {
 		fmt.Println(err)
 	} else {
