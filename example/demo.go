@@ -178,7 +178,7 @@ func testServiceAsync(f *finder.FinderManager) {
 	}
 
 	handler := new(ServiceChangedHandle)
-	serviceList, err = f.ServiceFinder.UseAndSubscribeService([]string{"xsf1"}, handler)
+	serviceList, err = f.ServiceFinder.UseAndSubscribeService([]string{"xsf"}, handler)
 	if err != nil {
 		fmt.Println(err)
 	} else {

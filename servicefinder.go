@@ -87,10 +87,14 @@ func (f *ServiceFinder) UseService(name []string) ([]*common.Service, error) {
 	serviceList := make([]*common.Service, 0)
 	for _, n := range name {
 		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
+		fmt.Println("useservice:", servicePath)
 		addrList, err = f.zkManager.GetChildren(servicePath)
 		if err != nil {
+			fmt.Println("useservice:", err)
 			// todo
 		} else if len(addrList) > 0 {
+			fmt.Println("sp", servicePath)
+			fmt.Println(addrList)
 			serviceList = append(serviceList, getService(f.zkManager, servicePath, n, addrList))
 		}
 	}
@@ -120,7 +124,6 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 				serviceChan <- service
 				return nil
 			}
-
 			serviceChan <- &common.Service{}
 			return nil
 		})
@@ -153,7 +156,6 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 }
 
 func register(zm *zkutil.ZkManager, parentPath string, addr string, data []byte) error {
-	fmt.Println("path:", parentPath)
 	var node *zk.Stat
 	var err error
 	servicePath := parentPath + "/" + addr
@@ -325,6 +327,7 @@ func waitServiceResult(serviceChan chan *common.Service, serviceNum int) []*comm
 			}
 			if index == serviceNum {
 				close(serviceChan)
+				fmt.Println(len(serviceList))
 				return serviceList
 			}
 		}
