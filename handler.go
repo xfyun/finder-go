@@ -86,6 +86,11 @@ func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
 }
 
 func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string) {
+	eventList := make([]*common.ServiceInstanceChangedEvent, 0)
+	event := &common.ServiceInstanceChangedEvent{
+		EventType: common.INSTANCEADDED,
+	}
+	//todo
 	instances := make([]*common.ServiceInstance, 0)
 	if len(addrList) > 0 {
 		servicePath := fmt.Sprintf("%s/%s/provider", s.zkManager.MetaData.ServiceRootPath, s.config.MeteData.Service)
@@ -100,7 +105,9 @@ func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string)
 			instances = append(instances, serviceInstance)
 		}
 	}
-	s.ChangedHandler.OnServiceInstanceChanged(name, instances)
+	event.ServerList = instances
+	eventList = append(eventList, event)
+	s.ChangedHandler.OnServiceInstanceChanged(name, eventList)
 }
 
 type ConfigHandle struct {

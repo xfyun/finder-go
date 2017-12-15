@@ -9,3 +9,10 @@ const (
 	ServiceProviderEventPrefix = "service_provider_"
 	ServiceConsumerEventPrefix = "service_consumer_"
 )
+
+type InstanceChangedEventType string
+
+const (
+	INSTANCEADDED  InstanceChangedEventType = "INSTANCEADDED"
+	INSTANCEREMOVE InstanceChangedEventType = "INSTANCEREMOVE"
+)

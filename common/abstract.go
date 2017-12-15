@@ -3,7 +3,7 @@ package common
 type ServiceChangedHandler interface {
 	OnServiceInstanceConfigChanged(name string, addr string, config *ServiceInstanceConfig) bool
 	OnServiceConfigChanged(name string, config *ServiceConfig) bool
-	OnServiceInstanceChanged(name string, instances []*ServiceInstance) bool
+	OnServiceInstanceChanged(name string, eventList []*ServiceInstanceChangedEvent) bool
 }
 
 type ConfigChangedHandler interface {

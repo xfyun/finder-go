@@ -29,12 +29,15 @@ func (s *ServiceChangedHandle) OnServiceConfigChanged(name string, config *commo
 	return true
 }
 
-func (s *ServiceChangedHandle) OnServiceInstanceChanged(name string, instances []*common.ServiceInstance) bool {
+func (s *ServiceChangedHandle) OnServiceInstanceChanged(name string, eventList []*common.ServiceInstanceChangedEvent) bool {
 	fmt.Println(name, " update begin:")
-	for _, inst := range instances {
-		fmt.Println("addr:", inst.Addr)
-		fmt.Println("weight:", inst.Config.Weight)
-		fmt.Println("is_valid:", inst.Config.IsValid)
+	for _, e := range eventList {
+		fmt.Println("event:", e)
+		for _, inst := range e.ServerList {
+			fmt.Println("addr:", inst.Addr)
+			fmt.Println("weight:", inst.Config.Weight)
+			fmt.Println("is_valid:", inst.Config.IsValid)
+		}
 	}
 
 	fmt.Println("got service update finish.")

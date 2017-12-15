@@ -39,6 +39,11 @@ type ServiceInstanceConfig struct {
 	IsValid bool `json:"is_valid"`
 }
 
+type ServiceInstanceChangedEvent struct {
+	EventType  InstanceChangedEventType
+	ServerList []*ServiceInstance
+}
+
 type ServiceInstance struct {
 	Addr   string
 	Config *ServiceInstanceConfig
