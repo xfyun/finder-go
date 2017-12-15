@@ -51,7 +51,7 @@ type ServiceConfig struct {
 
 type Service struct {
 	Name       string
-	ServerList []ServiceInstance
+	ServerList []*ServiceInstance
 	Config     *ServiceConfig
 }
 

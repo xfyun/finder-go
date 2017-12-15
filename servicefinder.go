@@ -252,7 +252,7 @@ func getServiceInstance(zm *zkutil.ZkManager, path string, addr string) (*common
 }
 
 func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList []string) *common.Service {
-	var service = &common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
+	var service = &common.Service{Name: name, ServerList: make([]*common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
 		serviceInstance, err := getServiceInstance(zm, servicePath, addr)
 		if err != nil {
@@ -261,7 +261,7 @@ func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList 
 			continue
 		}
 
-		service.ServerList = append(service.ServerList, *serviceInstance)
+		service.ServerList = append(service.ServerList, serviceInstance)
 	}
 	// todo
 	service.Config.ProxyMode = "default"
@@ -271,7 +271,7 @@ func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList 
 }
 
 func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string, addrList []string, interHandle *ServiceHandle) *common.Service {
-	var service = &common.Service{Name: name, ServerList: make([]common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
+	var service = &common.Service{Name: name, ServerList: make([]*common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
 		serviceInstance, err := getServiceInstanceWithWatcher(zm, servicePath, addr, interHandle)
 		if err != nil {
@@ -280,7 +280,7 @@ func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string
 			continue
 		}
 
-		service.ServerList = append(service.ServerList, *serviceInstance)
+		service.ServerList = append(service.ServerList, serviceInstance)
 	}
 	// todo
 	service.Config.ProxyMode = "default"

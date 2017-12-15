@@ -92,13 +92,13 @@ func testCache(cachepath string) {
 
 	service := &common.Service{
 		Name:       "xrpc",
-		ServerList: []common.ServiceInstance{},
+		ServerList: []*common.ServiceInstance{},
 		Config: &common.ServiceConfig{
 			ProxyMode:       "default",
 			LoadBalanceMode: "default",
 		},
 	}
-	instance := common.ServiceInstance{
+	instance := &common.ServiceInstance{
 		Addr: "127.0.0.0:9091",
 		Config: &common.ServiceInstanceConfig{
 			Weight:  100,
