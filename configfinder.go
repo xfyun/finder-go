@@ -4,6 +4,7 @@ import (
 	"finder-go/common"
 	"finder-go/errors"
 	"finder-go/utils/zkutil"
+	"fmt"
 
 	"github.com/curator-go/curator"
 )
@@ -32,14 +33,27 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 	for _, n := range name {
 		data, err = f.zkManager.GetNodeData(f.zkManager.MetaData.ConfigRootPath + "/" + n)
 		if err != nil {
-			// todo
+			fmt.Println(err)
+			// get config from cache
+			config, err := GetConfigFromCache(f.config.CachePath, n)
+			if err != nil {
+				fmt.Println(err)
+				//todo
+			} else {
+				configFiles[n] = config
+			}
 		} else {
 			var fData []byte
 			_, fData, err = common.DecodeValue(data)
 			if err != nil {
 				// todo
 			} else {
-				configFiles[n] = &common.Config{Name: n, File: fData}
+				config := &common.Config{Name: n, File: fData}
+				configFiles[n] = config
+				err = CacheConfig(f.config.CachePath, config)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
 	}
@@ -63,15 +77,36 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		err = f.zkManager.GetNodeDataW(f.zkManager.MetaData.ConfigRootPath+"/"+n, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
 			_, file, err := common.DecodeValue(e.Data())
 			if err != nil {
-				fileChan <- &common.Config{}
+				// get config from cache
+				config, err := GetConfigFromCache(f.config.CachePath, e.Name())
+				if err != nil {
+					fmt.Println(err)
+					//todo
+					fileChan <- &common.Config{}
+				} else {
+					fileChan <- config
+				}
+
 				return err
 			}
-			fileChan <- &common.Config{Name: e.Name(), File: file}
+			config := &common.Config{Name: e.Name(), File: file}
+			err = CacheConfig(f.config.CachePath, config)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fileChan <- config
 			return nil
 		})
 		if err != nil {
-			// todo
-			fileChan <- &common.Config{}
+			// get config from cache
+			config, err := GetConfigFromCache(f.config.CachePath, n)
+			if err != nil {
+				fmt.Println(err)
+				//todo
+				fileChan <- &common.Config{}
+			} else {
+				fileChan <- config
+			}
 			continue
 		}
 

@@ -51,9 +51,14 @@ func CacheConfig(cachePath string, config *common.Config) error {
 	return nil
 }
 
-func GetConfigFromCache(cachePath string, name string) ([]byte, error) {
+func GetConfigFromCache(cachePath string, name string) (*common.Config, error) {
 	cachePath = fmt.Sprintf("%s/config_%s.findercache", cachePath, name)
-	return fileutil.ReadFile(cachePath)
+	data, err := fileutil.ReadFile(cachePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &common.Config{Name: name, File: data}, nil
 }
 
 func CacheService(cachePath string, service *common.Service) error {

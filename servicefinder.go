@@ -91,7 +91,13 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 		addrList, err = f.zkManager.GetChildren(servicePath)
 		if err != nil {
 			fmt.Println("useservice:", err)
-			// todo
+			service, err := GetServiceFromCache(f.config.CachePath, n)
+			if err != nil {
+				fmt.Println(err)
+				//todo notify
+			} else {
+				serviceList[n] = service
+			}
 		} else if len(addrList) > 0 {
 			fmt.Println("sp", servicePath)
 			fmt.Println(addrList)
@@ -121,7 +127,19 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 			addrList := e.Children()
 			if len(addrList) > 0 {
 				service := getServiceWithWatcher(f.zkManager, servicePath, n, addrList, interHandle)
-				serviceChan <- service
+				if len(service.Name) > 0 {
+					serviceChan <- service
+				} else {
+					service, err := GetServiceFromCache(f.config.CachePath, n)
+					if err != nil {
+						fmt.Println(err)
+						//todo notify
+						serviceChan <- &common.Service{}
+					} else {
+						serviceChan <- service
+					}
+				}
+
 				return nil
 			}
 			serviceChan <- &common.Service{}
@@ -129,8 +147,15 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 		})
 		// handleChan := ServiceHandle{ChangedHandler: handler}
 		if err != nil {
-			// todo
-			serviceChan <- &common.Service{}
+			service, err := GetServiceFromCache(f.config.CachePath, n)
+			if err != nil {
+				fmt.Println(err)
+				//todo notify
+				serviceChan <- &common.Service{}
+			} else {
+				serviceChan <- service
+			}
+
 			continue
 		}
 

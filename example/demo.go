@@ -65,11 +65,11 @@ func testCache(cachepath string) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	data, err := finder.GetConfigFromCache(cachepath, "default.cfg")
+	c, err := finder.GetConfigFromCache(cachepath, "default.cfg")
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("default.cfg:", string(data))
+		fmt.Println("default.cfg:", string(c.File))
 	}
 
 	zkInfo := &common.ZkInfo{
@@ -218,25 +218,28 @@ func testUseConfigAsync(f *finder.FinderManager) {
 	// if err != nil {
 	// 	fmt.Println(err)
 	// }
-	handler := new(ConfigChangedHandle)
-	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	for _, c := range configFiles {
-		fmt.Println(c.Name, ":\r\n", string(c.File))
-	}
-
+	//handler := new(ConfigChangedHandle)
 	count := 0
 	for {
-		count++
+		fmt.Println("The ", count, "th show:")
+		//configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+		configFiles, err := f.ConfigFinder.UseConfig([]string{"xsfc.tmol"})
+
+		if err != nil {
+			fmt.Println(err)
+		}
+		for _, c := range configFiles {
+			fmt.Println(c.Name, ":\r\n", string(c.File))
+		}
+
 		if count > 200 {
 			f.ConfigFinder.UnSubscribeConfig("default.toml")
 		}
 		if count > 600 {
 			break
 		}
-		time.Sleep(time.Second * 1)
+		count++
+		time.Sleep(time.Second * 10)
 	}
+
 }

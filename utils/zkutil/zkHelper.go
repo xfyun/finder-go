@@ -43,7 +43,9 @@ func close(zm *ZkManager) error {
 func addListeners(zm *ZkManager) {
 	connListener := curator.NewConnectionStateListener(onConnectionStateChanged)
 	listener := curator.NewCuratorListener(func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-		fmt.Println("listener type:", e.Type().String())
+		// fmt.Println("listener type:", e.Type().String())
+		// fmt.Println(e.WatchedEvent())
+		// fmt.Println(e.WatchedEvent().Type)
 		// EventNodeCreated:         "EventNodeCreated",
 		// EventNodeDeleted:         "EventNodeDeleted",
 		// EventNodeDataChanged:     "EventNodeDataChanged",
