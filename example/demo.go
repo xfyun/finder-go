@@ -22,7 +22,7 @@ func main() {
 		CompanionUrl:     "http://10.1.86.223:9080",
 		CachePath:        cachePath,
 		TickerDuration:   5000,
-		ZkSessionTimeout: 100 * time.Second,
+		ZkSessionTimeout: 1000 * time.Second,
 		ZkConnectTimeout: 300 * time.Second,
 		ZkMaxSleepTime:   15 * time.Second,
 		ZkMaxRetryNum:    3,

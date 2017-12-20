@@ -35,8 +35,16 @@ func (f *ServiceFinder) RegisterService() error {
 		return err
 	}
 	parentPath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
+	err = register(f.zkManager, parentPath, f.config.MeteData.Address, data)
+	if err != nil {
+		return err
+	}
+	err = registerService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	return register(f.zkManager, parentPath, f.config.MeteData.Address, data)
+	return nil
 }
 
 func (f *ServiceFinder) RegisterServiceWithAddr(addr string) error {

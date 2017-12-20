@@ -1,1 +1,36 @@
 package companion
+
+import (
+	"encoding/json"
+	"finder-go/errors"
+	"finder-go/utils/httputil"
+	"fmt"
+	"net/http"
+)
+
+func RegisterService(hc *http.Client, url string, project string, group string, service string) error {
+	contentType := "application/x-www-form-urlencoded"
+	params := []byte(fmt.Sprintf("project=%s&group=%s&service=%s", project, group, service))
+	result, err := httputil.DoPost(hc, contentType, url, params)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	var r JSONResult
+	err = json.Unmarshal([]byte(result), &r)
+	if err != nil {
+		return err
+	}
+	if r.Ret != 0 {
+		err = &errors.FinderError{
+			Ret:  errors.FeedbackServiceError,
+			Func: "FeedbackForService",
+			Desc: r.Msg,
+		}
+
+		return err
+	}
+
+	return nil
+}

@@ -257,3 +257,8 @@ func pushServiceFeedback(companionUrl string, f *common.ServiceFeedback) error {
 	url := companionUrl + "/finder/push_service_feedback"
 	return companion.FeedbackForService(hc, url, f)
 }
+
+func registerService(companionUrl string, project string, group string, service string) error {
+	url := companionUrl + "/finder/register_service_info"
+	return companion.RegisterService(hc, url, project, group, service)
+}
