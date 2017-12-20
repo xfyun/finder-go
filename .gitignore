@@ -5,4 +5,5 @@
 *.jar
 *.DS_Store
 debug
+example
 findercache
