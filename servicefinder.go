@@ -102,6 +102,10 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 			fmt.Println("sp", servicePath)
 			fmt.Println(addrList)
 			serviceList[n] = getService(f.zkManager, servicePath, n, addrList)
+			err = CacheService(f.config.CachePath, serviceList[n])
+			if err != nil {
+				fmt.Println("CacheService failed")
+			}
 		}
 	}
 
@@ -128,6 +132,10 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 			if len(addrList) > 0 {
 				service := getServiceWithWatcher(f.zkManager, servicePath, n, addrList, interHandle)
 				if len(service.Name) > 0 {
+					err = CacheService(f.config.CachePath, service)
+					if err != nil {
+						fmt.Println("CacheService failed")
+					}
 					serviceChan <- service
 				} else {
 					service, err := GetServiceFromCache(f.config.CachePath, n)

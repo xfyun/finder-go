@@ -87,27 +87,124 @@ func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
 
 func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string) {
 	eventList := make([]*common.ServiceInstanceChangedEvent, 0)
-	event := &common.ServiceInstanceChangedEvent{
-		EventType: common.INSTANCEADDED,
+	newInstances := []*common.ServiceInstance{}
+	cachedService, err := GetServiceFromCache(s.config.CachePath, name)
+	if err != nil {
+		fmt.Println("GetServiceFromCache", name, err)
+		cachedService = &common.Service{Name: name, ServerList: newInstances}
 	}
-	//todo
-	instances := make([]*common.ServiceInstance, 0)
 	if len(addrList) > 0 {
 		servicePath := fmt.Sprintf("%s/%s/provider", s.zkManager.MetaData.ServiceRootPath, s.config.MeteData.Service)
-		for _, inst := range addrList {
-			serviceInstance, err := getServiceInstance(s.zkManager, servicePath, inst)
+		if len(cachedService.ServerList) > 0 {
+			oldInstances, deletedEvent := getDeletedInstEvent(addrList, cachedService.ServerList)
+			if deletedEvent != nil {
+				eventList = append(eventList, deletedEvent)
+			}
+			if oldInstances != nil {
+				newInstances = append(newInstances, oldInstances...)
+			}
+			addedEvent := getAddedInstEvents(s.zkManager, servicePath, addrList, cachedService.ServerList)
+			if addedEvent != nil {
+				newInstances = append(newInstances, addedEvent.ServerList...)
+				eventList = append(eventList, addedEvent)
+			}
+		} else {
+			addedEvent := getAddedInstEvents(s.zkManager, servicePath, addrList, cachedService.ServerList)
+			if addedEvent != nil {
+				newInstances = append(newInstances, addedEvent.ServerList...)
+				eventList = append(eventList, addedEvent)
+			}
+		}
+	} else {
+		oldInstances, deletedEvent := getDeletedInstEvent(addrList, cachedService.ServerList)
+		if deletedEvent != nil {
+			eventList = append(eventList, deletedEvent)
+		}
+		if oldInstances != nil {
+			newInstances = append(newInstances, oldInstances...)
+		}
+	}
+
+	cachedService.ServerList = newInstances
+	err = CacheService(s.config.CachePath, cachedService)
+	if err != nil {
+		fmt.Println("CacheService failed")
+	}
+
+	ok := s.ChangedHandler.OnServiceInstanceChanged(name, eventList)
+	if !ok {
+		fmt.Println("OnServiceInstanceChanged is not ok")
+	}
+}
+
+func getDeletedInstEvent(addrList []string, insts []*common.ServiceInstance) ([]*common.ServiceInstance, *common.ServiceInstanceChangedEvent) {
+	var event *common.ServiceInstanceChangedEvent
+	var oldInstances []*common.ServiceInstance
+	var deletedInstances []*common.ServiceInstance
+	var deleted bool
+	for _, inst := range insts {
+		deleted = true
+		for _, addr := range addrList {
+			if addr == inst.Addr {
+				deleted = false
+				if oldInstances == nil {
+					oldInstances = []*common.ServiceInstance{}
+				}
+				oldInstances = append(oldInstances, inst)
+			}
+		}
+		if deleted {
+			if deletedInstances == nil {
+				deletedInstances = []*common.ServiceInstance{}
+			}
+			deletedInstances = append(deletedInstances, inst)
+		}
+	}
+
+	if deletedInstances != nil {
+		event = &common.ServiceInstanceChangedEvent{
+			EventType:  common.INSTANCEREMOVE,
+			ServerList: deletedInstances,
+		}
+	}
+
+	return oldInstances, event
+}
+
+func getAddedInstEvents(zm *zkutil.ZkManager, servicePath string, addrList []string, insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
+	var event *common.ServiceInstanceChangedEvent
+	var addedInstances []*common.ServiceInstance
+	var added bool
+	for _, addr := range addrList {
+		added = true
+		for _, inst := range insts {
+			if addr == inst.Addr {
+				added = false
+			}
+		}
+		if added {
+			inst, err := getServiceInstance(zm, servicePath, addr)
 			if err != nil {
 				fmt.Println(err)
 				// todo
 				continue
 			}
 
-			instances = append(instances, serviceInstance)
+			if addedInstances == nil {
+				addedInstances = []*common.ServiceInstance{}
+			}
+			addedInstances = append(addedInstances, inst)
 		}
 	}
-	event.ServerList = instances
-	eventList = append(eventList, event)
-	s.ChangedHandler.OnServiceInstanceChanged(name, eventList)
+
+	if addedInstances != nil {
+		event = &common.ServiceInstanceChangedEvent{
+			EventType:  common.INSTANCEADDED,
+			ServerList: addedInstances,
+		}
+	}
+
+	return event
 }
 
 type ConfigHandle struct {
@@ -134,6 +231,12 @@ func (s *ConfigHandle) OnConfigFileChanged(name string, data []byte) {
 
 		ok := s.ChangedHandler.OnConfigFileChanged(c)
 		if ok {
+			err = CacheConfig(s.config.CachePath, c)
+			if err != nil {
+				fmt.Println(err)
+				// todo
+			}
+
 			fmt.Println("load success:", pushID)
 			f.LoadStatus = 1
 		}
