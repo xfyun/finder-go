@@ -78,7 +78,7 @@ func checkConfig(c *common.BootConfig) {
 		c.ZkConnectTimeout = 3 * time.Second
 	}
 	if c.ZkSessionTimeout <= 0 {
-		c.ZkSessionTimeout = 30 * time.Second
+		c.ZkSessionTimeout = 1800 * time.Second
 	}
 	if c.ZkMaxRetryNum < 0 {
 		c.ZkMaxRetryNum = 3

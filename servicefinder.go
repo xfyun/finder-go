@@ -39,6 +39,7 @@ func (f *ServiceFinder) RegisterService() error {
 	if err != nil {
 		return err
 	}
+
 	err = registerService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service)
 	if err != nil {
 		fmt.Println(err)

@@ -19,7 +19,7 @@ func main() {
 	}
 	cachePath += "/findercache"
 	config := common.BootConfig{
-		CompanionUrl:     "http://10.1.86.223:9080",
+		CompanionUrl:     "http://10.1.86.228:9080",
 		CachePath:        cachePath,
 		TickerDuration:   5000,
 		ZkSessionTimeout: 1000 * time.Second,
@@ -45,13 +45,13 @@ func main() {
 	f, err := finder.NewFinder(config)
 	if err != nil {
 		fmt.Println(err)
+	} else {
+		testUseConfigAsync(f)
+		//testCache(cachePath)
+		//testServiceAsync(f)
+
+		//testConfigFeedback()
 	}
-
-	//testUseConfigAsync(f)
-	//testCache(cachePath)
-	testServiceAsync(f)
-
-	//testConfigFeedback()
 
 }
 
@@ -213,24 +213,27 @@ func testServiceAsync(f *finder.FinderManager) {
 }
 
 func testUseConfigAsync(f *finder.FinderManager) {
-
 	// configFiles, err := f.ConfigFinder.UseConfig([]string{"test.toml"})
 	// if err != nil {
 	// 	fmt.Println(err)
 	// }
-	//handler := new(ConfigChangedHandle)
+	handler := new(ConfigChangedHandle)
 	count := 0
+	fmt.Println("The ", count, "th show:")
+	f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, c := range configFiles {
+		fmt.Println(c.Name, ":\r\n", string(c.File))
+	}
 	for {
-		fmt.Println("The ", count, "th show:")
+		//fmt.Println("The ", count, "th show:")
 		//configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
-		configFiles, err := f.ConfigFinder.UseConfig([]string{"xsfc.tmol"})
 
-		if err != nil {
-			fmt.Println(err)
-		}
-		for _, c := range configFiles {
-			fmt.Println(c.Name, ":\r\n", string(c.File))
-		}
+		//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+		//configFiles, err := f.ConfigFinder.UseConfig([]string{"xsfc.tmol"})
 
 		if count > 200 {
 			f.ConfigFinder.UnSubscribeConfig("default.toml")
@@ -239,7 +242,7 @@ func testUseConfigAsync(f *finder.FinderManager) {
 			break
 		}
 		count++
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 1)
 	}
 
 }

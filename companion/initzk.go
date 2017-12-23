@@ -5,14 +5,31 @@ import (
 	"finder-go/common"
 	"finder-go/errors"
 	"finder-go/utils/httputil"
+	"fmt"
 	"net/http"
+	"time"
 )
 
 // GetZkInfo for getting zk metadata
 func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
-	result, err := httputil.DoGet(hc, url)
-	if err != nil {
-		return nil, err
+	var result []byte
+	var err error
+	retryNum := 0
+	for {
+		result, err = httputil.DoGet(hc, url)
+		if err != nil {
+			fmt.Println(err)
+			if retryNum < 3 {
+				retryNum++
+				fmt.Println("The ", retryNum, "th GetZkInfo")
+				time.Sleep(time.Millisecond * 100)
+				continue
+			} else {
+				return nil, err
+			}
+		} else {
+			break
+		}
 	}
 
 	var r JSONResult

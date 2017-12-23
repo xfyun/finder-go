@@ -1,6 +1,7 @@
 package zkutil
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -52,6 +53,19 @@ func addListeners(zm *ZkManager) {
 		// EventNodeChildrenChanged: "EventNodeChildrenChanged",
 		// EventSession:             "EventSession",
 		// EventNotWatching:         "EventNotWatching",
+
+		// fmt.Println("e", e == nil)
+		// fmt.Println("e.WatchedEvent()", e.WatchedEvent() == nil)
+		// fmt.Println("e.WatchedEvent().Type", e.WatchedEvent().Type)
+		if e == nil {
+			fmt.Println("e is nil")
+			return errors.New("CuratorListener:e is nil")
+		}
+		if e.WatchedEvent() == nil {
+			fmt.Println("e.WatchedEvent() is nil")
+			return errors.New("CuratorListener:e.WatchedEvent() is nil")
+		}
+
 		switch e.WatchedEvent().Type {
 		case zk.EventNodeCreated:
 			fmt.Println("watchevent:", e.WatchedEvent())

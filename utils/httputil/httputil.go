@@ -23,7 +23,7 @@ func DoGet(client *http.Client, url string) ([]byte, error) {
 	}
 	err = resp.Body.Close()
 	if err != nil {
-
+		fmt.Println(err)
 	}
 
 	return result, nil
