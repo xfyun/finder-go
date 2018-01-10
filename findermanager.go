@@ -34,10 +34,11 @@ func init() {
 
 // FinderManager for controll all
 type FinderManager struct {
-	config        *common.BootConfig
-	ConfigFinder  *ConfigFinder
-	ServiceFinder *ServiceFinder
-	zkManager     *zkutil.ZkManager
+	config         *common.BootConfig
+	ConfigFinder   *ConfigFinder
+	ServiceFinder  *ServiceFinder
+	zkManager      *zkutil.ZkManager
+	InternalLogger common.Logger
 }
 
 func checkCachePath(path string) (string, error) {
@@ -69,7 +70,10 @@ func createCacheDir(path string) error {
 }
 
 // NewFinder for creating an instance
-func NewFinder(config common.BootConfig) (*FinderManager, error) {
+func NewFinder(config common.BootConfig, logger common.Logger) (*FinderManager, error) {
+	if logger == nil {
+		logger = common.NewDefaultLogger()
+	}
 	// 检查缓存路径，如果传入cachePath是空，则使用默认路径
 	p, err := checkCachePath(config.CachePath)
 	if err != nil {
@@ -84,6 +88,7 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	config.CachePath = p
 	// 初始化finder
 	fm := new(FinderManager)
+	fm.InternalLogger = logger
 	fm.config = &config
 	// 初始化zk
 	fm.zkManager, err = zkutil.NewZkManager(fm.config)
