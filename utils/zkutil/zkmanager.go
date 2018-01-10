@@ -1,17 +1,19 @@
 package zkutil
 
 import (
+	"errors"
 	"finder-go/common"
 	"finder-go/companion"
 	"finder-go/utils/arrayutil"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/curator-go/curator"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/cooleric/curator"
+	"github.com/cooleric/go-zookeeper/zk"
 )
 
 var (
@@ -22,6 +24,8 @@ var (
 	ServiceEventPool *ServiceChangedEventPool
 	ConsumeEventPool *ServiceChangedEventPool
 )
+
+type OnZkSessionExpiredEvent func()
 
 func init() {
 	hc = &http.Client{
@@ -45,8 +49,11 @@ func init() {
 // ZkManager for operate zk
 type ZkManager struct {
 	MetaData          *common.ZkInfo
+	watcherPool       map[string]map[string]curator.BackgroundCallback
+	tempNodePool      map[string]map[string][]byte
 	checkZkInfoTicker *time.Ticker
 	zkClient          curator.CuratorFramework
+	expired           bool
 }
 
 // NewZkManager for create ZkManager
@@ -72,7 +79,7 @@ func NewZkManager(config *common.BootConfig) (*ZkManager, error) {
 
 func checkConfig(c *common.BootConfig) {
 	if c.TickerDuration <= 0 {
-		c.ZkConnectTimeout = 30 * time.Second
+		c.TickerDuration = 30 * time.Second
 	}
 	if c.ZkConnectTimeout <= 0 {
 		c.ZkConnectTimeout = 3 * time.Second
@@ -95,10 +102,28 @@ func init_(config *common.BootConfig) (*ZkManager, error) {
 		return nil, err
 	}
 	zm := &ZkManager{
-		MetaData: metadata,
+		MetaData:     metadata,
+		watcherPool:  initWatcherPool(),
+		tempNodePool: initTempNodePool(),
 	}
 
 	return zm, nil
+}
+
+func initWatcherPool() map[string]map[string]curator.BackgroundCallback {
+	watcherPool := make(map[string]map[string]curator.BackgroundCallback)
+	watcherPool["GetNodeDataW"] = make(map[string]curator.BackgroundCallback)
+	watcherPool["GetChildrenW"] = make(map[string]curator.BackgroundCallback)
+
+	return watcherPool
+}
+
+func initTempNodePool() map[string]map[string][]byte {
+	tempNodePool := make(map[string]map[string][]byte)
+	tempNodePool["CreateTempPath"] = make(map[string][]byte)
+	tempNodePool["CreateTempPathWithData"] = make(map[string][]byte)
+
+	return tempNodePool
 }
 
 func (zm *ZkManager) CreatePath(path string) (string, error) {
@@ -110,10 +135,12 @@ func (zm *ZkManager) CreatePathWithData(path string, data []byte) (string, error
 }
 
 func (zm *ZkManager) CreateTempPath(path string) (string, error) {
+	zm.tempNodePool["CreateTempPath"][path] = nil
 	return zm.zkClient.Create().CreatingParentsIfNeeded().WithMode(curator.EPHEMERAL).ForPath(path)
 }
 
 func (zm *ZkManager) CreateTempPathWithData(path string, data []byte) (string, error) {
+	zm.tempNodePool["CreateTempPathWithData"][path] = data
 	return zm.zkClient.Create().CreatingParentsIfNeeded().WithMode(curator.EPHEMERAL).ForPathWithData(path, data)
 }
 
@@ -142,14 +169,17 @@ func (zm *ZkManager) UpdateDataWithCheckExists(path string, data []byte) (*zk.St
 }
 
 func (zm *ZkManager) GetNodeData(path string) ([]byte, error) {
-	// return zm.zkClient.GetData().Decompressed().ForPath(path)
 	return zm.zkClient.GetData().ForPath(path)
 }
 
 func (zm *ZkManager) GetNodeDataW(path string, c curator.BackgroundCallback) error {
-	// return zm.zkClient.GetData().Decompressed().UsingWatcher(watcher).ForPath(path)
-	fmt.Println(path)
+	zm.watcherPool["GetNodeDataW"][path] = c
 	_, err := zm.zkClient.GetData().InBackgroundWithCallback(c).Watched().ForPath(path)
+	return err
+}
+
+func (zm *ZkManager) GetNodeDataWForRecover(path string) error {
+	_, err := zm.zkClient.GetData().InBackground().Watched().ForPath(path)
 	return err
 }
 
@@ -158,7 +188,13 @@ func (zm *ZkManager) GetChildrenNodeUseWatch(path string, watcher curator.Watche
 }
 
 func (zm *ZkManager) GetChildrenW(path string, c curator.BackgroundCallback) error {
+	zm.watcherPool["GetChildrenW"][path] = c
 	_, err := zm.zkClient.GetChildren().InBackgroundWithCallback(c).Watched().ForPath(path)
+	return err
+}
+
+func (zm *ZkManager) GetChildrenWForRecoer(path string) error {
+	_, err := zm.zkClient.GetChildren().InBackground().Watched().ForPath(path)
 	return err
 }
 
@@ -184,10 +220,63 @@ func (zm *ZkManager) RemoveListener(listener curator.CuratorListener) {
 
 func (zm *ZkManager) Destroy() {
 	zkExit <- true
+
 	zm.checkZkInfoTicker.Stop()
+
 	err := close(zm)
 	if err != nil {
 
+	}
+}
+
+func (zm *ZkManager) OnZkSessionExpired() {
+	recoverTempNode(zm)
+	recoverWatcher(zm)
+}
+
+func recoverWatcher(zm *ZkManager) {
+	for f, v := range zm.watcherPool {
+		switch f {
+		case "GetNodeDataW":
+			for p, _ := range v {
+				err := zm.GetNodeDataWForRecover(p)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		case "GetChildrenW":
+			for p, _ := range v {
+				err := zm.GetChildrenWForRecoer(p)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+	}
+}
+
+func recoverTempNode(zm *ZkManager) {
+	for f, v := range zm.tempNodePool {
+		switch f {
+		case "CreateTempPath":
+			for p, _ := range v {
+				r, err := zm.CreateTempPath(p)
+				if err != nil {
+					log.Fatal(err)
+				} else {
+					log.Println(r)
+				}
+			}
+		case "CreateTempPathWithData":
+			for p, v := range v {
+				r, err := zm.CreateTempPathWithData(p, v)
+				if err != nil {
+					log.Fatal(err)
+				} else {
+					log.Println(r)
+				}
+			}
+		}
 	}
 }
 
@@ -203,7 +292,7 @@ func onEventNodeChildrenChanged(c curator.CuratorFramework, e curator.CuratorEve
 		return nil
 	}
 
-	return nil
+	return errors.New(common.ServiceEventPrefix + serviceName + " couldn't be found in ServiceEventPool")
 }
 
 func onEventNodeCreated(e *zk.Event) {

@@ -6,7 +6,7 @@ import (
 	"finder-go/utils/zkutil"
 	"fmt"
 
-	"github.com/curator-go/curator"
+	"github.com/cooleric/curator"
 )
 
 var (

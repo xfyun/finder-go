@@ -25,7 +25,7 @@ func RegisterService(hc *http.Client, url string, project string, group string, 
 	if r.Ret != 0 {
 		err = &errors.FinderError{
 			Ret:  errors.FeedbackServiceError,
-			Func: "FeedbackForService",
+			Func: "RegisterService",
 			Desc: r.Msg,
 		}
 

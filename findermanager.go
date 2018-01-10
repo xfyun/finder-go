@@ -90,6 +90,7 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config}
 	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config}
 

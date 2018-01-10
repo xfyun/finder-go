@@ -8,8 +8,8 @@ import (
 	"finder-go/utils/zkutil"
 	"fmt"
 
-	"github.com/curator-go/curator"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/cooleric/curator"
+	"github.com/cooleric/go-zookeeper/zk"
 )
 
 type ServiceFinder struct {

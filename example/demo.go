@@ -19,11 +19,11 @@ func main() {
 	}
 	cachePath += "/findercache"
 	config := common.BootConfig{
-		CompanionUrl:     "http://10.1.86.228:9080",
+		CompanionUrl:     "http://10.1.86.223:9080",
 		CachePath:        cachePath,
 		TickerDuration:   5000,
-		ZkSessionTimeout: 1000 * time.Second,
-		ZkConnectTimeout: 300 * time.Second,
+		ZkSessionTimeout: 5 * time.Second,
+		ZkConnectTimeout: 3 * time.Second,
 		ZkMaxSleepTime:   15 * time.Second,
 		ZkMaxRetryNum:    3,
 		// MeteData: &common.ServiceMeteData{
@@ -33,11 +33,18 @@ func main() {
 		// 	Version: "1.0.0",
 		// 	Address: "127.0.0.1:9091",
 		// },
+		// MeteData: &common.ServiceMeteData{
+		// 	Project: "test",
+		// 	Group:   "default",
+		// 	Service: "xsf",
+		// 	Version: "1.0.0",
+		// 	Address: "127.0.0.1:9091",
+		// },
 		MeteData: &common.ServiceMeteData{
-			Project: "test",
-			Group:   "default",
-			Service: "xsf",
-			Version: "1.0.0",
+			Project: "AIaaS",
+			Group:   "aitest_weiwang26",
+			Service: "aitest_weiwang26",
+			Version: "v1.0.3",
 			Address: "127.0.0.1:9091",
 		},
 	}
@@ -46,9 +53,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		testUseConfigAsync(f)
+		//testUseConfigAsync(f)
 		//testCache(cachePath)
-		//testServiceAsync(f)
+		testServiceAsync(f)
 
 		//testConfigFeedback()
 	}
@@ -152,32 +159,33 @@ func testConfigFeedback() {
 
 func testServiceAsync(f *finder.FinderManager) {
 	var err error
-	err = f.ServiceFinder.RegisterService()
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("RegisterService is ok.")
-	}
-	time.Sleep(time.Second * 2)
+	// err = f.ServiceFinder.RegisterService()
+	// //err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println("RegisterService is ok.")
+	// }
+	// time.Sleep(time.Second * 2)
 
-	serviceList, err := f.ServiceFinder.UseService([]string{"xrpc"})
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		for _, s := range serviceList {
-			fmt.Println(s.Name, ":")
-			for _, item := range s.ServerList {
-				fmt.Println("addr:", item.Addr)
-				fmt.Println("weight:", item.Config.Weight)
-				fmt.Println("is_valid:", item.Config.IsValid)
-			}
-		}
+	// serviceList, err := f.ServiceFinder.UseService([]string{"xrpc"})
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	for _, s := range serviceList {
+	// 		fmt.Println(s.Name, ":")
+	// 		for _, item := range s.ServerList {
+	// 			fmt.Println("addr:", item.Addr)
+	// 			fmt.Println("weight:", item.Config.Weight)
+	// 			fmt.Println("is_valid:", item.Config.IsValid)
+	// 		}
+	// 	}
 
-		time.Sleep(time.Second * 2)
-	}
+	// 	time.Sleep(time.Second * 2)
+	// }
 
 	handler := new(ServiceChangedHandle)
-	serviceList, err = f.ServiceFinder.UseAndSubscribeService([]string{"xsf"}, handler)
+	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26"}, handler)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -220,8 +228,8 @@ func testUseConfigAsync(f *finder.FinderManager) {
 	handler := new(ConfigChangedHandle)
 	count := 0
 	fmt.Println("The ", count, "th show:")
-	f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
-	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+	f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
+	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
 	if err != nil {
 		fmt.Println(err)
 	}

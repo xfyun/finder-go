@@ -3,11 +3,12 @@ package zkutil
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
-	"github.com/curator-go/curator"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/cooleric/curator"
+	"github.com/cooleric/go-zookeeper/zk"
 )
 
 func getRetryPolicy(maxRetryNum int, maxSleepTime time.Duration) curator.RetryPolicy {
@@ -58,30 +59,54 @@ func addListeners(zm *ZkManager) {
 		// fmt.Println("e.WatchedEvent()", e.WatchedEvent() == nil)
 		// fmt.Println("e.WatchedEvent().Type", e.WatchedEvent().Type)
 		if e == nil {
-			fmt.Println("e is nil")
+			log.Fatalln("e is nil")
 			return errors.New("CuratorListener:e is nil")
 		}
 		if e.WatchedEvent() == nil {
-			fmt.Println("e.WatchedEvent() is nil")
+			log.Fatalln("e.WatchedEvent() is nil")
 			return errors.New("CuratorListener:e.WatchedEvent() is nil")
 		}
 
 		switch e.WatchedEvent().Type {
 		case zk.EventNodeCreated:
-			fmt.Println("watchevent:", e.WatchedEvent())
+			log.Println("watchevent:", e.WatchedEvent())
 		case zk.EventNodeDeleted:
-			fmt.Println("watchevent:", e.WatchedEvent())
+			log.Println("watchevent:", e.WatchedEvent())
 		case zk.EventNodeDataChanged:
-			fmt.Println("watchevent:", e.WatchedEvent(), e.Data())
+			log.Println("watchevent:", e.WatchedEvent(), e.Data())
 			err := zm.GetNodeDataW(e.Path(), onEventNodeDataChanged)
 			if err != nil {
+				log.Fatalln(err)
 				// todo
 			}
 		case zk.EventNodeChildrenChanged:
-			fmt.Println("watchevent:", e.WatchedEvent(), e.Children(), e.Data())
+			log.Println("watchevent:", e.WatchedEvent(), e.Children(), e.Data())
 			err := zm.GetChildrenW(e.Path(), onEventNodeChildrenChanged)
 			if err != nil {
+				log.Fatalln(err)
 				// todo
+			}
+		case zk.EventSession:
+			log.Println("watchevent:", e.WatchedEvent())
+			switch e.WatchedEvent().State {
+			case zk.StateExpired:
+				zm.expired = true
+				log.Println("zk expired by self")
+				// if c.BlockUntilConnected() == nil {
+				// 	zm.Destroy()
+				// 	log.Println("begin recocer session")
+				// 	zm.OnZkSessionExpired()
+				// 	log.Println("recocer session end")
+				// }
+				break
+			case zk.StateHasSession:
+				if zm.expired {
+					log.Println("begin recocer session")
+					zm.OnZkSessionExpired()
+					log.Println("recocer session end")
+					zm.expired = false
+				}
+
 			}
 		}
 

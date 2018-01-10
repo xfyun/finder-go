@@ -94,7 +94,7 @@ func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string)
 		cachedService = &common.Service{Name: name, ServerList: newInstances}
 	}
 	if len(addrList) > 0 {
-		servicePath := fmt.Sprintf("%s/%s/provider", s.zkManager.MetaData.ServiceRootPath, s.config.MeteData.Service)
+		servicePath := fmt.Sprintf("%s/%s/provider", s.zkManager.MetaData.ServiceRootPath, name)
 		if len(cachedService.ServerList) > 0 {
 			oldInstances, deletedEvent := getDeletedInstEvent(addrList, cachedService.ServerList)
 			if deletedEvent != nil {
