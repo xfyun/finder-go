@@ -1,13 +1,14 @@
-package companion
+package finder
 
 import (
 	"encoding/json"
-	"finder-go/common"
-	"finder-go/errors"
-	"finder-go/utils/httputil"
 	"fmt"
 	"net/http"
 	"time"
+
+	common "git.xfyun.cn/AIaas/finder-go/common"
+	errors "git.xfyun.cn/AIaas/finder-go/errors"
+	"git.xfyun.cn/AIaas/finder-go/utils/httputil"
 )
 
 // GetZkInfo for getting zk metadata

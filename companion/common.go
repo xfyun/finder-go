@@ -1,4 +1,4 @@
-package companion
+package finder
 
 // JSONResult defined for companion
 type JSONResult struct {

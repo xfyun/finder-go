@@ -1,15 +1,16 @@
 package finder
 
 import (
-	"finder-go/common"
-	"finder-go/errors"
-	"finder-go/utils/fileutil"
-	"finder-go/utils/stringutil"
-	"finder-go/utils/zkutil"
 	"net"
 	"net/http"
 	"os"
 	"time"
+
+	common "git.xfyun.cn/AIaas/finder-go/common"
+	errors "git.xfyun.cn/AIaas/finder-go/errors"
+	"git.xfyun.cn/AIaas/finder-go/utils/fileutil"
+	"git.xfyun.cn/AIaas/finder-go/utils/stringutil"
+	"git.xfyun.cn/AIaas/finder-go/utils/zkutil"
 )
 
 var (

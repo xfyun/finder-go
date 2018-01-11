@@ -2,9 +2,10 @@ package finder
 
 import (
 	"encoding/json"
-	"finder-go/common"
-	"finder-go/utils/fileutil"
 	"fmt"
+
+	common "git.xfyun.cn/AIaas/finder-go/common"
+	"git.xfyun.cn/AIaas/finder-go/utils/fileutil"
 )
 
 func CacheZkInfo(cachePath string, zkInfo *common.ZkInfo) error {

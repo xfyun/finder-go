@@ -1,4 +1,4 @@
-package errors
+package finder
 
 type ReturnCode int
 

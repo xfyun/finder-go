@@ -2,14 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"finder-go"
-	"finder-go/common"
-	"finder-go/utils/httputil"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"time"
+
+	finder "git.xfyun.cn/AIaas/finder-go"
+
+	common "git.xfyun.cn/AIaas/finder-go/common"
+	"git.xfyun.cn/AIaas/finder-go/utils/httputil"
 )
 
 func main() {
@@ -159,14 +161,15 @@ func testConfigFeedback() {
 
 func testServiceAsync(f *finder.FinderManager) {
 	var err error
-	// err = f.ServiceFinder.RegisterService()
-	// //err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println("RegisterService is ok.")
-	// }
-	// time.Sleep(time.Second * 2)
+	err = f.ServiceFinder.RegisterService()
+	//err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("RegisterService is ok.")
+	}
+	time.Sleep(time.Second * 2)
+	return
 
 	// serviceList, err := f.ServiceFinder.UseService([]string{"xrpc"})
 	// if err != nil {

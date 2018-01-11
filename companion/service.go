@@ -1,11 +1,13 @@
-package companion
+package finder
 
 import (
 	"encoding/json"
-	"finder-go/errors"
-	"finder-go/utils/httputil"
+
 	"fmt"
 	"net/http"
+
+	errors "git.xfyun.cn/AIaas/finder-go/errors"
+	"git.xfyun.cn/AIaas/finder-go/utils/httputil"
 )
 
 func RegisterService(hc *http.Client, url string, project string, group string, service string) error {

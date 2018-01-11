@@ -1,8 +1,9 @@
-package common
+package finder
 
 import (
 	"encoding/binary"
-	"finder-go/errors"
+
+	errors "git.xfyun.cn/AIaas/finder-go/errors"
 )
 
 func DecodeValue(data []byte) (string, []byte, error) {

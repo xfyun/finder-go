@@ -1,11 +1,11 @@
 package finder
 
 import (
-	"finder-go/common"
-	"finder-go/errors"
-	"finder-go/utils/zkutil"
 	"fmt"
 
+	common "git.xfyun.cn/AIaas/finder-go/common"
+	errors "git.xfyun.cn/AIaas/finder-go/errors"
+	"git.xfyun.cn/AIaas/finder-go/utils/zkutil"
 	"github.com/cooleric/curator"
 )
 

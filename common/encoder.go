@@ -1,9 +1,11 @@
-package common
+package finder
 
 import (
 	"encoding/binary"
-	"finder-go/errors"
-	"finder-go/utils/byteutil"
+
+	errors "git.xfyun.cn/AIaas/finder-go/errors"
+
+	"git.xfyun.cn/AIaas/finder-go/utils/byteutil"
 )
 
 func EncodeValue(pushID string, data []byte) ([]byte, error) {

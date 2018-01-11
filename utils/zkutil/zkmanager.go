@@ -2,15 +2,16 @@ package zkutil
 
 import (
 	"errors"
-	"finder-go/common"
-	"finder-go/companion"
-	"finder-go/utils/arrayutil"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	common "git.xfyun.cn/AIaas/finder-go/common"
+	companion "git.xfyun.cn/AIaas/finder-go/companion"
+	"git.xfyun.cn/AIaas/finder-go/utils/arrayutil"
 
 	"github.com/cooleric/curator"
 	"github.com/cooleric/go-zookeeper/zk"

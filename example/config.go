@@ -1,8 +1,9 @@
 package main
 
 import (
-	"finder-go/common"
 	"fmt"
+
+	common "git.xfyun.cn/AIaas/finder-go/common"
 )
 
 type ConfigChangedHandle struct {

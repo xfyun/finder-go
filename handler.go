@@ -2,11 +2,12 @@ package finder
 
 import (
 	"encoding/json"
-	"finder-go/common"
-	"finder-go/companion"
-	"finder-go/utils/zkutil"
 	"fmt"
 	"time"
+
+	common "git.xfyun.cn/AIaas/finder-go/common"
+	companion "git.xfyun.cn/AIaas/finder-go/companion"
+	"git.xfyun.cn/AIaas/finder-go/utils/zkutil"
 )
 
 type ServiceHandle struct {

@@ -1,4 +1,4 @@
-package errors
+package finder
 
 import (
 	"fmt"
