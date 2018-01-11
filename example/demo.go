@@ -49,7 +49,7 @@ func main() {
 		},
 	}
 
-	f, err := finder.NewFinder(config, nil)
+	f, err := finder.NewFinderWithLogger(config, nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {
