@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
-	"git.xfyun.cn/AIaas/finder-go/utils/fileutil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
 )
 
 func CacheZkInfo(cachePath string, zkInfo *common.ZkInfo) error {

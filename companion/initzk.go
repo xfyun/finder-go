@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
-	errors "git.xfyun.cn/AIaas/finder-go/errors"
-	"git.xfyun.cn/AIaas/finder-go/utils/httputil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
 // GetZkInfo for getting zk metadata

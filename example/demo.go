@@ -8,10 +8,10 @@ import (
 	"os"
 	"time"
 
-	finder "git.xfyun.cn/AIaas/finder-go"
+	finder "git.xfyun.cn/AIaaS/finder-go"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
-	"git.xfyun.cn/AIaas/finder-go/utils/httputil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
 func main() {
@@ -84,7 +84,7 @@ func testCache(cachepath string) {
 	zkInfo := &common.ZkInfo{
 		ZkAddr:          []string{"10.1.86.73:2181", "10.1.86.74:2181"},
 		ConfigRootPath:  "/polaris/config/",
-		ServiceRootPath: "polaris/service/",
+		ServiceRootPath: "/polaris/service/",
 	}
 	err = finder.CacheZkInfo(cachepath, zkInfo)
 	if err != nil {

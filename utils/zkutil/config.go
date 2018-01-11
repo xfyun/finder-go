@@ -3,7 +3,7 @@ package zkutil
 import (
 	"sync"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
 )
 
 type ConfigChangedEventPool struct {

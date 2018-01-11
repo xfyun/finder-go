@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
 )
 
 type ConfigChangedHandle struct {

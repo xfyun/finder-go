@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
-	companion "git.xfyun.cn/AIaas/finder-go/companion"
-	"git.xfyun.cn/AIaas/finder-go/utils/zkutil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	companion "git.xfyun.cn/AIaaS/finder-go/companion"
+	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
 )
 
 type ServiceHandle struct {

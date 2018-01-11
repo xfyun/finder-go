@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
-	errors "git.xfyun.cn/AIaas/finder-go/errors"
-	"git.xfyun.cn/AIaas/finder-go/utils/fileutil"
-	"git.xfyun.cn/AIaas/finder-go/utils/stringutil"
-	"git.xfyun.cn/AIaas/finder-go/utils/zkutil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
+	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
+	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
 )
 
 var (

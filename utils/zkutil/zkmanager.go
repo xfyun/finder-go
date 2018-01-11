@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
-	companion "git.xfyun.cn/AIaas/finder-go/companion"
-	"git.xfyun.cn/AIaas/finder-go/utils/arrayutil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	companion "git.xfyun.cn/AIaaS/finder-go/companion"
+	"git.xfyun.cn/AIaaS/finder-go/utils/arrayutil"
 
 	"github.com/cooleric/curator"
 	"github.com/cooleric/go-zookeeper/zk"

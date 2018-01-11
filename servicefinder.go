@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	common "git.xfyun.cn/AIaas/finder-go/common"
-	errors "git.xfyun.cn/AIaas/finder-go/errors"
-	"git.xfyun.cn/AIaas/finder-go/utils/stringutil"
-	"git.xfyun.cn/AIaas/finder-go/utils/zkutil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
+	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
 	"github.com/cooleric/curator"
 	"github.com/cooleric/go-zookeeper/zk"
 )

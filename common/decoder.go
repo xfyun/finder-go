@@ -3,7 +3,7 @@ package finder
 import (
 	"encoding/binary"
 
-	errors "git.xfyun.cn/AIaas/finder-go/errors"
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 )
 
 func DecodeValue(data []byte) (string, []byte, error) {
