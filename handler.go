@@ -3,6 +3,7 @@ package finder
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
@@ -35,11 +36,11 @@ func (s *ServiceHandle) OnServiceInstanceConfigChanged(name string, addr string,
 	err = json.Unmarshal(config, c)
 	if err != nil {
 		f.LoadStatus = -1
-		fmt.Println(err)
+		log.Println(err)
 	} else {
 		ok := s.ChangedHandler.OnServiceInstanceConfigChanged(name, addr, c)
 		if ok {
-			fmt.Println("load success:", pushID)
+			log.Println("load success:", pushID)
 			f.LoadStatus = 1
 		}
 	}
@@ -47,7 +48,7 @@ func (s *ServiceHandle) OnServiceInstanceConfigChanged(name string, addr string,
 	f.LoadTime = time.Now().Unix()
 	err = pushServiceFeedback(s.config.CompanionUrl, f)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }
 
@@ -70,11 +71,11 @@ func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
 	err = json.Unmarshal(config, c)
 	if err != nil {
 		f.LoadStatus = -1
-		fmt.Println(err)
+		log.Println(err)
 	} else {
 		ok := s.ChangedHandler.OnServiceConfigChanged(name, c)
 		if ok {
-			fmt.Println("load success:", pushID)
+			log.Println("load success:", pushID)
 			f.LoadStatus = 1
 		}
 	}
@@ -82,7 +83,7 @@ func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
 	f.LoadTime = time.Now().Unix()
 	err = pushServiceFeedback(s.config.CompanionUrl, f)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }
 
@@ -91,7 +92,7 @@ func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string)
 	newInstances := []*common.ServiceInstance{}
 	cachedService, err := GetServiceFromCache(s.config.CachePath, name)
 	if err != nil {
-		fmt.Println("GetServiceFromCache", name, err)
+		log.Println("GetServiceFromCache", name, err)
 		cachedService = &common.Service{Name: name, ServerList: newInstances}
 	}
 	if len(addrList) > 0 {
@@ -129,12 +130,12 @@ func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string)
 	cachedService.ServerList = newInstances
 	err = CacheService(s.config.CachePath, cachedService)
 	if err != nil {
-		fmt.Println("CacheService failed")
+		log.Println("CacheService failed")
 	}
 
 	ok := s.ChangedHandler.OnServiceInstanceChanged(name, eventList)
 	if !ok {
-		fmt.Println("OnServiceInstanceChanged is not ok")
+		log.Println("OnServiceInstanceChanged is not ok")
 	}
 }
 
@@ -186,7 +187,7 @@ func getAddedInstEvents(zm *zkutil.ZkManager, servicePath string, addrList []str
 		if added {
 			inst, err := getServiceInstance(zm, servicePath, addr)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				// todo
 				continue
 			}
@@ -234,17 +235,17 @@ func (s *ConfigHandle) OnConfigFileChanged(name string, data []byte) {
 		if ok {
 			err = CacheConfig(s.config.CachePath, c)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				// todo
 			}
 
-			fmt.Println("load success:", pushID)
+			log.Println("load success:", pushID)
 			f.LoadStatus = 1
 		}
 		f.LoadTime = time.Now().Unix()
 		err = pushConfigFeedback(s.config.CompanionUrl, f)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}
 }
@@ -259,7 +260,7 @@ func pushServiceFeedback(companionUrl string, f *common.ServiceFeedback) error {
 	return companion.FeedbackForService(hc, url, f)
 }
 
-func registerService(companionUrl string, project string, group string, service string) error {
+func pushService(companionUrl string, project string, group string, service string) error {
 	url := companionUrl + "/finder/register_service_info"
 	return companion.RegisterService(hc, url, project, group, service)
 }

@@ -9,10 +9,11 @@ const (
 )
 
 const (
-	Success        ReturnCode = 0
-	InvalidParam   ReturnCode = 10000
-	ConfigMissName ReturnCode = 10100
-	ZkMissRootPath ReturnCode = 10200 + iota
+	Success             ReturnCode = 0
+	InvalidParam        ReturnCode = 10000
+	ConfigMissName      ReturnCode = 10100
+	ConfigMissCacheFile ReturnCode = 10101
+	ZkMissRootPath      ReturnCode = 10200 + iota
 	ZkMissAddr
 	ZkGetInfoError
 )

@@ -47,7 +47,7 @@ func (l *DefaultLogger) Debug(v ...interface{}) {
 }
 
 func (l *DefaultLogger) Error(v ...interface{}) {
-	log.Fatalln(v)
+	log.Println(v)
 }
 
 func (l *DefaultLogger) Infof(fmt string, v ...interface{}) {
@@ -59,5 +59,5 @@ func (l *DefaultLogger) Debugf(fmt string, v ...interface{}) {
 }
 
 func (l *DefaultLogger) Errorf(fmt string, v ...interface{}) {
-	log.Fatalf(fmt, v)
+	log.Printf(fmt, v)
 }

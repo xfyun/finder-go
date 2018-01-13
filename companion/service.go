@@ -2,6 +2,7 @@ package finder
 
 import (
 	"encoding/json"
+	"log"
 
 	"fmt"
 	"net/http"
@@ -15,7 +16,7 @@ func RegisterService(hc *http.Client, url string, project string, group string, 
 	params := []byte(fmt.Sprintf("project=%s&group=%s&service=%s", project, group, service))
 	result, err := httputil.DoPost(hc, contentType, url, params)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 

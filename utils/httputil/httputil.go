@@ -2,8 +2,8 @@ package httputil
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -14,7 +14,7 @@ func DoGet(client *http.Client, url string) ([]byte, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("status_code:", resp.StatusCode)
+		log.Println("status_code:", resp.StatusCode)
 	}
 
 	result, err := ioutil.ReadAll(resp.Body)
@@ -23,7 +23,7 @@ func DoGet(client *http.Client, url string) ([]byte, error) {
 	}
 	err = resp.Body.Close()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	return result, nil

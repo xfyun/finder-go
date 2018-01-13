@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -161,15 +162,15 @@ func testConfigFeedback() {
 
 func testServiceAsync(f *finder.FinderManager) {
 	var err error
-	err = f.ServiceFinder.RegisterService()
-	//err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("RegisterService is ok.")
-	}
-	time.Sleep(time.Second * 2)
-	return
+	// err = f.ServiceFinder.RegisterService()
+	// err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println("RegisterService is ok.")
+	// }
+	// time.Sleep(time.Second * 200)
+	// return
 
 	// serviceList, err := f.ServiceFinder.UseService([]string{"xrpc"})
 	// if err != nil {
@@ -230,14 +231,15 @@ func testUseConfigAsync(f *finder.FinderManager) {
 	// }
 	handler := new(ConfigChangedHandle)
 	count := 0
-	fmt.Println("The ", count, "th show:")
-	f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
+
+	f.InternalLogger.Info("The ", count, "th show:")
+	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
 	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	for _, c := range configFiles {
-		fmt.Println(c.Name, ":\r\n", string(c.File))
+		log.Println(c.Name, ":\r\n", string(c.File))
 	}
 	for {
 		//fmt.Println("The ", count, "th show:")

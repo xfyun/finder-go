@@ -1,8 +1,6 @@
 package finder
 
 import (
-	"fmt"
-
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
@@ -16,6 +14,7 @@ var (
 type ConfigFinder struct {
 	config    *common.BootConfig
 	zkManager *zkutil.ZkManager
+	logger    common.Logger
 }
 
 func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error) {
@@ -33,11 +32,11 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 	for _, n := range name {
 		data, err = f.zkManager.GetNodeData(f.zkManager.MetaData.ConfigRootPath + "/" + n)
 		if err != nil {
-			fmt.Println(err)
+			f.logger.Error(err)
 			// get config from cache
 			config, err := GetConfigFromCache(f.config.CachePath, n)
 			if err != nil {
-				fmt.Println(err)
+				f.logger.Error(err)
 				//todo
 			} else {
 				configFiles[n] = config
@@ -52,7 +51,7 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 				configFiles[n] = config
 				err = CacheConfig(f.config.CachePath, config)
 				if err != nil {
-					fmt.Println(err)
+					f.logger.Error(err)
 				}
 			}
 		}
@@ -80,7 +79,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 				// get config from cache
 				config, err := GetConfigFromCache(f.config.CachePath, e.Name())
 				if err != nil {
-					fmt.Println(err)
+					f.logger.Error(err)
 					//todo
 					fileChan <- &common.Config{}
 				} else {
@@ -92,7 +91,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			config := &common.Config{Name: e.Name(), File: file}
 			err = CacheConfig(f.config.CachePath, config)
 			if err != nil {
-				fmt.Println(err)
+				f.logger.Error(err)
 			}
 			fileChan <- config
 			return nil
@@ -101,7 +100,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			// get config from cache
 			config, err := GetConfigFromCache(f.config.CachePath, n)
 			if err != nil {
-				fmt.Println(err)
+				f.logger.Info(err)
 				//todo
 				fileChan <- &common.Config{}
 			} else {

@@ -133,8 +133,8 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 		return nil, err
 	}
 
-	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config}
-	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config}
+	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
+	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
 
 	if err != nil {
 		return nil, err

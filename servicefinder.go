@@ -3,6 +3,7 @@ package finder
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
@@ -15,58 +16,15 @@ import (
 type ServiceFinder struct {
 	zkManager *zkutil.ZkManager
 	config    *common.BootConfig
+	logger    common.Logger
 }
 
 func (f *ServiceFinder) RegisterService() error {
-	var err error
-	addr := f.config.MeteData.Address
-	if stringutil.IsNullOrEmpty(addr) {
-		err = &errors.FinderError{
-			Ret:  errors.ServiceMissAddr,
-			Func: "RegisterService",
-		}
-
-		return err
-	}
-
-	var data []byte
-	data, err = getDefaultServiceItemConfig(addr)
-	if err != nil {
-		return err
-	}
-	parentPath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
-	err = register(f.zkManager, parentPath, f.config.MeteData.Address, data)
-	if err != nil {
-		return err
-	}
-
-	err = registerService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	return nil
+	return registerService(f, f.config.MeteData.Address)
 }
 
 func (f *ServiceFinder) RegisterServiceWithAddr(addr string) error {
-	var err error
-	if stringutil.IsNullOrEmpty(addr) {
-		err = &errors.FinderError{
-			Ret:  errors.ServiceMissAddr,
-			Func: "RegisterService",
-		}
-
-		return err
-	}
-
-	var data []byte
-	data, err = getDefaultServiceItemConfig(addr)
-	if err != nil {
-		return err
-	}
-	parentPath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
-
-	return register(f.zkManager, parentPath, addr, data)
+	return registerService(f, addr)
 }
 
 func (f *ServiceFinder) UnRegisterService() error {
@@ -96,24 +54,24 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 	serviceList := make(map[string]*common.Service)
 	for _, n := range name {
 		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
-		fmt.Println("useservice:", servicePath)
+		f.logger.Info("useservice:", servicePath)
 		addrList, err = f.zkManager.GetChildren(servicePath)
 		if err != nil {
-			fmt.Println("useservice:", err)
+			f.logger.Info("useservice:", err)
 			service, err := GetServiceFromCache(f.config.CachePath, n)
 			if err != nil {
-				fmt.Println(err)
+				f.logger.Error(err)
 				//todo notify
 			} else {
 				serviceList[n] = service
 			}
 		} else if len(addrList) > 0 {
-			fmt.Println("sp", servicePath)
-			fmt.Println(addrList)
+			f.logger.Info("sp", servicePath)
+			f.logger.Info(addrList)
 			serviceList[n] = getService(f.zkManager, servicePath, n, addrList)
 			err = CacheService(f.config.CachePath, serviceList[n])
 			if err != nil {
-				fmt.Println("CacheService failed")
+				f.logger.Error("CacheService failed")
 			}
 		}
 	}
@@ -143,13 +101,13 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 				if len(service.Name) > 0 {
 					err = CacheService(f.config.CachePath, service)
 					if err != nil {
-						fmt.Println("CacheService failed")
+						f.logger.Info("CacheService failed")
 					}
 					serviceChan <- service
 				} else {
 					service, err := GetServiceFromCache(f.config.CachePath, n)
 					if err != nil {
-						fmt.Println(err)
+						f.logger.Info(err)
 						//todo notify
 						serviceChan <- &common.Service{}
 					} else {
@@ -166,7 +124,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 		if err != nil {
 			service, err := GetServiceFromCache(f.config.CachePath, n)
 			if err != nil {
-				fmt.Println(err)
+				f.logger.Info(err)
 				//todo notify
 				serviceChan <- &common.Service{}
 			} else {
@@ -197,31 +155,74 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 	return nil
 }
 
-func register(zm *zkutil.ZkManager, parentPath string, addr string, data []byte) error {
-	var node *zk.Stat
-	var err error
-	servicePath := parentPath + "/" + addr
-	node, err = zm.ExistsNode(servicePath)
-	if err != nil {
-		fmt.Println("ExistsNode", err)
-		return err
-	}
-	if node == nil {
-		err = createParentNode(zm, parentPath)
-		if err != nil {
-			fmt.Println("createParentNode", err)
-			return err
+func registerService(f *ServiceFinder, addr string) error {
+	if stringutil.IsNullOrEmpty(addr) {
+		err := &errors.FinderError{
+			Ret:  errors.ServiceMissAddr,
+			Func: "RegisterService",
 		}
 
-		return createTempNode(zm, servicePath, data)
+		f.logger.Error("RegisterService:", err)
+		return err
+	}
+
+	data, err := getDefaultServiceItemConfig(addr)
+	if err != nil {
+		f.logger.Error("RegisterService->getDefaultServiceItemConfig:", err)
+		return err
+	}
+	parentPath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, f.config.MeteData.Service)
+	err = register(f.zkManager, parentPath, addr, data)
+	if err != nil {
+		f.logger.Error("RegisterService->register:", err)
+		return err
+	}
+
+	err = pushService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service)
+	if err != nil {
+		f.logger.Error("RegisterService->registerService:", err)
 	}
 
 	return nil
 }
 
+func register(zm *zkutil.ZkManager, parentPath string, addr string, data []byte) error {
+	log.Println("call register func")
+	var node *zk.Stat
+	var err error
+	servicePath := parentPath + "/" + addr
+	log.Println("servicePath:", servicePath)
+	node, err = zm.ExistsNode(servicePath)
+	if err != nil {
+		log.Println("ExistsNode:", err)
+		return err
+	}
+	if node == nil {
+		log.Println("begin createParentNode")
+		err = createParentNode(zm, parentPath)
+		if err != nil {
+			log.Println("createParentNode", err)
+			return err
+		}
+
+		log.Println("begin createTempNode")
+		return createTempNode(zm, servicePath, data)
+	}
+
+	log.Println("exist node")
+	err = zm.RemoveInRecursive(servicePath)
+	if err != nil {
+		log.Println("RemoveInRecursive:", err)
+		return err
+	}
+	log.Println("begin createTempNode")
+	return createTempNode(zm, servicePath, data)
+}
+
 func createParentNode(zm *zkutil.ZkManager, parentPath string) error {
 	node, err := zm.ExistsNode(parentPath)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -229,9 +230,10 @@ func createParentNode(zm *zkutil.ZkManager, parentPath string) error {
 		var result string
 		result, err = zm.CreatePath(parentPath)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
-		fmt.Println(result)
+		log.Println(result)
 	}
 
 	return nil
@@ -240,9 +242,10 @@ func createParentNode(zm *zkutil.ZkManager, parentPath string) error {
 func createTempNode(zm *zkutil.ZkManager, path string, data []byte) error {
 	result, err := zm.CreateTempPathWithData(path, data)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
-	fmt.Println(result)
+	log.Println(result)
 
 	return nil
 }
@@ -255,12 +258,14 @@ func getDefaultServiceItemConfig(addr string) ([]byte, error) {
 
 	data, err := json.Marshal(defaultServiceInstanceConfig)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	var encodedData []byte
 	encodedData, err = common.EncodeValue("", data)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -279,7 +284,7 @@ func getServiceInstance(zm *zkutil.ZkManager, path string, addr string) (*common
 		return nil, err
 	}
 
-	fmt.Println(string(item))
+	log.Println(string(item))
 	serviceInstanceConfig := &common.ServiceInstanceConfig{}
 	err = json.Unmarshal(item, serviceInstanceConfig)
 	if err != nil {
@@ -298,7 +303,7 @@ func getService(zm *zkutil.ZkManager, servicePath string, name string, addrList 
 	for _, addr := range addrList {
 		serviceInstance, err := getServiceInstance(zm, servicePath, addr)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			// todo
 			continue
 		}
@@ -317,7 +322,7 @@ func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string
 	for _, addr := range addrList {
 		serviceInstance, err := getServiceInstanceWithWatcher(zm, servicePath, addr, interHandle)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			// todo
 			continue
 		}

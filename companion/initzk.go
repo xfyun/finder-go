@@ -2,7 +2,7 @@ package finder
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -19,10 +19,10 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	for {
 		result, err = httputil.DoGet(hc, url)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			if retryNum < 3 {
 				retryNum++
-				fmt.Println("The ", retryNum, "th GetZkInfo")
+				log.Println("The ", retryNum, "th GetZkInfo")
 				time.Sleep(time.Millisecond * 100)
 				continue
 			} else {

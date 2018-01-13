@@ -2,7 +2,6 @@ package zkutil
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -18,13 +17,13 @@ func getRetryPolicy(maxRetryNum int, maxSleepTime time.Duration) curator.RetryPo
 func onConnectionStateChanged(f curator.CuratorFramework, e curator.ConnectionState) {
 	switch e {
 	case curator.CONNECTED:
-		fmt.Println(e.String())
+		log.Println(e.String())
 	case curator.RECONNECTED:
-		fmt.Println(e.String())
+		log.Println(e.String())
 	case curator.SUSPENDED:
-		fmt.Println(e.String())
+		log.Println(e.String())
 	case curator.LOST:
-		fmt.Println(e.String())
+		log.Println(e.String())
 	}
 }
 
@@ -45,9 +44,9 @@ func close(zm *ZkManager) error {
 func addListeners(zm *ZkManager) {
 	connListener := curator.NewConnectionStateListener(onConnectionStateChanged)
 	listener := curator.NewCuratorListener(func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-		// fmt.Println("listener type:", e.Type().String())
-		// fmt.Println(e.WatchedEvent())
-		// fmt.Println(e.WatchedEvent().Type)
+		// log.Println("listener type:", e.Type().String())
+		// log.Println(e.WatchedEvent())
+		// log.Println(e.WatchedEvent().Type)
 		// EventNodeCreated:         "EventNodeCreated",
 		// EventNodeDeleted:         "EventNodeDeleted",
 		// EventNodeDataChanged:     "EventNodeDataChanged",
@@ -55,15 +54,15 @@ func addListeners(zm *ZkManager) {
 		// EventSession:             "EventSession",
 		// EventNotWatching:         "EventNotWatching",
 
-		// fmt.Println("e", e == nil)
-		// fmt.Println("e.WatchedEvent()", e.WatchedEvent() == nil)
-		// fmt.Println("e.WatchedEvent().Type", e.WatchedEvent().Type)
+		// log.Println("e", e == nil)
+		// log.Println("e.WatchedEvent()", e.WatchedEvent() == nil)
+		// log.Println("e.WatchedEvent().Type", e.WatchedEvent().Type)
 		if e == nil {
-			log.Fatalln("e is nil")
+			log.Println("e is nil")
 			return errors.New("CuratorListener:e is nil")
 		}
 		if e.WatchedEvent() == nil {
-			log.Fatalln("e.WatchedEvent() is nil")
+			log.Println("e.WatchedEvent() is nil")
 			return errors.New("CuratorListener:e.WatchedEvent() is nil")
 		}
 
@@ -76,14 +75,14 @@ func addListeners(zm *ZkManager) {
 			log.Println("watchevent:", e.WatchedEvent(), e.Data())
 			err := zm.GetNodeDataW(e.Path(), onEventNodeDataChanged)
 			if err != nil {
-				log.Fatalln(err)
+				log.Println(err)
 				// todo
 			}
 		case zk.EventNodeChildrenChanged:
 			log.Println("watchevent:", e.WatchedEvent(), e.Children(), e.Data())
 			err := zm.GetChildrenW(e.Path(), onEventNodeChildrenChanged)
 			if err != nil {
-				log.Fatalln(err)
+				log.Println(err)
 				// todo
 			}
 		case zk.EventSession:

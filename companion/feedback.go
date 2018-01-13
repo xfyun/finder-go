@@ -52,7 +52,7 @@ func FeedbackForService(hc *http.Client, url string, f *common.ServiceFeedback) 
 		f.Provider, f.ProviderVersion, f.UpdateTime, f.UpdateStatus, f.LoadTime, f.LoadStatus))
 	result, err := httputil.DoPost(hc, contentType, url, params)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 

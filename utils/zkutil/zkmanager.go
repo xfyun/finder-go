@@ -344,7 +344,7 @@ func getServiceName(path string, deep int) string {
 
 func watchZkAddr(zm *ZkManager) {
 	for t := range zm.checkZkInfoTicker.C {
-		//fmt.Println(t)
+		//log.Println(t)
 		if t.IsZero() {
 
 		}

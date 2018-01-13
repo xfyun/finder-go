@@ -132,7 +132,7 @@ func (h *handleHolder) internalClose() error {
 	// 临时用于捕捉“panic: close of closed channel”异常
 	defer func() {
 		if err := recover(); err != nil {
-			log.Fatalln(err)
+			log.Println(err)
 		}
 	}()
 
