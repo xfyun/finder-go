@@ -66,13 +66,18 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 				serviceList[n] = service
 			}
 		} else if len(addrList) > 0 {
-			f.logger.Info("sp", servicePath)
+			f.logger.Info("sp:", servicePath)
 			f.logger.Info(addrList)
 			serviceList[n] = getService(f.zkManager, servicePath, n, addrList)
 			err = CacheService(f.config.CachePath, serviceList[n])
 			if err != nil {
 				f.logger.Error("CacheService failed")
 			}
+		}
+
+		err = registerConsumer(f, n, f.config.MeteData.Address)
+		if err != nil {
+			f.logger.Error("registerConsumer failed,", err)
 		}
 	}
 
@@ -103,6 +108,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 					if err != nil {
 						f.logger.Info("CacheService failed")
 					}
+
 					serviceChan <- service
 				} else {
 					service, err := GetServiceFromCache(f.config.CachePath, n)
@@ -134,6 +140,10 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 			continue
 		}
 
+		err = registerConsumer(f, n, f.config.MeteData.Address)
+		if err != nil {
+			f.logger.Error("registerConsumer failed,", err)
+		}
 		zkutil.ServiceEventPool.Append(common.ServiceEventPrefix+n, interHandle)
 	}
 
@@ -181,6 +191,32 @@ func registerService(f *ServiceFinder, addr string) error {
 	err = pushService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service)
 	if err != nil {
 		f.logger.Error("RegisterService->registerService:", err)
+	}
+
+	return nil
+}
+
+func registerConsumer(f *ServiceFinder, service string, addr string) error {
+	if stringutil.IsNullOrEmpty(addr) {
+		err := &errors.FinderError{
+			Ret:  errors.ServiceMissAddr,
+			Func: "registerConsumer",
+		}
+
+		f.logger.Error("registerConsumer:", err)
+		return err
+	}
+
+	data, err := getDefaultConsumerItemConfig(addr)
+	if err != nil {
+		f.logger.Error("registerConsumer->getDefaultConsumerItemConfig:", err)
+		return err
+	}
+	parentPath := fmt.Sprintf("%s/%s/consumer", f.zkManager.MetaData.ServiceRootPath, service)
+	err = register(f.zkManager, parentPath, addr, data)
+	if err != nil {
+		f.logger.Error("registerConsumer->register:", err)
+		return err
 	}
 
 	return nil
@@ -257,6 +293,27 @@ func getDefaultServiceItemConfig(addr string) ([]byte, error) {
 	}
 
 	data, err := json.Marshal(defaultServiceInstanceConfig)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	var encodedData []byte
+	encodedData, err = common.EncodeValue("", data)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return encodedData, nil
+}
+
+func getDefaultConsumerItemConfig(addr string) ([]byte, error) {
+	defaultConsumeInstanceConfig := common.ConsumerInstanceConfig{
+		IsValid: true,
+	}
+
+	data, err := json.Marshal(defaultConsumeInstanceConfig)
 	if err != nil {
 		log.Println(err)
 		return nil, err

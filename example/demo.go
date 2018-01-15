@@ -162,15 +162,15 @@ func testConfigFeedback() {
 
 func testServiceAsync(f *finder.FinderManager) {
 	var err error
-	// err = f.ServiceFinder.RegisterService()
-	// err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println("RegisterService is ok.")
-	// }
-	// time.Sleep(time.Second * 200)
-	// return
+	err = f.ServiceFinder.RegisterService()
+	//err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("RegisterService is ok.")
+	}
+	time.Sleep(time.Second * 200)
+	return
 
 	// serviceList, err := f.ServiceFinder.UseService([]string{"xrpc"})
 	// if err != nil {
