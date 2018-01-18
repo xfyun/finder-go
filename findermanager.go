@@ -11,6 +11,7 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
+	"git.xfyun.cn/AIaaS/finder-go/utils/netutil"
 )
 
 var (
@@ -72,8 +73,24 @@ func createCacheDir(path string) error {
 
 // NewFinder for creating an instance
 func NewFinder(config common.BootConfig) (*FinderManager, error) {
-
 	logger := common.NewDefaultLogger()
+
+	if stringutil.IsNullOrEmpty(config.CompanionUrl){
+		err := &errors.FinderError{
+			Ret:  errors.MissCompanionUrl,
+			Func: "NewFinder",
+		}
+		return nil,err
+	}
+
+	if stringutil.IsNullOrEmpty(config.MeteData.Address){
+		localIP,err:=netutil.GetLocalIP(config.CompanionUrl)
+		if err!=nil{
+			logger.Error(err)
+			return nil,err
+		}
+		config.MeteData.Address=localIP
+	}
 
 	// 检查缓存路径，如果传入cachePath是空，则使用默认路径
 	p, err := checkCachePath(config.CachePath)
@@ -97,8 +114,8 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 		return nil, err
 	}
 
-	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config}
-	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config}
+	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
+	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
 
 	if err != nil {
 		return nil, err
@@ -111,6 +128,24 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	if logger == nil {
 		logger = common.NewDefaultLogger()
 	}
+
+	if stringutil.IsNullOrEmpty(config.CompanionUrl){
+		err := &errors.FinderError{
+			Ret:  errors.MissCompanionUrl,
+			Func: "NewFinder",
+		}
+		return nil,err
+	}
+
+	if stringutil.IsNullOrEmpty(config.MeteData.Address){
+		localIP,err:=netutil.GetLocalIP(config.CompanionUrl)
+		if err!=nil{
+			logger.Error(err)
+			return nil,err
+		}
+		config.MeteData.Address=localIP
+	}
+	
 	// 检查缓存路径，如果传入cachePath是空，则使用默认路径
 	p, err := checkCachePath(config.CachePath)
 	if err != nil {

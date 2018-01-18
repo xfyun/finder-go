@@ -11,6 +11,7 @@ const (
 const (
 	Success             ReturnCode = 0
 	InvalidParam        ReturnCode = 10000
+	MissCompanionUrl 	ReturnCode = 10001
 	ConfigMissName      ReturnCode = 10100
 	ConfigMissCacheFile ReturnCode = 10101
 	ZkMissRootPath      ReturnCode = 10200 + iota
