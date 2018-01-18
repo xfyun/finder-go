@@ -7,11 +7,12 @@ import (
 	"net"
 )
 
+// GetLocalIP get local ip
 func GetLocalIP(url string)(string,error){
 	var host string
 	var port string 
 	var localIP string
-	items:=strings.Split(url,":")
+	items :=strings.Split(url,":")
 	if len(items)==3{
 		host=strings.Replace(items[1],"/","",-1) 
 		port=items[2]

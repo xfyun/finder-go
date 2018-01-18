@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
@@ -17,6 +18,8 @@ type ServiceFinder struct {
 	zkManager *zkutil.ZkManager
 	config    *common.BootConfig
 	logger    common.Logger
+	SubscribedService	map[string]*common.Service
+	mutex 	         sync.Mutex
 }
 
 func (f *ServiceFinder) RegisterService() error {
@@ -95,9 +98,16 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 		return nil, err
 	}
 
+	serviceList := make(map[string]*common.Service)
 	serviceChan := make(chan *common.Service)
 	interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
 	for _, n := range name {
+		f.mutex.Lock()
+		if s,ok := f.SubscribedService[n]; ok{
+			serviceList[n] = s
+			f.mutex.Unlock()
+			continue
+		}
 		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
 		err = f.zkManager.GetChildrenW(servicePath, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
 			addrList := e.Children()
@@ -147,7 +157,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 		zkutil.ServiceEventPool.Append(common.ServiceEventPrefix+n, interHandle)
 	}
 
-	return waitServiceResult(serviceChan, len(name)), nil
+	return f.waitServiceResult(serviceList,serviceChan, len(name)), nil
 }
 
 func (f *ServiceFinder) UnSubscribeService(name string) error {
@@ -161,6 +171,9 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 	}
 
 	zkutil.ServiceEventPool.Remove(name)
+	f.mutex.Lock()
+	delete(f.SubscribedService,name)
+	f.mutex.Unlock()
 
 	return nil
 }
@@ -419,8 +432,7 @@ func getServiceInstanceWithWatcher(zm *zkutil.ZkManager, servicePath string, add
 	return waitServiceInstanceResult(serviceInstanceChan), nil
 }
 
-func waitServiceResult(serviceChan chan *common.Service, serviceNum int) map[string]*common.Service {
-	serviceList := make(map[string]*common.Service)
+func(f *ServiceFinder) waitServiceResult(serviceList map[string]*common.Service,serviceChan chan *common.Service, serviceNum int) map[string]*common.Service {
 	index := 0
 	for {
 		select {
@@ -428,7 +440,10 @@ func waitServiceResult(serviceChan chan *common.Service, serviceNum int) map[str
 			index++
 			if len(s.Name) > 0 {
 				serviceList[s.Name] = s
+				f.SubscribedService[s.Name] = s
 			}
+
+			f.mutex.Unlock()
 			if index == serviceNum {
 				close(serviceChan)
 				return serviceList

@@ -24,7 +24,7 @@ func main() {
 	}
 	cachePath += "/findercache"
 	config := common.BootConfig{
-		CompanionUrl:     "http://10.1.86.223:9081",
+		CompanionUrl:     "http://10.1.86.223:9080",
 		CachePath:        cachePath,
 		TickerDuration:   5000,
 		ZkSessionTimeout: 5 * time.Second,
@@ -50,6 +50,7 @@ func main() {
 			Group:   "aitest_weiwang26",
 			Service: "aitest_weiwang26",
 			Version: "v1.0.3",
+			Address:"127.0.0.1:8091",
 		},
 	}
 
@@ -215,8 +216,8 @@ func testConfigFeedback() {
 
 func testServiceAsync(f *finder.FinderManager) {
 	var err error
-	//err = f.ServiceFinder.RegisterService()
-	err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
+	err = f.ServiceFinder.RegisterService()
+	//err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -241,7 +242,12 @@ func testServiceAsync(f *finder.FinderManager) {
 	// 	time.Sleep(time.Second * 2)
 	// }
 
-	handler := new(ServiceChangedHandle)
+	forIndex:=0
+for {
+	forIndex++
+	go func(){
+
+    handler := new(ServiceChangedHandle)
 	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26"}, handler)
 	if err != nil {
 		fmt.Println(err)
@@ -255,8 +261,15 @@ func testServiceAsync(f *finder.FinderManager) {
 			}
 		}
 
-		time.Sleep(time.Second * 2)
+		//time.Sleep(time.Second * 2)
 	}
+}()
+
+	if forIndex>10{
+		break
+	}
+}
+	
 
 	count := 0
 	for {

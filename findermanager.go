@@ -115,7 +115,7 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	}
 
 	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
-	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
+	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger, SubscribedService: make(map[string]*common.Service)}
 
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	}
 
 	fm.ConfigFinder = &ConfigFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
-	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger}
+	fm.ServiceFinder = &ServiceFinder{zkManager: fm.zkManager, config: fm.config, logger: fm.InternalLogger, SubscribedService: make(map[string]*common.Service)}
 
 	if err != nil {
 		return nil, err

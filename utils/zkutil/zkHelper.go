@@ -73,14 +73,14 @@ func addListeners(zm *ZkManager) {
 			log.Println("watchevent:", e.WatchedEvent())
 		case zk.EventNodeDataChanged:
 			log.Println("watchevent:", e.WatchedEvent(), e.Data())
-			err := zm.GetNodeDataW(e.Path(), onEventNodeDataChanged)
+			err := zm.GetNodeDataForCallback(e.Path(), onEventNodeDataChanged)
 			if err != nil {
 				log.Println(err)
 				// todo
 			}
 		case zk.EventNodeChildrenChanged:
 			log.Println("watchevent:", e.WatchedEvent(), e.Children(), e.Data())
-			err := zm.GetChildrenW(e.Path(), onEventNodeChildrenChanged)
+			err := zm.GetChildrenForCallback(e.Path(), onEventNodeChildrenChanged)
 			if err != nil {
 				log.Println(err)
 				// todo
