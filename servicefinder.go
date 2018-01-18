@@ -100,14 +100,20 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 
 	serviceList := make(map[string]*common.Service)
 	serviceChan := make(chan *common.Service)
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	go func(f *ServiceFinder, serviceList map[string]*common.Service, serviceChan chan *common.Service){
+	
 	interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
-	for _, n := range name {
-		f.mutex.Lock()
+	for index, n := range name {
+		fmt.Println(n,index)
 		if s,ok := f.SubscribedService[n]; ok{
 			serviceList[n] = s
-			f.mutex.Unlock()
+            serviceChan <- &common.Service{}
+			
 			continue
 		}
+
 		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
 		err = f.zkManager.GetChildrenW(servicePath, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
 			addrList := e.Children()
@@ -118,7 +124,6 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 					if err != nil {
 						f.logger.Info("CacheService failed")
 					}
-
 					serviceChan <- service
 				} else {
 					service, err := GetServiceFromCache(f.config.CachePath, n)
@@ -140,7 +145,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 		if err != nil {
 			service, err := GetServiceFromCache(f.config.CachePath, n)
 			if err != nil {
-				f.logger.Info(err)
+				f.logger.Info("GetServiceFromCache ",err)
 				//todo notify
 				serviceChan <- &common.Service{}
 			} else {
@@ -149,15 +154,16 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 
 			continue
 		}
-
 		err = registerConsumer(f, n, f.config.MeteData.Address)
 		if err != nil {
 			f.logger.Error("registerConsumer failed,", err)
 		}
+
 		zkutil.ServiceEventPool.Append(common.ServiceEventPrefix+n, interHandle)
 	}
+	}(f,serviceList,serviceChan)
 
-	return f.waitServiceResult(serviceList,serviceChan, len(name)), nil
+	return f.waitServiceResult(serviceList,serviceChan, len(name)),nil
 }
 
 func (f *ServiceFinder) UnSubscribeService(name string) error {
@@ -438,17 +444,17 @@ func(f *ServiceFinder) waitServiceResult(serviceList map[string]*common.Service,
 		select {
 		case s := <-serviceChan:
 			index++
-			if len(s.Name) > 0 {
+			if s!=nil && len(s.Name) > 0 {
 				serviceList[s.Name] = s
 				f.SubscribedService[s.Name] = s
 			}
-
-			f.mutex.Unlock()
 			if index == serviceNum {
 				close(serviceChan)
+				
 				return serviceList
 			}
 		}
+
 	}
 }
 

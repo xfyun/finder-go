@@ -50,7 +50,7 @@ func main() {
 			Group:   "aitest_weiwang26",
 			Service: "aitest_weiwang26",
 			Version: "v1.0.3",
-			Address:"127.0.0.1:8091",
+			Address:"127.0.0.1:8090",
 		},
 	}
 
@@ -245,10 +245,12 @@ func testServiceAsync(f *finder.FinderManager) {
 	forIndex:=0
 for {
 	forIndex++
-	go func(){
+	//go func(){
 
-    handler := new(ServiceChangedHandle)
-	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26"}, handler)
+	handler := new(ServiceChangedHandle)
+	fmt.Println("use ",forIndex)
+	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26","aitest_weiwang26"}, handler)
+	fmt.Println("use end ",forIndex)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -263,9 +265,9 @@ for {
 
 		//time.Sleep(time.Second * 2)
 	}
-}()
+//}()
 
-	if forIndex>10{
+	if forIndex>100{
 		break
 	}
 }

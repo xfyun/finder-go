@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"sync"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	companion "git.xfyun.cn/AIaaS/finder-go/companion"
@@ -25,7 +24,7 @@ var (
 	ConfigEventPool  *ConfigChangedEventPool
 	ServiceEventPool *ServiceChangedEventPool
 	ConsumeEventPool *ServiceChangedEventPool
-	mutex 	         sync.Mutex
+	//mutex 	         sync.Mutex
 )
 
 type OnZkSessionExpiredEvent func()
@@ -139,16 +138,16 @@ func (zm *ZkManager) CreatePathWithData(path string, data []byte) (string, error
 }
 
 func (zm *ZkManager) CreateTempPath(path string) (string, error) {
-	mutex.Lock()
+	//mutex.Lock()
 	zm.tempNodePool["CreateTempPath"][path] = nil
-	mutex.Unlock()
+	//mutex.Unlock()
 	return zm.zkClient.Create().CreatingParentsIfNeeded().WithMode(curator.EPHEMERAL).ForPath(path)
 }
 
 func (zm *ZkManager) CreateTempPathWithData(path string, data []byte) (string, error) {
-	mutex.Lock()
+	//mutex.Lock()
 	zm.tempNodePool["CreateTempPathWithData"][path] = data
-	mutex.Unlock()
+	//mutex.Unlock()
 	return zm.zkClient.Create().CreatingParentsIfNeeded().WithMode(curator.EPHEMERAL).ForPathWithData(path, data)
 }
 
@@ -181,16 +180,9 @@ func (zm *ZkManager) GetNodeData(path string) ([]byte, error) {
 }
 
 func (zm *ZkManager) GetNodeDataW(path string, c curator.BackgroundCallback) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-	if _ , ok := zm.watcherPool["GetNodeDataW"][path] ; !ok{
-		zm.watcherPool["GetNodeDataW"][path] = c
-
-		_, err := zm.zkClient.GetData().InBackgroundWithCallback(c).Watched().ForPath(path)
-	   return err
-	}
-
-    return nil
+	zm.watcherPool["GetNodeDataW"][path] = c
+	_, err := zm.zkClient.GetData().InBackgroundWithCallback(c).Watched().ForPath(path)
+	return err
 }
 
 func (zm *ZkManager) GetNodeDataForCallback(path string, c curator.BackgroundCallback) error {
@@ -208,15 +200,11 @@ func (zm *ZkManager) GetChildrenNodeUseWatch(path string, watcher curator.Watche
 }
 
 func (zm *ZkManager) GetChildrenW(path string, c curator.BackgroundCallback) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-	if _ , ok := zm.watcherPool["GetChildrenW"][path] ; !ok{
-		zm.watcherPool["GetChildrenW"][path] = c
-
-		_, err := zm.zkClient.GetChildren().InBackgroundWithCallback(c).Watched().ForPath(path)
-	   return err
-	}
-	return nil
+	//mutex.Lock()
+	//defer mutex.Unlock()
+	zm.watcherPool["GetChildrenW"][path] = c
+	_, err := zm.zkClient.GetChildren().InBackgroundWithCallback(c).Watched().ForPath(path)
+	return err
 }
 
 func (zm *ZkManager) GetChildrenForCallback(path string, c curator.BackgroundCallback) error {
