@@ -105,8 +105,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 	go func(f *ServiceFinder, serviceList map[string]*common.Service, serviceChan chan *common.Service){
 	
 	interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
-	for index, n := range name {
-		fmt.Println(n,index)
+	for _, n := range name {
 		if s,ok := f.SubscribedService[n]; ok{
 			serviceList[n] = s
             serviceChan <- &common.Service{}

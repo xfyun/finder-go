@@ -50,7 +50,7 @@ func main() {
 			Group:   "aitest_weiwang26",
 			Service: "aitest_weiwang26",
 			Version: "v1.0.3",
-			Address:"127.0.0.1:8090",
+			Address:"127.0.0.1:8091",
 		},
 	}
 
