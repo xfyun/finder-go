@@ -15,11 +15,11 @@ import (
 )
 
 type ServiceFinder struct {
-	zkManager *zkutil.ZkManager
-	config    *common.BootConfig
-	logger    common.Logger
-	SubscribedService	map[string]*common.Service
-	mutex 	         sync.Mutex
+	zkManager         *zkutil.ZkManager
+	config            *common.BootConfig
+	logger            common.Logger
+	SubscribedService map[string]*common.Service
+	mutex             sync.Mutex
 }
 
 func (f *ServiceFinder) RegisterService() error {
@@ -102,67 +102,66 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 	serviceChan := make(chan *common.Service)
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
-	go func(f *ServiceFinder, serviceList map[string]*common.Service, serviceChan chan *common.Service){
-	
-	interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
-	for _, n := range name {
-		if s,ok := f.SubscribedService[n]; ok{
-			serviceList[n] = s
-            serviceChan <- &common.Service{}
-			
-			continue
-		}
+	go func(f *ServiceFinder, serviceList map[string]*common.Service, serviceChan chan *common.Service) {
+		interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
+		for _, n := range name {
+			if s, ok := f.SubscribedService[n]; ok {
+				serviceList[n] = s
+				serviceChan <- &common.Service{}
 
-		servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
-		err = f.zkManager.GetChildrenW(servicePath, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-			addrList := e.Children()
-			if len(addrList) > 0 {
-				service := getServiceWithWatcher(f.zkManager, servicePath, n, addrList, interHandle)
-				if len(service.Name) > 0 {
-					err = CacheService(f.config.CachePath, service)
-					if err != nil {
-						f.logger.Info("CacheService failed")
-					}
-					serviceChan <- service
-				} else {
-					service, err := GetServiceFromCache(f.config.CachePath, n)
-					if err != nil {
-						f.logger.Info(err)
-						//todo notify
-						serviceChan <- &common.Service{}
-					} else {
+				continue
+			}
+
+			servicePath := fmt.Sprintf("%s/%s/provider", f.zkManager.MetaData.ServiceRootPath, n)
+			err = f.zkManager.GetChildrenW(servicePath, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
+				addrList := e.Children()
+				if len(addrList) > 0 {
+					service := getServiceWithWatcher(f.zkManager, servicePath, n, addrList, interHandle)
+					if len(service.Name) > 0 {
+						err = CacheService(f.config.CachePath, service)
+						if err != nil {
+							f.logger.Info("CacheService failed")
+						}
 						serviceChan <- service
+					} else {
+						service, err := GetServiceFromCache(f.config.CachePath, n)
+						if err != nil {
+							f.logger.Info(err)
+							//todo notify
+							serviceChan <- &common.Service{}
+						} else {
+							serviceChan <- service
+						}
 					}
+
+					return nil
+				}
+				serviceChan <- &common.Service{}
+				return nil
+			})
+			// handleChan := ServiceHandle{ChangedHandler: handler}
+			if err != nil {
+				service, err := GetServiceFromCache(f.config.CachePath, n)
+				if err != nil {
+					f.logger.Info("GetServiceFromCache ", err)
+					//todo notify
+					serviceChan <- &common.Service{}
+				} else {
+					serviceChan <- service
 				}
 
-				return nil
+				continue
 			}
-			serviceChan <- &common.Service{}
-			return nil
-		})
-		// handleChan := ServiceHandle{ChangedHandler: handler}
-		if err != nil {
-			service, err := GetServiceFromCache(f.config.CachePath, n)
+			err = registerConsumer(f, n, f.config.MeteData.Address)
 			if err != nil {
-				f.logger.Info("GetServiceFromCache ",err)
-				//todo notify
-				serviceChan <- &common.Service{}
-			} else {
-				serviceChan <- service
+				f.logger.Error("registerConsumer failed,", err)
 			}
 
-			continue
+			zkutil.ServiceEventPool.Append(common.ServiceEventPrefix+n, interHandle)
 		}
-		err = registerConsumer(f, n, f.config.MeteData.Address)
-		if err != nil {
-			f.logger.Error("registerConsumer failed,", err)
-		}
+	}(f, serviceList, serviceChan)
 
-		zkutil.ServiceEventPool.Append(common.ServiceEventPrefix+n, interHandle)
-	}
-	}(f,serviceList,serviceChan)
-
-	return f.waitServiceResult(serviceList,serviceChan, len(name)),nil
+	return f.waitServiceResult(serviceList, serviceChan, len(name)), nil
 }
 
 func (f *ServiceFinder) UnSubscribeService(name string) error {
@@ -177,7 +176,7 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 
 	zkutil.ServiceEventPool.Remove(name)
 	f.mutex.Lock()
-	delete(f.SubscribedService,name)
+	delete(f.SubscribedService, name)
 	f.mutex.Unlock()
 
 	return nil
@@ -437,19 +436,19 @@ func getServiceInstanceWithWatcher(zm *zkutil.ZkManager, servicePath string, add
 	return waitServiceInstanceResult(serviceInstanceChan), nil
 }
 
-func(f *ServiceFinder) waitServiceResult(serviceList map[string]*common.Service,serviceChan chan *common.Service, serviceNum int) map[string]*common.Service {
+func (f *ServiceFinder) waitServiceResult(serviceList map[string]*common.Service, serviceChan chan *common.Service, serviceNum int) map[string]*common.Service {
 	index := 0
 	for {
 		select {
 		case s := <-serviceChan:
 			index++
-			if s!=nil && len(s.Name) > 0 {
+			if s != nil && len(s.Name) > 0 {
 				serviceList[s.Name] = s
 				f.SubscribedService[s.Name] = s
 			}
 			if index == serviceNum {
 				close(serviceChan)
-				
+
 				return serviceList
 			}
 		}
