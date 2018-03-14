@@ -6,9 +6,11 @@ import (
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 )
 
+// ServiceChangedHandle ServiceChangedHandle
 type ServiceChangedHandle struct {
 }
 
+// OnServiceInstanceConfigChanged OnServiceInstanceConfigChanged
 func (s *ServiceChangedHandle) OnServiceInstanceConfigChanged(name string, instance string, config *common.ServiceInstanceConfig) bool {
 	fmt.Println(name, " update begin:")
 	fmt.Println("name:", name)
@@ -20,6 +22,7 @@ func (s *ServiceChangedHandle) OnServiceInstanceConfigChanged(name string, insta
 	return true
 }
 
+// OnServiceConfigChanged OnServiceConfigChanged
 func (s *ServiceChangedHandle) OnServiceConfigChanged(name string, config *common.ServiceConfig) bool {
 	fmt.Println(name, " update begin:")
 	fmt.Println("name:", name)
@@ -30,6 +33,8 @@ func (s *ServiceChangedHandle) OnServiceConfigChanged(name string, config *commo
 	return true
 }
 
+
+// OnServiceInstanceChanged OnServiceInstanceChanged
 func (s *ServiceChangedHandle) OnServiceInstanceChanged(name string, eventList []*common.ServiceInstanceChangedEvent) bool {
 	fmt.Println(name, " update begin:")
 	for _, e := range eventList {
