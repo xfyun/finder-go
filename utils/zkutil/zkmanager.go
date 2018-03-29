@@ -139,6 +139,7 @@ func (zm *ZkManager) CreatePathWithData(path string, data []byte) (string, error
 
 func (zm *ZkManager) CreateTempPath(path string) (string, error) {
 	//mutex.Lock()
+	log.Println("zm.tempNodePool[\"CreateTempPath\"]", path)
 	zm.tempNodePool["CreateTempPath"][path] = nil
 	//mutex.Unlock()
 	return zm.zkClient.Create().CreatingParentsIfNeeded().WithMode(curator.EPHEMERAL).ForPath(path)
@@ -146,6 +147,7 @@ func (zm *ZkManager) CreateTempPath(path string) (string, error) {
 
 func (zm *ZkManager) CreateTempPathWithData(path string, data []byte) (string, error) {
 	//mutex.Lock()
+	log.Println("zm.tempNodePool[\"CreateTempPathWithData\"]", path)
 	zm.tempNodePool["CreateTempPathWithData"][path] = data
 	//mutex.Unlock()
 	return zm.zkClient.Create().CreatingParentsIfNeeded().WithMode(curator.EPHEMERAL).ForPathWithData(path, data)
