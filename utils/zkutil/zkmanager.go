@@ -50,8 +50,8 @@ func init() {
 
 // ZkManager for operate zk
 type ZkManager struct {
-	MetaData          *common.ZkInfo
-	watcherPool       map[string]map[string]curator.BackgroundCallback
+	MetaData    *common.ZkInfo
+	watcherPool map[string]map[string]curator.BackgroundCallback
 	// watcherPool 	  *WatcherPool
 	tempNodePool      map[string]map[string][]byte
 	checkZkInfoTicker *time.Ticker
@@ -260,14 +260,14 @@ func recoverWatcher(zm *ZkManager) {
 			for p, _ := range v {
 				err := zm.GetNodeDataWForRecover(p)
 				if err != nil {
-					log.Fatal(err)
+					log.Println(err)
 				}
 			}
 		case "GetChildrenW":
 			for p, _ := range v {
 				err := zm.GetChildrenWForRecoer(p)
 				if err != nil {
-					log.Fatal(err)
+					log.Println(err)
 				}
 			}
 		}
@@ -278,19 +278,23 @@ func recoverTempNode(zm *ZkManager) {
 	for f, v := range zm.tempNodePool {
 		switch f {
 		case "CreateTempPath":
+			log.Println("for CreateTempPath")
 			for p, _ := range v {
+				log.Println("recover TempNode:", p)
 				r, err := zm.CreateTempPath(p)
 				if err != nil {
-					log.Fatal(err)
+					log.Println(err)
 				} else {
 					log.Println(r)
 				}
 			}
 		case "CreateTempPathWithData":
+			log.Println("for CreateTempPathWithData")
 			for p, v := range v {
+				log.Println("recover TempPathWithData:", p)
 				r, err := zm.CreateTempPathWithData(p, v)
 				if err != nil {
-					log.Fatal(err)
+					log.Println(err)
 				} else {
 					log.Println(r)
 				}
