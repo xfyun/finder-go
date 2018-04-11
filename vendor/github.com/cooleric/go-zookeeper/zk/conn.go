@@ -783,7 +783,7 @@ func (c *Conn) sendLoop() error {
 			c.conn.SetWriteDeadline(time.Now().Add(c.recvTimeout))
 			_, err = c.conn.Write(c.buf[:n+4])
 			c.conn.SetWriteDeadline(time.Time{})
-			log.Printf("sendLoop:case <-pingTicker.C")
+			// log.Printf("sendLoop:case <-pingTicker.C")
 			if err != nil {
 				log.Printf("sendLoop:called close")
 				c.conn.Close()
