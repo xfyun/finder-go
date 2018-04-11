@@ -93,16 +93,18 @@ func addListeners(zm *ZkManager) {
 				log.Println("zk expired by self")
 				// if c.BlockUntilConnected() == nil {
 				// 	zm.Destroy()
-				// 	log.Println("begin recvcer session")
-				// 	zm.OnZkSessionExpired()
-				// 	log.Println("recocer session end")
+				log.Println("begin recvcer session when expired")
+				go func() {
+					zm.OnZkSessionExpired()
+				}()
+				log.Println("recocer session end  when expired")
 				// }
 				break
 			case zk.StateHasSession:
 				if zm.expired {
-					log.Println("begin recover session")
+					log.Println("begin recover session when StateHasSession")
 					zm.OnZkSessionExpired()
-					log.Println("recover session end")
+					log.Println("recover session end when StateHasSession")
 					zm.expired = false
 				}
 
