@@ -251,8 +251,13 @@ func (zm *ZkManager) Destroy() {
 }
 
 func (zm *ZkManager) OnZkSessionExpired() {
+	if !zm.expired {
+		return
+	}
 	recoverTempNode(zm)
 	recoverWatcher(zm)
+
+	zm.expired = false
 }
 
 func recoverWatcher(zm *ZkManager) {
@@ -260,16 +265,26 @@ func recoverWatcher(zm *ZkManager) {
 		switch f {
 		case "GetNodeDataW":
 			for p, _ := range v {
-				err := zm.GetNodeDataWForRecover(p)
-				if err != nil {
-					log.Println(err)
+				for {
+					err := zm.GetNodeDataWForRecover(p)
+					if err != nil {
+						log.Println(err)
+						//time.Sleep(time.Millisecond * 200)
+					} else {
+						break
+					}
 				}
 			}
 		case "GetChildrenW":
 			for p, _ := range v {
-				err := zm.GetChildrenWForRecoer(p)
-				if err != nil {
-					log.Println(err)
+				for {
+					err := zm.GetChildrenWForRecoer(p)
+					if err != nil {
+						log.Println(err)
+						//time.Sleep(time.Millisecond * 200)
+					} else {
+						break
+					}
 				}
 			}
 		}
@@ -282,23 +297,31 @@ func recoverTempNode(zm *ZkManager) {
 		case "CreateTempPath":
 			log.Println("for CreateTempPath")
 			for p, _ := range v {
-				log.Println("recover TempNode:", p)
-				r, err := zm.CreateTempPath(p)
-				if err != nil {
-					log.Println(err)
-				} else {
-					log.Println(r)
+				for {
+					log.Println("recover TempNode:", p)
+					r, err := zm.CreateTempPath(p)
+					if err != nil {
+						log.Println(err)
+						//time.Sleep(time.Millisecond * 200)
+					} else {
+						log.Println(r)
+						break
+					}
 				}
 			}
 		case "CreateTempPathWithData":
 			log.Println("for CreateTempPathWithData")
 			for p, v := range v {
-				log.Println("recover TempPathWithData:", p)
-				r, err := zm.CreateTempPathWithData(p, v)
-				if err != nil {
-					log.Println(err)
-				} else {
-					log.Println(r)
+				for {
+					log.Println("recover TempPathWithData:", p)
+					r, err := zm.CreateTempPathWithData(p, v)
+					if err != nil {
+						log.Println(err)
+						//time.Sleep(time.Millisecond * 200)
+					} else {
+						log.Println(r)
+						break
+					}
 				}
 			}
 		}
