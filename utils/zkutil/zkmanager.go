@@ -214,7 +214,7 @@ func (zm *ZkManager) GetChildrenForCallback(path string, c curator.BackgroundCal
 	return err
 }
 
-func (zm *ZkManager) GetChildrenWForRecoer(path string) error {
+func (zm *ZkManager) GetChildrenWForRecover(path string) error {
 	_, err := zm.zkClient.GetChildren().InBackground().Watched().ForPath(path)
 	return err
 }
@@ -278,7 +278,7 @@ func recoverWatcher(zm *ZkManager) {
 		case "GetChildrenW":
 			for p, _ := range v {
 				for {
-					err := zm.GetChildrenWForRecoer(p)
+					err := zm.GetChildrenWForRecover(p)
 					if err != nil {
 						log.Println(err)
 						//time.Sleep(time.Millisecond * 200)
@@ -299,12 +299,22 @@ func recoverTempNode(zm *ZkManager) {
 			for p, _ := range v {
 				for {
 					log.Println("recover TempNode:", p)
-					r, err := zm.CreateTempPath(p)
+					node, err := zm.ExistsNode(p)
 					if err != nil {
-						log.Println(err)
-						//time.Sleep(time.Millisecond * 200)
+						log.Println("zm.ExistsNode:", err)
+						continue
+					}
+					if node == nil {
+						r, err := zm.CreateTempPath(p)
+						if err != nil {
+							log.Println(err)
+							//time.Sleep(time.Millisecond * 200)
+						} else {
+							log.Println(r)
+							break
+						}
 					} else {
-						log.Println(r)
+						log.Println("zm.ExistsNode:true")
 						break
 					}
 				}
@@ -314,12 +324,22 @@ func recoverTempNode(zm *ZkManager) {
 			for p, v := range v {
 				for {
 					log.Println("recover TempPathWithData:", p)
-					r, err := zm.CreateTempPathWithData(p, v)
+					node, err := zm.ExistsNode(p)
 					if err != nil {
-						log.Println(err)
-						//time.Sleep(time.Millisecond * 200)
+						log.Println("zm.ExistsNode:", err)
+						continue
+					}
+					if node == nil {
+						r, err := zm.CreateTempPathWithData(p, v)
+						if err != nil {
+							log.Println(err)
+							//time.Sleep(time.Millisecond * 200)
+						} else {
+							log.Println(r)
+							break
+						}
 					} else {
-						log.Println(r)
+						log.Println("zm.ExistsNode:true")
 						break
 					}
 				}
