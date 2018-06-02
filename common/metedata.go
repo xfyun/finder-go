@@ -15,6 +15,7 @@ type BootConfig struct {
 	CachePath        string
 	CacheConfig      bool
 	CacheService     bool
+	StorageParams    map[string]string
 	TickerDuration   time.Duration
 	ZkSessionTimeout time.Duration
 	ZkConnectTimeout time.Duration

@@ -23,7 +23,7 @@ type StorageManager interface {
 	UnWatch(path string) error
 }
 
-func NewManager(config StorageConfig) (StorageManager, error) {
+func NewManager(config *StorageConfig) (StorageManager, error) {
 	switch config.Name {
 	case "zookeeper":
 		log.Println("called NewZkManager")

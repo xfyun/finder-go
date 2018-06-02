@@ -141,6 +141,17 @@ func (zm *ZkManager) SetTempPath(path string) error {
 				return err
 			}
 		}
+	} else if err == zk.ErrNodeExists {
+		err = zm.RemoveInRecursive(path)
+		if err != nil {
+			return err
+		}
+		_, err = zm.conn.Create(path, []byte{}, EPHEMERAL, zk.WorldACL(zk.PermAll))
+		if err != nil {
+			return err
+		}
+	} else {
+		return err
 	}
 
 	return nil

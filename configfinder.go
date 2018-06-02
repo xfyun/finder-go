@@ -1,10 +1,12 @@
 package finder
 
 import (
+	"sync"
+
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
-	"github.com/cooleric/curator"
 )
 
 var (
@@ -12,108 +14,128 @@ var (
 )
 
 type ConfigFinder struct {
-	config    *common.BootConfig
-	zkManager *zkutil.ZkManager
-	logger    common.Logger
+	locker     sync.Mutex
+	rootPath   string
+	config     *common.BootConfig
+	storageMgr storage.StorageManager
+	usedConfig sync.Map
 }
 
+func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManager, logger common.Logger) *ConfigFinder {
+	finder := &ConfigFinder{
+		locker:     sync.Mutex{},
+		rootPath:   root,
+		config:     bc,
+		storageMgr: sm,
+		usedConfig: sync.Map{},
+	}
+	if logger == nil {
+
+	}
+
+	return finder
+}
+
+// UseConfig for
 func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error) {
-	var err error
 	if len(name) == 0 {
-		err = &errors.FinderError{
+		err := &errors.FinderError{
 			Ret:  errors.ConfigMissName,
 			Func: "UseConfig",
 		}
 
 		return nil, err
 	}
+
+	f.locker.Lock()
+	defer f.locker.Unlock()
+
 	configFiles := make(map[string]*common.Config)
-	var data []byte
 	for _, n := range name {
-		data, err = f.zkManager.GetNodeData(f.zkManager.MetaData.ConfigRootPath + "/" + n)
-		if err != nil {
-			f.logger.Error(err)
-			// get config from cache
-			config, err := GetConfigFromCache(f.config.CachePath, n)
+		if c, ok := f.usedConfig.Load(name); !ok {
+			data, err := f.storageMgr.GetData(f.rootPath + "/" + n)
 			if err != nil {
-				f.logger.Error(err)
-				//todo
+				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 			} else {
-				configFiles[n] = config
+				_, fData, err := common.DecodeValue(data)
+				if err != nil {
+					onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
+				} else {
+					config := &common.Config{Name: n, File: fData}
+					configFiles[n] = config
+
+					err = CacheConfig(f.config.CachePath, config)
+					if err != nil {
+						logger.Error("CacheConfig:", err)
+					}
+				}
 			}
 		} else {
-			var fData []byte
-			_, fData, err = common.DecodeValue(data)
-			if err != nil {
-				// todo
+			// todo
+			if config, ok := c.(common.Config); ok {
+				configFiles[n] = &config
 			} else {
-				config := &common.Config{Name: n, File: fData}
-				configFiles[n] = config
-				err = CacheConfig(f.config.CachePath, config)
-				if err != nil {
-					f.logger.Error(err)
-				}
+				// get config from cache
+				configFiles[n] = getCachedConfig(n, f.config.CachePath)
 			}
 		}
 	}
 
-	return configFiles, err
+	return configFiles, nil
 }
 
+// UseAndSubscribeConfig for
 func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
-	var err error
 	if len(name) == 0 {
-		err = &errors.FinderError{
+		err := &errors.FinderError{
 			Ret:  errors.ConfigMissName,
-			Func: "UseAndSubscribeConfig",
+			Func: "UseConfig",
 		}
 
 		return nil, err
 	}
 
-	fileChan := make(chan *common.Config)
+	f.locker.Lock()
+	defer f.locker.Unlock()
+
+	configFiles := make(map[string]*common.Config)
+	path := ""
 	for _, n := range name {
-		err = f.zkManager.GetNodeDataW(f.zkManager.MetaData.ConfigRootPath+"/"+n, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-			_, file, err := common.DecodeValue(e.Data())
+		if c, ok := f.usedConfig.Load(name); !ok {
+			path = f.rootPath + "/" + n
+			data, err := f.storageMgr.GetData(path)
 			if err != nil {
-				// get config from cache
-				config, err := GetConfigFromCache(f.config.CachePath, e.Name())
+				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
+			} else {
+				_, fData, err := common.DecodeValue(data)
 				if err != nil {
-					f.logger.Error(err)
-					//todo
-					fileChan <- &common.Config{}
+					onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 				} else {
-					fileChan <- config
+					config := &common.Config{Name: n, File: fData}
+					configFiles[n] = config
+					f.usedConfig.Store(n, config)
+
+					err = CacheConfig(f.config.CachePath, config)
+					if err != nil {
+						logger.Error("CacheConfig:", err)
+					}
 				}
 
-				return err
+				// watch config node
+				f.storageMgr.Watch(path)
 			}
-			config := &common.Config{Name: e.Name(), File: file}
-			err = CacheConfig(f.config.CachePath, config)
-			if err != nil {
-				f.logger.Error(err)
-			}
-			fileChan <- config
-			return nil
-		})
-		if err != nil {
-			// get config from cache
-			config, err := GetConfigFromCache(f.config.CachePath, n)
-			if err != nil {
-				f.logger.Info(err)
-				//todo
-				fileChan <- &common.Config{}
+		} else {
+			// todo
+			if config, ok := c.(common.Config); ok {
+				configFiles[n] = &config
 			} else {
-				fileChan <- config
+				// get config from cache
+				configFiles[n] = getCachedConfig(n, f.config.CachePath)
 			}
-			continue
 		}
-
-		interHandle := ConfigHandle{ChangedHandler: handler, config: f.config}
-		zkutil.ConfigEventPool.Append(common.ConfigEventPrefix+n, &interHandle)
 	}
 
-	return waitConfigResult(fileChan, len(name)), nil
+	return configFiles, nil
 }
 
 func (f *ConfigFinder) UnSubscribeConfig(name string) error {
@@ -126,25 +148,25 @@ func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 		return err
 	}
 
+	// todo
+
 	zkutil.ConfigEventPool.Remove(name)
 
 	return nil
 }
 
-func waitConfigResult(fileChan chan *common.Config, fileNum int) map[string]*common.Config {
-	configFiles := make(map[string]*common.Config)
-	index := 0
-	for {
-		select {
-		case c := <-fileChan:
-			index++
-			if len(c.Name) > 0 {
-				configFiles[c.Name] = c
-			}
-			if index == fileNum {
-				close(fileChan)
-				return configFiles
-			}
-		}
+// onUseConfigError with cache
+func onUseConfigErrorWithCache(configFiles map[string]*common.Config, name string, cachePath string, err error) {
+	logger.Error("onUseConfigError:", err)
+	configFiles[name] = getCachedConfig(name, cachePath)
+}
+
+func getCachedConfig(name string, cachePath string) *common.Config {
+	config, err := GetConfigFromCache(cachePath, name)
+	if err != nil {
+		logger.Error("GetConfigFromCache:", err)
+		return nil
 	}
+
+	return config
 }
