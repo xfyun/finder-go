@@ -9,9 +9,9 @@ import (
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
+	"git.xfyun.cn/AIaaS/finder-go/utils/netutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
-	"git.xfyun.cn/AIaaS/finder-go/utils/netutil"
 )
 
 var (
@@ -74,22 +74,22 @@ func createCacheDir(path string) error {
 // NewFinder for creating an instance
 func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	logger := common.NewDefaultLogger()
-
-	if stringutil.IsNullOrEmpty(config.CompanionUrl){
+	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
 		err := &errors.FinderError{
 			Ret:  errors.MissCompanionUrl,
 			Func: "NewFinder",
 		}
-		return nil,err
+
+		return nil, err
 	}
 
-	if stringutil.IsNullOrEmpty(config.MeteData.Address){
-		localIP,err:=netutil.GetLocalIP(config.CompanionUrl)
-		if err!=nil{
+	if stringutil.IsNullOrEmpty(config.MeteData.Address) {
+		localIP, err := netutil.GetLocalIP(config.CompanionUrl)
+		if err != nil {
 			logger.Error(err)
-			return nil,err
+			return nil, err
 		}
-		config.MeteData.Address=localIP
+		config.MeteData.Address = localIP
 	}
 
 	// 检查缓存路径，如果传入cachePath是空，则使用默认路径
@@ -129,23 +129,23 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 		logger = common.NewDefaultLogger()
 	}
 
-	if stringutil.IsNullOrEmpty(config.CompanionUrl){
+	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
 		err := &errors.FinderError{
 			Ret:  errors.MissCompanionUrl,
 			Func: "NewFinder",
 		}
-		return nil,err
+		return nil, err
 	}
 
-	if stringutil.IsNullOrEmpty(config.MeteData.Address){
-		localIP,err:=netutil.GetLocalIP(config.CompanionUrl)
-		if err!=nil{
+	if stringutil.IsNullOrEmpty(config.MeteData.Address) {
+		localIP, err := netutil.GetLocalIP(config.CompanionUrl)
+		if err != nil {
 			logger.Error(err)
-			return nil,err
+			return nil, err
 		}
-		config.MeteData.Address=localIP
+		config.MeteData.Address = localIP
 	}
-	
+
 	// 检查缓存路径，如果传入cachePath是空，则使用默认路径
 	p, err := checkCachePath(config.CachePath)
 	if err != nil {

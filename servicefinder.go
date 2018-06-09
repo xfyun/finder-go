@@ -11,6 +11,7 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
 	"github.com/cooleric/curator"
+
 	"github.com/cooleric/go-zookeeper/zk"
 )
 

@@ -1,14 +1,14 @@
 package main
 
 import (
-	"errors"
-	"strings"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	finder "git.xfyun.cn/AIaaS/finder-go"
@@ -45,13 +45,22 @@ func main() {
 		// 	Version: "1.0.0",
 		// 	Address: "127.0.0.1:9091",
 		// },
+
 		MeteData: &common.ServiceMeteData{
 			Project: "AIaaS",
-			Group:   "aitest_weiwang26",
-			Service: "aitest_weiwang26",
-			Version: "v1.0.3",
-			Address:"127.0.0.1:8091",
+			Group:   "aitest",
+			Service: "iatExecutor",
+			Version: "2.0.6",
+			Address: "127.0.0.1:8092",
 		},
+
+		// MeteData: &common.ServiceMeteData{
+		// 	Project: "AIaaS",
+		// 	Group:   "aitest",
+		// 	Service: "atmos",
+		// 	Version: "0.1",
+		// 	Address: "127.0.0.1:8092",
+		// },
 	}
 
 	f, err := finder.NewFinderWithLogger(config, nil)
@@ -61,62 +70,62 @@ func main() {
 		//testUseConfigAsync(f)
 		//testCache(cachePath)
 		testServiceAsync(f)
+		//testUseService(f)
 
 		//testConfigFeedback()
 	}
 
 }
 
-func getLocalIP(url string)(string,error){
+func getLocalIP(url string) (string, error) {
 	var host string
-	var port string 
+	var port string
 	var localIP string
-	items:=strings.Split(url,":")
-	if len(items)==3{
-		host=strings.Replace(items[1],"/","",-1) 
-		port=items[2]
-	}else if len(items)==2{
-		host=strings.Replace(items[0],"/","",-1)
-		port=items[1]
-	}else{
-		host=url
-		port="80"
+	items := strings.Split(url, ":")
+	if len(items) == 3 {
+		host = strings.Replace(items[1], "/", "", -1)
+		port = items[2]
+	} else if len(items) == 2 {
+		host = strings.Replace(items[0], "/", "", -1)
+		port = items[1]
+	} else {
+		host = url
+		port = "80"
 	}
 
-	if len(host)==0{
-		return "",errors.New("testRemote:invalid remote url")
+	if len(host) == 0 {
+		return "", errors.New("testRemote:invalid remote url")
 	}
-	if len(port)==0{
-		port="80"
+	if len(port) == 0 {
+		port = "80"
 	}
-	ips,err:=net.LookupHost(host)
-	if err!=nil{
-		return "",err
+	ips, err := net.LookupHost(host)
+	if err != nil {
+		return "", err
 	}
-	for _,ip:=range ips{
-		conn,err:=net.Dial("tcp",ip+":"+port)
-		if err!=nil{
-			log.Println("testRemote:",err)
+	for _, ip := range ips {
+		conn, err := net.Dial("tcp", ip+":"+port)
+		if err != nil {
+			log.Println("testRemote:", err)
 			continue
 		}
-		localIP=conn.LocalAddr().String()		
+		localIP = conn.LocalAddr().String()
 		log.Println("testRemote:ok")
-		err=conn.Close()
-		if err!=nil{
-			log.Println("testRemote:",err)
+		err = conn.Close()
+		if err != nil {
+			log.Println("testRemote:", err)
 			break
 		}
 		break
 	}
 
-	if len(localIP)==0{
-		return "",errors.New("testRemote:failed")
+	if len(localIP) == 0 {
+		return "", errors.New("testRemote:failed")
 	}
-	
 
-	fmt.Println("local ip:",localIP)
+	fmt.Println("local ip:", localIP)
 
-	return localIP,nil
+	return localIP, nil
 }
 
 func testCache(cachepath string) {
@@ -214,6 +223,41 @@ func testConfigFeedback() {
 	fmt.Println(string(result))
 }
 
+func testUseService(f *finder.FinderManager) {
+	handler := new(ServiceChangedHandle)
+	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"iatExecutor"}, handler)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, s := range serviceList {
+			fmt.Println(s.Name, ":")
+			for _, item := range s.ServerList {
+				fmt.Println("addr:", item.Addr)
+				fmt.Println("weight:", item.Config.Weight)
+				fmt.Println("is_valid:", item.Config.IsValid)
+			}
+		}
+	}
+
+	count := 0
+	for {
+		count++
+		if count > 200 {
+			//f.ConfigFinder.UnSubscribeConfig("default.toml")
+		}
+		if count > 600 {
+			err = f.ServiceFinder.UnRegisterService()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println("UnRegisterService is ok.")
+			}
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
+}
+
 func testServiceAsync(f *finder.FinderManager) {
 	var err error
 	err = f.ServiceFinder.RegisterService()
@@ -242,36 +286,35 @@ func testServiceAsync(f *finder.FinderManager) {
 	// 	time.Sleep(time.Second * 2)
 	// }
 
-	forIndex:=0
-for {
-	forIndex++
+	// forIndex := 0
+	// for {
+	// 	forIndex++
 	//go func(){
 
-	handler := new(ServiceChangedHandle)
-	fmt.Println("use ",forIndex)
-	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26","aitest_weiwang26"}, handler)
-	fmt.Println("use end ",forIndex)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		for _, s := range serviceList {
-			fmt.Println(s.Name, ":")
-			for _, item := range s.ServerList {
-				fmt.Println("addr:", item.Addr)
-				fmt.Println("weight:", item.Config.Weight)
-				fmt.Println("is_valid:", item.Config.IsValid)
-			}
-		}
+	// handler := new(ServiceChangedHandle)
+	// fmt.Println("use ", forIndex)
+	// serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26", "aitest_weiwang26"}, handler)
+	// fmt.Println("use end ", forIndex)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	for _, s := range serviceList {
+	// 		fmt.Println(s.Name, ":")
+	// 		for _, item := range s.ServerList {
+	// 			fmt.Println("addr:", item.Addr)
+	// 			fmt.Println("weight:", item.Config.Weight)
+	// 			fmt.Println("is_valid:", item.Config.IsValid)
+	// 		}
+	// 	}
 
-		//time.Sleep(time.Second * 2)
-	}
-//}()
+	//time.Sleep(time.Second * 2)
+	//}
+	//}()
 
-	if forIndex>100{
-		break
-	}
-}
-	
+	// if forIndex > 100 {
+	// 	break
+	// }
+	//	}
 
 	count := 0
 	for {
