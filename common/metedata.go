@@ -11,21 +11,16 @@ type ServiceMeteData struct {
 }
 
 type BootConfig struct {
-	CompanionUrl     string
-	CachePath        string
-	CacheConfig      bool
-	CacheService     bool
-	StorageParams    map[string]string
-	TickerDuration   time.Duration
-	ZkSessionTimeout time.Duration
-	ZkConnectTimeout time.Duration
-	ZkMaxSleepTime   time.Duration
-	ZkMaxRetryNum    int
-	MeteData         *ServiceMeteData
+	CompanionUrl  string
+	CachePath     string
+	CacheConfig   bool
+	CacheService  bool
+	ExpireTimeout time.Duration
+	MeteData      *ServiceMeteData
 }
 
-type ZkInfo struct {
-	ZkAddr          []string
+type StorageInfo struct {
+	Addr            []string
 	ConfigRootPath  string
 	ServiceRootPath string
 }

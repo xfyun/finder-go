@@ -8,9 +8,8 @@ import (
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
+	storagecommon "git.xfyun.cn/AIaaS/finder-go/storage/common"
 	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
-	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
-	"github.com/cooleric/curator"
 )
 
 type ServiceFinder struct {
@@ -18,33 +17,30 @@ type ServiceFinder struct {
 	rootPath          string
 	config            *common.BootConfig
 	storageMgr        storage.StorageManager
-	usedService       sync.Map
-	SubscribedService map[string]*common.Service
+	usedService       map[string]*common.Service
+	subscribedService map[string]*common.Service
 	mutex             sync.Mutex
 }
 
-func NewServiceFinder(root string, bc *common.BootConfig, sm storage.StorageManager, logger common.Logger) *ServiceFinder {
+func NewServiceFinder(root string, bc *common.BootConfig, sm storage.StorageManager) *ServiceFinder {
 	finder := &ServiceFinder{
-		locker:      sync.Mutex{},
-		rootPath:    root,
-		config:      bc,
-		storageMgr:  sm,
-		usedService: sync.Map{},
-	}
-
-	if logger == nil {
-
+		locker:            sync.Mutex{},
+		rootPath:          root,
+		config:            bc,
+		storageMgr:        sm,
+		usedService:       make(map[string]*common.Service, 0),
+		subscribedService: make(map[string]*common.Service, 0),
 	}
 
 	return finder
 }
 
 func (f *ServiceFinder) RegisterService() error {
-	return registerService(f, f.config.MeteData.Address)
+	return f.registerService(f.config.MeteData.Address)
 }
 
 func (f *ServiceFinder) RegisterServiceWithAddr(addr string) error {
-	return registerService(f, addr)
+	return f.registerService(addr)
 }
 
 func (f *ServiceFinder) UnRegisterService() error {
@@ -76,6 +72,11 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 	var addrList []string
 	serviceList := make(map[string]*common.Service)
 	for _, n := range name {
+		if s, ok := f.usedService[n]; ok {
+			serviceList[n] = s
+			continue
+		}
+
 		servicePath := fmt.Sprintf("%s/%s/provider", f.rootPath, n)
 		logger.Info("useservice:", servicePath)
 		addrList, err = f.storageMgr.GetChildren(servicePath)
@@ -85,20 +86,24 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 			if err != nil {
 				logger.Error(err)
 				//todo notify
-			} else {
-				serviceList[n] = service
+				return nil, err
 			}
+
+			serviceList[n] = service
+			f.usedService[n] = service
 		} else if len(addrList) > 0 {
 			logger.Info("servicePath:", servicePath)
 			logger.Info(addrList)
-			serviceList[n] = getService(f.storageMgr, servicePath, n, addrList)
+			serviceList[n] = f.getService(servicePath, n, addrList)
 			err = CacheService(f.config.CachePath, serviceList[n])
 			if err != nil {
 				logger.Error("CacheService failed")
 			}
 		}
 
-		err = registerConsumer(f, n, f.config.MeteData.Address)
+		f.usedService[n] = serviceList[n]
+
+		err = f.registerConsumer(n, f.config.MeteData.Address)
 		if err != nil {
 			logger.Error("registerConsumer failed,", err)
 		}
@@ -122,69 +127,58 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 	defer f.locker.Unlock()
 
 	serviceList := make(map[string]*common.Service)
-	serviceChan := make(chan *common.Service)
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-	go func(f *ServiceFinder, serviceList map[string]*common.Service, serviceChan chan *common.Service) {
-		interHandle := &ServiceHandle{ChangedHandler: handler, config: f.config, zkManager: f.zkManager}
-		for _, n := range name {
-			if s, ok := f.SubscribedService[n]; ok {
-				serviceList[n] = s
-				serviceChan <- &common.Service{}
-
-				continue
-			}
-
-			servicePath := fmt.Sprintf("%s/%s/provider", f.rootPath, n)
-			err = f.storageMgr.GetChildrenW(servicePath, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-				addrList := e.Children()
-				if len(addrList) > 0 {
-					service := getServiceWithWatcher(f.storageMgr, servicePath, n, addrList, interHandle)
-					if len(service.Name) > 0 {
-						err = CacheService(f.config.CachePath, service)
-						if err != nil {
-							logger.Info("CacheService failed")
-						}
-						serviceChan <- service
-					} else {
-						service, err := GetServiceFromCache(f.config.CachePath, n)
-						if err != nil {
-							logger.Info(err)
-							//todo notify
-							serviceChan <- &common.Service{}
-						} else {
-							serviceChan <- service
-						}
-					}
-
-					return nil
-				}
-				serviceChan <- &common.Service{}
-				return nil
-			})
-			// handleChan := ServiceHandle{ChangedHandler: handler}
-			if err != nil {
-				service, err := GetServiceFromCache(f.config.CachePath, n)
-				if err != nil {
-					logger.Info("GetServiceFromCache ", err)
-					//todo notify
-					serviceChan <- &common.Service{}
-				} else {
-					serviceChan <- service
-				}
-
-				continue
-			}
-			err = registerConsumer(f, n, f.config.MeteData.Address)
-			if err != nil {
-				logger.Error("registerConsumer failed,", err)
-			}
-
-			zkutil.ServiceEventPool.Append(common.ServiceEventPrefix+n, interHandle)
+	for _, n := range name {
+		if s, ok := f.subscribedService[n]; ok {
+			serviceList[n] = s
+			continue
 		}
-	}(f, serviceList, serviceChan)
 
-	return f.waitServiceResult(serviceList, serviceChan, len(name)), nil
+		servicePath := fmt.Sprintf("%s/%s/provider", f.rootPath, n)
+		callback := NewServiceChangedCallback(n, SERVICE_INSTANCE_CHANGED, f.rootPath, handler, f.config, f.storageMgr)
+		addrList, err := f.storageMgr.GetChildrenWithWatch(servicePath, &callback)
+		if err != nil {
+			logger.Error("f.storageMgr.GetChildrenWithWatch:", err)
+			service, err := GetServiceFromCache(f.config.CachePath, n)
+			if err != nil {
+				logger.Info("GetServiceFromCache ", err)
+				return nil, err
+			}
+
+			serviceList[n] = service
+			f.subscribedService[n] = service
+		}
+
+		service, err := f.getServiceWithWatcher(servicePath, n, addrList, handler)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(service.ServerList) > 0 {
+			err = CacheService(f.config.CachePath, service)
+			if err != nil {
+				logger.Info("CacheService failed")
+			}
+		} else {
+			service, err = GetServiceFromCache(f.config.CachePath, n)
+			if err != nil {
+				logger.Info(err)
+				return nil, err
+				//todo notify
+			}
+		}
+
+		serviceList[n] = service
+		f.subscribedService[n] = service
+
+		err = f.registerConsumer(n, f.config.MeteData.Address)
+		if err != nil {
+			logger.Error("registerConsumer failed,", err)
+		}
+
+		// zkutil.ServiceEventPool.Append(common.ServiceEventPrefix+n, interHandle)
+	}
+
+	return serviceList, nil
 }
 
 func (f *ServiceFinder) UnSubscribeService(name string) error {
@@ -197,15 +191,15 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 		return err
 	}
 
-	zkutil.ServiceEventPool.Remove(name)
-	f.mutex.Lock()
-	delete(f.SubscribedService, name)
-	f.mutex.Unlock()
+	f.locker.Lock()
+	defer f.locker.Unlock()
+
+	delete(f.subscribedService, name)
 
 	return nil
 }
 
-func registerService(f *ServiceFinder, addr string) error {
+func (f *ServiceFinder) registerService(addr string) error {
 	if stringutil.IsNullOrEmpty(addr) {
 		err := &errors.FinderError{
 			Ret:  errors.ServiceMissAddr,
@@ -222,7 +216,7 @@ func registerService(f *ServiceFinder, addr string) error {
 		return err
 	}
 	parentPath := fmt.Sprintf("%s/%s/provider", f.rootPath, f.config.MeteData.Service)
-	err = register(f.storageMgr, parentPath, addr, data)
+	err = f.register(parentPath, addr, data)
 	if err != nil {
 		logger.Error("RegisterService->register:", err)
 		return err
@@ -236,7 +230,7 @@ func registerService(f *ServiceFinder, addr string) error {
 	return nil
 }
 
-func registerConsumer(f *ServiceFinder, service string, addr string) error {
+func (f *ServiceFinder) registerConsumer(service string, addr string) error {
 	if stringutil.IsNullOrEmpty(addr) {
 		err := &errors.FinderError{
 			Ret:  errors.ServiceMissAddr,
@@ -253,7 +247,7 @@ func registerConsumer(f *ServiceFinder, service string, addr string) error {
 		return err
 	}
 	parentPath := fmt.Sprintf("%s/%s/consumer", f.rootPath, service)
-	err = register(f.storageMgr, parentPath, addr, data)
+	err = f.register(parentPath, addr, data)
 	if err != nil {
 		logger.Error("registerConsumer->register:", err)
 		return err
@@ -262,12 +256,12 @@ func registerConsumer(f *ServiceFinder, service string, addr string) error {
 	return nil
 }
 
-func register(sm storage.StorageManager, parentPath string, addr string, data []byte) error {
-	logger.Println("call register func")
+func (f *ServiceFinder) register(parentPath string, addr string, data []byte) error {
+	logger.Info("call register func")
 	servicePath := parentPath + "/" + addr
-	logger.Println("servicePath:", servicePath)
+	logger.Info("servicePath:", servicePath)
 
-	return sm.SetTempPath(servicePath)
+	return f.storageMgr.SetTempPath(servicePath)
 }
 
 func getDefaultServiceItemConfig(addr string) ([]byte, error) {
@@ -278,14 +272,14 @@ func getDefaultServiceItemConfig(addr string) ([]byte, error) {
 
 	data, err := json.Marshal(defaultServiceInstanceConfig)
 	if err != nil {
-		logger.Println(err)
+		logger.Error(err)
 		return nil, err
 	}
 
 	var encodedData []byte
 	encodedData, err = common.EncodeValue("", data)
 	if err != nil {
-		logger.Println(err)
+		logger.Error(err)
 		return nil, err
 	}
 
@@ -299,14 +293,14 @@ func getDefaultConsumerItemConfig(addr string) ([]byte, error) {
 
 	data, err := json.Marshal(defaultConsumeInstanceConfig)
 	if err != nil {
-		logger.Println(err)
+		logger.Error(err)
 		return nil, err
 	}
 
 	var encodedData []byte
 	encodedData, err = common.EncodeValue("", data)
 	if err != nil {
-		logger.Println(err)
+		logger.Error(err)
 		return nil, err
 	}
 
@@ -314,7 +308,7 @@ func getDefaultConsumerItemConfig(addr string) ([]byte, error) {
 }
 
 func getServiceInstance(sm storage.StorageManager, path string, addr string) (*common.ServiceInstance, error) {
-	data, err := sm.GetNodeData(path + "/" + addr)
+	data, err := sm.GetData(path + "/" + addr)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +319,7 @@ func getServiceInstance(sm storage.StorageManager, path string, addr string) (*c
 		return nil, err
 	}
 
-	logger.Println(string(item))
+	logger.Info(string(item))
 	serviceInstanceConfig := &common.ServiceInstanceConfig{}
 	err = json.Unmarshal(item, serviceInstanceConfig)
 	if err != nil {
@@ -339,12 +333,12 @@ func getServiceInstance(sm storage.StorageManager, path string, addr string) (*c
 	return serviceInstance, nil
 }
 
-func getService(sm storage.StorageManager, servicePath string, name string, addrList []string) *common.Service {
+func (f *ServiceFinder) getService(servicePath string, name string, addrList []string) *common.Service {
 	var service = &common.Service{Name: name, ServerList: make([]*common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
-		serviceInstance, err := getServiceInstance(sm, servicePath, addr)
+		serviceInstance, err := getServiceInstance(f.storageMgr, servicePath, addr)
 		if err != nil {
-			logger.Println(err)
+			logger.Info(err)
 			// todo
 			continue
 		}
@@ -358,14 +352,15 @@ func getService(sm storage.StorageManager, servicePath string, name string, addr
 	return service
 }
 
-func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string, addrList []string, interHandle *ServiceHandle) *common.Service {
+func (f *ServiceFinder) getServiceWithWatcher(servicePath string, name string, addrList []string, handler common.ServiceChangedHandler) (*common.Service, error) {
 	var service = &common.Service{Name: name, ServerList: make([]*common.ServiceInstance, 0), Config: &common.ServiceConfig{}}
 	for _, addr := range addrList {
-		serviceInstance, err := getServiceInstanceWithWatcher(zm, servicePath, addr, interHandle)
+		callback := NewServiceChangedCallback(name, SERVICE_INSTANCE_CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr)
+		serviceInstance, err := f.getServiceInstanceWithWatcher(servicePath, addr, &callback)
 		if err != nil {
-			logger.Println(err)
+			logger.Info(err)
 			// todo
-			continue
+			return nil, err
 		}
 
 		service.ServerList = append(service.ServerList, serviceInstance)
@@ -374,65 +369,25 @@ func getServiceWithWatcher(zm *zkutil.ZkManager, servicePath string, name string
 	service.Config.ProxyMode = "default"
 	service.Config.LoadBalanceMode = "default"
 
-	return service
+	return service, nil
 }
 
-func getServiceInstanceWithWatcher(zm *zkutil.ZkManager, servicePath string, addr string, interHandle *ServiceHandle) (*common.ServiceInstance, error) {
-	serviceInstanceChan := make(chan *common.ServiceInstance)
-	err := zm.GetNodeDataW(servicePath+"/"+addr, func(c curator.CuratorFramework, e curator.CuratorEvent) error {
-		_, item, err := common.DecodeValue(e.Data())
-		if err != nil {
-			serviceInstanceChan <- &common.ServiceInstance{}
-			return err
-		}
-		serviceInstance := &common.ServiceInstance{Addr: addr, Config: new(common.ServiceInstanceConfig)}
-		err = json.Unmarshal(item, serviceInstance.Config)
-		if err != nil {
-			serviceInstanceChan <- &common.ServiceInstance{}
-			return err
-		}
-
-		serviceInstanceChan <- serviceInstance
-		return nil
-	})
+func (f *ServiceFinder) getServiceInstanceWithWatcher(servicePath string, addr string, callback storagecommon.ChangedCallback) (*common.ServiceInstance, error) {
+	data, err := f.storageMgr.GetDataWithWatch(servicePath+"/"+addr, callback)
 	if err != nil {
 		return nil, err
 	}
-	zkutil.ServiceEventPool.Append(common.ServiceProviderEventPrefix+addr, interHandle)
 
-	return waitServiceInstanceResult(serviceInstanceChan), nil
-}
-
-func (f *ServiceFinder) waitServiceResult(serviceList map[string]*common.Service, serviceChan chan *common.Service, serviceNum int) map[string]*common.Service {
-	index := 0
-	for {
-		select {
-		case s := <-serviceChan:
-			index++
-			if s != nil && len(s.Name) > 0 {
-				serviceList[s.Name] = s
-				f.SubscribedService[s.Name] = s
-			}
-			if index == serviceNum {
-				close(serviceChan)
-
-				return serviceList
-			}
-		}
-
+	_, item, err := common.DecodeValue(data)
+	if err != nil {
+		return nil, err
 	}
-}
 
-func waitServiceInstanceResult(serviceInstanceChan chan *common.ServiceInstance) *common.ServiceInstance {
-	serviceInstance := new(common.ServiceInstance)
-	for {
-		select {
-		case s := <-serviceInstanceChan:
-			if len(s.Addr) > 0 {
-				serviceInstance = s
-			}
-			close(serviceInstanceChan)
-			return serviceInstance
-		}
+	serviceInstance := &common.ServiceInstance{Addr: addr, Config: new(common.ServiceInstanceConfig)}
+	err = json.Unmarshal(item, serviceInstance.Config)
+	if err != nil {
+		return nil, err
 	}
+
+	return serviceInstance, nil
 }

@@ -14,72 +14,18 @@ import (
 	finder "git.xfyun.cn/AIaaS/finder-go"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
-	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
 func main() {
+	newProviderFinder("127.0.0.1:8081")
+	newConsumerFinder("127.0.0.1:8082")
+	newConfigFinder("127.0.0.1:10010", []string{"xsfc.toml"})
+	newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
 
-	testNewZkConn()
-	// newProviderFinder("127.0.0.1:8081")
-	// newConsumerFinder("127.0.0.1:8082")
-	// newConfigFinder("127.0.0.1:10010", []string{"xsfc.toml"})
-	// newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
-
-	// for {
-	// 	time.Sleep(time.Second * 60)
-	// 	log.Println("I'm running.")
-	// }
-
-}
-
-func testNewZkConn() {
-	config := storage.StorageConfig{
-		Name:   "zookeeper",
-		Params: make(map[string]string),
-	}
-	config.Params["servers"] = "10.1.86.212:2181"
-	config.Params["session_timeout"] = "15000"
-	zm, err := storage.NewManager(config)
-	if err != nil {
-		log.Println(err)
-	}
-	err = zm.Init()
-	if err != nil {
-		log.Println(err)
-	}
-	err = zm.SetPath("/A/B/C")
-	if err != nil {
-		log.Println(err)
-	}
-
-	err = zm.SetData("/A/B/C", []byte("test"))
-	if err != nil {
-		log.Println(err)
-	}
-
-	data, err := zm.GetData("/A/B/C")
-	if err != nil {
-		log.Println(err)
-	} else {
-		log.Println("got value:", string(data))
-	}
-
-	err = zm.Watch("/A/B/C")
-	if err != nil {
-		log.Println(err)
-	}
-
-	for i := 0; i < 50; i++ {
-		time.Sleep(time.Second * 2)
-		log.Println("setdata:", i)
-		err = zm.SetData("/A/B/C", []byte("test"))
-		if err != nil {
-			log.Println(err)
-		}
-		if i == 1 {
-			//zm.Destroy()
-		}
+	for {
+		time.Sleep(time.Second * 60)
+		log.Println("I'm running.")
 	}
 
 }
@@ -92,13 +38,9 @@ func newProviderFinder(addr string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:     "http://10.1.86.223:9080",
-		CachePath:        cachePath,
-		TickerDuration:   5000,
-		ZkSessionTimeout: 5 * time.Second,
-		ZkConnectTimeout: 3 * time.Second,
-		ZkMaxSleepTime:   15 * time.Second,
-		ZkMaxRetryNum:    3,
+		CompanionUrl:  "http://10.1.86.223:9080",
+		CachePath:     cachePath,
+		ExpireTimeout: 5 * time.Second,
 		// MeteData: &common.ServiceMeteData{
 		// 	Project: "project",
 		// 	Group:   "group",
@@ -142,13 +84,9 @@ func newConsumerFinder(addr string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:     "http://10.1.86.223:9080",
-		CachePath:        cachePath,
-		TickerDuration:   5000,
-		ZkSessionTimeout: 5 * time.Second,
-		ZkConnectTimeout: 3 * time.Second,
-		ZkMaxSleepTime:   15 * time.Second,
-		ZkMaxRetryNum:    3,
+		CompanionUrl:  "http://10.1.86.223:9080",
+		CachePath:     cachePath,
+		ExpireTimeout: 5 * time.Second,
 		// MeteData: &common.ServiceMeteData{
 		// 	Project: "project",
 		// 	Group:   "group",
@@ -192,13 +130,9 @@ func newConfigFinder(addr string, name []string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:     "http://10.1.86.223:9080",
-		CachePath:        cachePath,
-		TickerDuration:   5000,
-		ZkSessionTimeout: 5 * time.Second,
-		ZkConnectTimeout: 3 * time.Second,
-		ZkMaxSleepTime:   15 * time.Second,
-		ZkMaxRetryNum:    3,
+		CompanionUrl:  "http://10.1.86.223:9080",
+		CachePath:     cachePath,
+		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
 			Project: "AIaaS",
 			Group:   "dx",
@@ -288,20 +222,20 @@ func testCache(cachepath string) {
 		fmt.Println("default.cfg:", string(c.File))
 	}
 
-	zkInfo := &common.ZkInfo{
-		ZkAddr:          []string{"10.1.86.73:2181", "10.1.86.74:2181"},
+	zkInfo := &common.StorageInfo{
+		Addr:            []string{"10.1.86.73:2181", "10.1.86.74:2181"},
 		ConfigRootPath:  "/polaris/config/",
 		ServiceRootPath: "/polaris/service/",
 	}
-	err = finder.CacheZkInfo(cachepath, zkInfo)
+	err = finder.CacheStorageInfo(cachepath, zkInfo)
 	if err != nil {
 		fmt.Println(err)
 	}
-	newZkInfo, err := finder.GetZkInfoFromCache(cachepath)
+	newZkInfo, err := finder.GetStorageInfoFromCache(cachepath)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("ZkAddr:", newZkInfo.ZkAddr)
+		fmt.Println("ZkAddr:", newZkInfo.Addr)
 		fmt.Println("ConfigRootPath:", newZkInfo.ConfigRootPath)
 		fmt.Println("ServiceRootPath:", newZkInfo.ServiceRootPath)
 	}

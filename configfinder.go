@@ -6,7 +6,6 @@ import (
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
-	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
 )
 
 var (
@@ -21,16 +20,13 @@ type ConfigFinder struct {
 	usedConfig sync.Map
 }
 
-func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManager, logger common.Logger) *ConfigFinder {
+func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManager) *ConfigFinder {
 	finder := &ConfigFinder{
 		locker:     sync.Mutex{},
 		rootPath:   root,
 		config:     bc,
 		storageMgr: sm,
 		usedConfig: sync.Map{},
-	}
-	if logger == nil {
-
 	}
 
 	return finder
@@ -101,9 +97,21 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	configFiles := make(map[string]*common.Config)
 	path := ""
 	for _, n := range name {
-		if c, ok := f.usedConfig.Load(name); !ok {
+		if c, ok := f.usedConfig.Load(name); ok {
+			// todo
+			if config, ok := c.(common.Config); ok {
+				configFiles[n] = &config
+			} else {
+				// get config from cache
+				configFiles[n] = getCachedConfig(n, f.config.CachePath)
+			}
+
+			continue
+		} else {
 			path = f.rootPath + "/" + n
-			data, err := f.storageMgr.GetData(path)
+			callback := NewConfigChangedCallback(n, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr)
+			data, err := f.storageMgr.GetDataWithWatch(path, &callback)
+
 			if err != nil {
 				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 			} else {
@@ -120,18 +128,8 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 						logger.Error("CacheConfig:", err)
 					}
 				}
+			}
 
-				// watch config node
-				f.storageMgr.Watch(path)
-			}
-		} else {
-			// todo
-			if config, ok := c.(common.Config); ok {
-				configFiles[n] = &config
-			} else {
-				// get config from cache
-				configFiles[n] = getCachedConfig(n, f.config.CachePath)
-			}
 		}
 	}
 
@@ -149,8 +147,6 @@ func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	}
 
 	// todo
-
-	zkutil.ConfigEventPool.Remove(name)
 
 	return nil
 }

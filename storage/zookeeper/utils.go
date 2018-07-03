@@ -175,3 +175,13 @@ func validatePath(path string) error {
 
 	return nil
 }
+
+func getNodeFromPath(path string) string {
+	if idx := strings.LastIndex(path, PATH_SEPARATOR); idx < 0 {
+		return path
+	} else if idx+1 >= len(path) {
+		return ""
+	} else {
+		return path[idx+1:]
+	}
+}
