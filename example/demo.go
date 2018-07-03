@@ -18,19 +18,29 @@ import (
 )
 
 func main() {
+	newProviderFinder("127.0.0.1:8081")
+	newConsumerFinder("127.0.0.1:8082")
+	newConfigFinder("127.0.0.1:10010", []string{"xsfc.toml"})
+	newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
+
+	for {
+		time.Sleep(time.Second * 60)
+		log.Println("I'm running.")
+	}
+
+}
+
+func newProviderFinder(addr string) {
 	cachePath, err := os.Getwd()
 	if err != nil {
 		return
 	}
 	cachePath += "/findercache"
 	config := common.BootConfig{
-		CompanionUrl:     "http://10.1.86.223:9080",
-		CachePath:        cachePath,
-		TickerDuration:   5000,
-		ZkSessionTimeout: 5 * time.Second,
-		ZkConnectTimeout: 3 * time.Second,
-		ZkMaxSleepTime:   15 * time.Second,
-		ZkMaxRetryNum:    3,
+		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
+		CompanionUrl:  "http://10.1.86.223:9080",
+		CachePath:     cachePath,
+		ExpireTimeout: 5 * time.Second,
 		// MeteData: &common.ServiceMeteData{
 		// 	Project: "project",
 		// 	Group:   "group",
@@ -48,10 +58,10 @@ func main() {
 
 		MeteData: &common.ServiceMeteData{
 			Project: "AIaaS",
-			Group:   "aitest",
-			Service: "iatExecutor",
-			Version: "2.0.6",
-			Address: "127.0.0.1:8092",
+			Group:   "dx",
+			Service: "finder_test",
+			Version: "1.0",
+			Address: addr,
 		},
 
 		// MeteData: &common.ServiceMeteData{
@@ -74,7 +84,84 @@ func main() {
 
 		//testConfigFeedback()
 	}
+}
 
+func newConsumerFinder(addr string) {
+	cachePath, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	cachePath += "/findercache"
+	config := common.BootConfig{
+		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
+		CompanionUrl:  "http://10.1.86.223:9080",
+		CachePath:     cachePath,
+		ExpireTimeout: 5 * time.Second,
+		// MeteData: &common.ServiceMeteData{
+		// 	Project: "project",
+		// 	Group:   "group",
+		// 	Service: "xsf",
+		// 	Version: "1.0.0",
+		// 	Address: "127.0.0.1:9091",
+		// },
+		// MeteData: &common.ServiceMeteData{
+		// 	Project: "test",
+		// 	Group:   "default",
+		// 	Service: "xsf",
+		// 	Version: "1.0.0",
+		// 	Address: "127.0.0.1:9091",
+		// },
+		MeteData: &common.ServiceMeteData{
+			Project: "AIaaS",
+			Group:   "dx",
+			Service: "finder_test",
+			Version: "1.0",
+			Address: addr,
+		},
+	}
+
+	f, err := finder.NewFinderWithLogger(config, nil)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		//testUseConfigAsync(f)
+		//testCache(cachePath)
+		testUseServiceAsync(f)
+
+		//testConfigFeedback()
+	}
+}
+
+func newConfigFinder(addr string, name []string) {
+	cachePath, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	cachePath += "/findercache"
+	config := common.BootConfig{
+		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
+		CompanionUrl:  "http://10.1.86.223:9080",
+		CachePath:     cachePath,
+		ExpireTimeout: 5 * time.Second,
+		MeteData: &common.ServiceMeteData{
+			Project: "AIaaS",
+			Group:   "dx",
+			Service: "iatExecutor",
+			Version: "2.0.7",
+			Address: addr,
+		},
+	}
+
+	f, err := finder.NewFinderWithLogger(config, nil)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		testUseConfigAsyncByName(f, name)
+		//testCache(cachePath)
+		//testUseServiceAsync(f)
+
+		//testConfigFeedback()
+	}
 }
 
 func getLocalIP(url string) (string, error) {
@@ -145,20 +232,20 @@ func testCache(cachepath string) {
 		fmt.Println("default.cfg:", string(c.File))
 	}
 
-	zkInfo := &common.ZkInfo{
-		ZkAddr:          []string{"10.1.86.73:2181", "10.1.86.74:2181"},
+	zkInfo := &common.StorageInfo{
+		Addr:            []string{"10.1.86.73:2181", "10.1.86.74:2181"},
 		ConfigRootPath:  "/polaris/config/",
 		ServiceRootPath: "/polaris/service/",
 	}
-	err = finder.CacheZkInfo(cachepath, zkInfo)
+	err = finder.CacheStorageInfo(cachepath, zkInfo)
 	if err != nil {
 		fmt.Println(err)
 	}
-	newZkInfo, err := finder.GetZkInfoFromCache(cachepath)
+	newZkInfo, err := finder.GetStorageInfoFromCache(cachepath)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("ZkAddr:", newZkInfo.ZkAddr)
+		fmt.Println("ZkAddr:", newZkInfo.Addr)
 		fmt.Println("ConfigRootPath:", newZkInfo.ConfigRootPath)
 		fmt.Println("ServiceRootPath:", newZkInfo.ServiceRootPath)
 	}
@@ -268,7 +355,7 @@ func testServiceAsync(f *finder.FinderManager) {
 		fmt.Println("RegisterService is ok.")
 	}
 	time.Sleep(time.Second * 2)
-	//return
+	return
 
 	// serviceList, err := f.ServiceFinder.UseService([]string{"xrpc"})
 	// if err != nil {
@@ -286,35 +373,102 @@ func testServiceAsync(f *finder.FinderManager) {
 	// 	time.Sleep(time.Second * 2)
 	// }
 
-	// forIndex := 0
-	// for {
-	// 	forIndex++
-	//go func(){
+	forIndex := 0
+	for {
+		forIndex++
+		go func() {
 
-	// handler := new(ServiceChangedHandle)
-	// fmt.Println("use ", forIndex)
-	// serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26", "aitest_weiwang26"}, handler)
-	// fmt.Println("use end ", forIndex)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	for _, s := range serviceList {
-	// 		fmt.Println(s.Name, ":")
-	// 		for _, item := range s.ServerList {
-	// 			fmt.Println("addr:", item.Addr)
-	// 			fmt.Println("weight:", item.Config.Weight)
-	// 			fmt.Println("is_valid:", item.Config.IsValid)
-	// 		}
-	// 	}
+			handler := new(ServiceChangedHandle)
+			fmt.Println("use ", forIndex)
+			serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26", "aitest_weiwang26"}, handler)
+			fmt.Println("use end ", forIndex)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				for _, s := range serviceList {
+					fmt.Println(s.Name, ":")
+					for _, item := range s.ServerList {
+						fmt.Println("addr:", item.Addr)
+						fmt.Println("weight:", item.Config.Weight)
+						fmt.Println("is_valid:", item.Config.IsValid)
+					}
+				}
 
-	//time.Sleep(time.Second * 2)
-	//}
-	//}()
+				//time.Sleep(time.Second * 2)
+			}
+		}()
 
-	// if forIndex > 100 {
-	// 	break
-	// }
-	//	}
+		if forIndex > 10 {
+			break
+		}
+	}
+
+	count := 0
+	for {
+		count++
+		if count > 200 {
+			//f.ConfigFinder.UnSubscribeConfig("default.toml")
+		}
+		if count > 600 {
+			err = f.ServiceFinder.UnRegisterService()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println("UnRegisterService is ok.")
+			}
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
+}
+
+func testUseServiceAsync(f *finder.FinderManager) {
+	handler := new(ServiceChangedHandle)
+	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"iatExecutor"}, handler)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, s := range serviceList {
+			fmt.Println(s.Name, ":")
+			for _, item := range s.ServerList {
+				fmt.Println("addr:", item.Addr)
+				fmt.Println("weight:", item.Config.Weight)
+				fmt.Println("is_valid:", item.Config.IsValid)
+			}
+		}
+	}
+
+	return
+
+	forIndex := 0
+	for {
+		forIndex++
+		go func() {
+
+			handler := new(ServiceChangedHandle)
+			fmt.Println("use ", forIndex)
+			serviceList, err := f.ServiceFinder.UseAndSubscribeService([]string{"aitest_weiwang26", "aitest_weiwang26"}, handler)
+			fmt.Println("use end ", forIndex)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				for _, s := range serviceList {
+					fmt.Println(s.Name, ":")
+					for _, item := range s.ServerList {
+						fmt.Println("addr:", item.Addr)
+						fmt.Println("weight:", item.Config.Weight)
+						fmt.Println("is_valid:", item.Config.IsValid)
+					}
+				}
+
+				//time.Sleep(time.Second * 2)
+			}
+		}()
+
+		if forIndex > 10 {
+			break
+		}
+	}
 
 	count := 0
 	for {
@@ -345,13 +499,52 @@ func testUseConfigAsync(f *finder.FinderManager) {
 
 	f.InternalLogger.Info("The ", count, "th show:")
 	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
-	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
+	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"2.yml"}, handler)
 	if err != nil {
 		log.Println(err)
 	}
 	for _, c := range configFiles {
 		log.Println(c.Name, ":\r\n", string(c.File))
 	}
+
+	for {
+		//fmt.Println("The ", count, "th show:")
+		//configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+
+		//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+		//configFiles, err := f.ConfigFinder.UseConfig([]string{"xsfc.tmol"})
+
+		if count > 200 {
+			f.ConfigFinder.UnSubscribeConfig("default.toml")
+		}
+		if count > 600 {
+			break
+		}
+		count++
+		time.Sleep(time.Second * 1)
+	}
+
+}
+
+func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
+	// configFiles, err := f.ConfigFinder.UseConfig([]string{"test.toml"})
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	handler := new(ConfigChangedHandle)
+	count := 0
+
+	f.InternalLogger.Info("The ", count, "th show:")
+	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
+	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig(name, handler)
+	if err != nil {
+		log.Println(err)
+	}
+	for _, c := range configFiles {
+		log.Println(c.Name, ":\r\n", string(c.File))
+	}
+
+	return
 	for {
 		//fmt.Println("The ", count, "th show:")
 		//configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)

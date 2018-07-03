@@ -10,8 +10,8 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
 )
 
-func CacheZkInfo(cachePath string, zkInfo *common.ZkInfo) error {
-	cachePath = fmt.Sprintf("%s/zk_%s.findercache", cachePath, "info")
+func CacheStorageInfo(cachePath string, zkInfo *common.StorageInfo) error {
+	cachePath = fmt.Sprintf("%s/storage_%s.findercache", cachePath, "info")
 	data, err := json.Marshal(zkInfo)
 	if err != nil {
 		log.Println(err)
@@ -26,14 +26,14 @@ func CacheZkInfo(cachePath string, zkInfo *common.ZkInfo) error {
 	return nil
 }
 
-func GetZkInfoFromCache(cachePath string) (*common.ZkInfo, error) {
-	cachePath = fmt.Sprintf("%s/zk_%s.findercache", cachePath, "info")
+func GetStorageInfoFromCache(cachePath string) (*common.StorageInfo, error) {
+	cachePath = fmt.Sprintf("%s/storage_%s.findercache", cachePath, "info")
 	data, err := fileutil.ReadFile(cachePath)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	zkInfo := &common.ZkInfo{}
+	zkInfo := &common.StorageInfo{}
 	err = json.Unmarshal(data, zkInfo)
 	if err != nil {
 		log.Println(err)

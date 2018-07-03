@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -307,10 +308,11 @@ func WithMaxConnBufferSize(maxBufferSize int) connOption {
 }
 
 func (c *Conn) Close() {
-	_, closed := <-c.shouldQuit
-	if !closed {
-		close(c.shouldQuit)
-	}
+	log.Printf("called Close from conn.go")
+	//_, closed := <-c.shouldQuit
+	//if !closed {
+	close(c.shouldQuit)
+	//}
 
 	select {
 	case <-c.queueRequest(opClose, &closeRequest{}, &closeResponse{}, nil):
@@ -342,11 +344,13 @@ func (c *Conn) setTimeouts(sessionTimeoutMs int32) {
 }
 
 func (c *Conn) setState(state State) {
+	log.Println("setState:", state)
 	atomic.StoreInt32((*int32)(&c.state), int32(state))
 	c.sendEvent(Event{Type: EventSession, State: state, Server: c.Server()})
 }
 
 func (c *Conn) sendEvent(evt Event) {
+	log.Println("sendEvent:", evt)
 	if c.eventCallback != nil {
 		c.eventCallback(evt)
 	}
@@ -455,6 +459,7 @@ func (c *Conn) sendRequest(
 func (c *Conn) loop() {
 	for {
 		if err := c.connect(); err != nil {
+			log.Println("c.Close() was called")
 			// c.Close() was called
 			return
 		}
@@ -483,6 +488,7 @@ func (c *Conn) loop() {
 				if err != nil || c.logInfo {
 					c.logger.Printf("Send loop terminated: err=%v", err)
 				}
+				log.Println("causes recv loop to EOF/exit")
 				c.conn.Close() // causes recv loop to EOF/exit
 				wg.Done()
 			}()
@@ -511,6 +517,7 @@ func (c *Conn) loop() {
 		select {
 		case <-c.shouldQuit:
 			c.flushRequests(ErrClosing)
+			log.Println("c.shouldQuit:true")
 			return
 		default:
 		}
@@ -523,6 +530,7 @@ func (c *Conn) loop() {
 		if c.reconnectLatch != nil {
 			select {
 			case <-c.shouldQuit:
+				log.Println("c.reconnectLatch != nil & c.shouldQuit:true")
 				return
 			case <-c.reconnectLatch:
 			}
@@ -712,6 +720,7 @@ func (c *Conn) authenticate() error {
 }
 
 func (c *Conn) sendData(req *request) error {
+	// log.Println("sendData:", req)
 	header := &requestHeader{req.xid, req.opcode}
 	n, err := encodePacket(c.buf[4:], header)
 	if err != nil {
@@ -759,6 +768,7 @@ func (c *Conn) sendLoop() error {
 	for {
 		select {
 		case req := <-c.sendChan:
+			// log.Printf("sendLoop:c.sendChan")
 			if err := c.sendData(req); err != nil {
 				return err
 			}
@@ -773,11 +783,14 @@ func (c *Conn) sendLoop() error {
 			c.conn.SetWriteDeadline(time.Now().Add(c.recvTimeout))
 			_, err = c.conn.Write(c.buf[:n+4])
 			c.conn.SetWriteDeadline(time.Time{})
+			// log.Printf("sendLoop:case <-pingTicker.C")
 			if err != nil {
+				log.Printf("sendLoop:called close")
 				c.conn.Close()
 				return err
 			}
 		case <-c.closeChan:
+			log.Printf("sendLoop:case <-c.closeChan")
 			return nil
 		}
 	}
@@ -911,11 +924,13 @@ func (c *Conn) queueRequest(opcode int32, req interface{}, res interface{}, recv
 		recvFunc:   recvFunc,
 	}
 	c.sendChan <- rq
+
 	return rq.recvChan
 }
 
 func (c *Conn) request(opcode int32, req interface{}, res interface{}, recvFunc func(*request, *responseHeader, error)) (int64, error) {
 	r := <-c.queueRequest(opcode, req, res, recvFunc)
+
 	return r.zxid, r.err
 }
 

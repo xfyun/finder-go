@@ -11,8 +11,8 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
-// GetZkInfo for getting zk metadata
-func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
+// GetStorageInfo for getting storage metadata
+func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 	var result []byte
 	var err error
 	retryNum := 0
@@ -22,7 +22,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 			log.Println(err)
 			if retryNum < 3 {
 				retryNum++
-				log.Println("The ", retryNum, "th GetZkInfo")
+				log.Println("The ", retryNum, "th GetStorageInfo")
 				time.Sleep(time.Millisecond * 100)
 				continue
 			} else {
@@ -41,7 +41,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	if r.Ret != 0 {
 		err = &errors.FinderError{
 			Ret:  errors.ZkGetInfoError,
-			Func: "GetZkInfo",
+			Func: "GetStorageInfo",
 			Desc: r.Msg,
 		}
 		return nil, err
@@ -51,7 +51,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	if _, ok = r.Data["config_path"]; !ok {
 		err = &errors.FinderError{
 			Ret:  errors.ZkMissRootPath,
-			Func: "GetZkInfo",
+			Func: "GetStorageInfo",
 			Desc: "miss config path",
 		}
 
@@ -61,7 +61,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	if _, ok = r.Data["service_path"]; !ok {
 		err = &errors.FinderError{
 			Ret:  errors.ZkMissRootPath,
-			Func: "GetZkInfo",
+			Func: "GetStorageInfo",
 			Desc: "miss service path",
 		}
 
@@ -72,7 +72,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 	if _, ok = r.Data["zk_addr"]; !ok {
 		err = &errors.FinderError{
 			Ret:  errors.ZkMissAddr,
-			Func: "GetZkInfo",
+			Func: "GetStorageInfo",
 			Desc: "miss zk_info",
 		}
 
@@ -85,7 +85,7 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 		if len(zkAddr) == 0 {
 			err = &errors.FinderError{
 				Ret:  errors.ZkMissAddr,
-				Func: "GetZkInfo",
+				Func: "GetStorageInfo",
 				Desc: "convert failure",
 			}
 
@@ -93,10 +93,10 @@ func GetZkInfo(hc *http.Client, url string) (*common.ZkInfo, error) {
 		}
 	}
 
-	zkInfo := &common.ZkInfo{
+	zkInfo := &common.StorageInfo{
 		ConfigRootPath:  r.Data["config_path"].(string),
 		ServiceRootPath: r.Data["service_path"].(string),
-		ZkAddr:          zkAddr,
+		Addr:            zkAddr,
 	}
 
 	return zkInfo, nil

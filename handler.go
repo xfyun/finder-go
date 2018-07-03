@@ -8,16 +8,59 @@ import (
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	companion "git.xfyun.cn/AIaaS/finder-go/companion"
-	"git.xfyun.cn/AIaaS/finder-go/utils/zkutil"
+	"git.xfyun.cn/AIaaS/finder-go/storage"
 )
 
-type ServiceHandle struct {
-	ChangedHandler common.ServiceChangedHandler
-	config         *common.BootConfig
-	zkManager      *zkutil.ZkManager
+const (
+	SERVICE_INSTANCE_CHANGED        = "SERVICE_INSTANCE"
+	SERVICE_CONFIG_CHANGED          = "SERVICE_CONFIG"
+	SERVICE_INSTANCE_CONFIG_CHANGED = "SERVICE_INSTANCE_CONFIG"
+	CONFIG_CHANGED                  = "CONFIG"
+)
+
+type ServiceChangedCallback struct {
+	name      string
+	eventType string
+	uh        common.ServiceChangedHandler
+	bootCfg   *common.BootConfig
+	sm        storage.StorageManager
+	root      string
 }
 
-func (s *ServiceHandle) OnServiceInstanceConfigChanged(name string, addr string, data []byte) {
+func NewServiceChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ServiceChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager) ServiceChangedCallback {
+	return ServiceChangedCallback{
+		name:      serviceName,
+		eventType: watchType,
+		root:      rootPath,
+		uh:        userHandle,
+		bootCfg:   bootConfig,
+		sm:        storageMgr,
+	}
+}
+
+// func (cb *ServiceChangedCallback) checkEventType(name string, path string) bool {
+// 	if paths, ok := cb.watchedTypes.Load(name); ok {
+// 		return arrayutil.Contains(path, paths)
+// 	}
+
+// 	return false
+// }
+
+func (cb *ServiceChangedCallback) DataChangedCallback(path string, node string, data []byte) {
+	if cb.eventType == SERVICE_CONFIG_CHANGED {
+		cb.OnServiceConfigChanged(cb.name, data)
+	} else if cb.eventType == SERVICE_INSTANCE_CONFIG_CHANGED {
+		cb.OnServiceInstanceConfigChanged(cb.name, node, data)
+	}
+}
+
+func (cb *ServiceChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
+	if cb.eventType == SERVICE_INSTANCE_CHANGED {
+		cb.OnServiceInstanceChanged(cb.name, children)
+	}
+}
+
+func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(name string, addr string, data []byte) {
 	pushID, config, err := common.DecodeValue(data)
 	if err != nil {
 		// todo
@@ -26,7 +69,7 @@ func (s *ServiceHandle) OnServiceInstanceConfigChanged(name string, addr string,
 
 	f := &common.ServiceFeedback{
 		PushID:          pushID,
-		ServiceMete:     s.config.MeteData,
+		ServiceMete:     cb.bootCfg.MeteData,
 		Provider:        name,
 		ProviderVersion: "",
 		UpdateTime:      time.Now().Unix(),
@@ -38,7 +81,7 @@ func (s *ServiceHandle) OnServiceInstanceConfigChanged(name string, addr string,
 		f.LoadStatus = -1
 		log.Println(err)
 	} else {
-		ok := s.ChangedHandler.OnServiceInstanceConfigChanged(name, addr, c)
+		ok := cb.uh.OnServiceInstanceConfigChanged(name, addr, c)
 		if ok {
 			log.Println("load success:", pushID)
 			f.LoadStatus = 1
@@ -46,13 +89,13 @@ func (s *ServiceHandle) OnServiceInstanceConfigChanged(name string, addr string,
 	}
 
 	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(s.config.CompanionUrl, f)
+	err = pushServiceFeedback(cb.bootCfg.CompanionUrl, f)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
+func (cb *ServiceChangedCallback) OnServiceConfigChanged(name string, data []byte) {
 	pushID, config, err := common.DecodeValue(data)
 	if err != nil {
 		// todo
@@ -61,7 +104,7 @@ func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
 
 	f := &common.ServiceFeedback{
 		PushID:          pushID,
-		ServiceMete:     s.config.MeteData,
+		ServiceMete:     cb.bootCfg.MeteData,
 		Provider:        name,
 		ProviderVersion: "",
 		UpdateTime:      time.Now().Unix(),
@@ -73,7 +116,7 @@ func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
 		f.LoadStatus = -1
 		log.Println(err)
 	} else {
-		ok := s.ChangedHandler.OnServiceConfigChanged(name, c)
+		ok := cb.uh.OnServiceConfigChanged(name, c)
 		if ok {
 			log.Println("load success:", pushID)
 			f.LoadStatus = 1
@@ -81,22 +124,22 @@ func (s *ServiceHandle) OnServiceConfigChanged(name string, data []byte) {
 	}
 
 	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(s.config.CompanionUrl, f)
+	err = pushServiceFeedback(cb.bootCfg.CompanionUrl, f)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string) {
+func (cb *ServiceChangedCallback) OnServiceInstanceChanged(name string, addrList []string) {
 	eventList := make([]*common.ServiceInstanceChangedEvent, 0)
 	newInstances := []*common.ServiceInstance{}
-	cachedService, err := GetServiceFromCache(s.config.CachePath, name)
+	cachedService, err := GetServiceFromCache(cb.bootCfg.CachePath, name)
 	if err != nil {
 		log.Println("GetServiceFromCache", name, err)
 		cachedService = &common.Service{Name: name, ServerList: newInstances}
 	}
 	if len(addrList) > 0 {
-		servicePath := fmt.Sprintf("%s/%s/provider", s.zkManager.MetaData.ServiceRootPath, name)
+		servicePath := fmt.Sprintf("%s/%s/provider", cb.root, name)
 		if len(cachedService.ServerList) > 0 {
 			oldInstances, deletedEvent := getDeletedInstEvent(addrList, cachedService.ServerList)
 			if deletedEvent != nil {
@@ -105,13 +148,13 @@ func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string)
 			if oldInstances != nil {
 				newInstances = append(newInstances, oldInstances...)
 			}
-			addedEvent := getAddedInstEvents(s.zkManager, servicePath, addrList, cachedService.ServerList)
+			addedEvent := getAddedInstEvents(cb.sm, servicePath, addrList, cachedService.ServerList)
 			if addedEvent != nil {
 				newInstances = append(newInstances, addedEvent.ServerList...)
 				eventList = append(eventList, addedEvent)
 			}
 		} else {
-			addedEvent := getAddedInstEvents(s.zkManager, servicePath, addrList, cachedService.ServerList)
+			addedEvent := getAddedInstEvents(cb.sm, servicePath, addrList, cachedService.ServerList)
 			if addedEvent != nil {
 				newInstances = append(newInstances, addedEvent.ServerList...)
 				eventList = append(eventList, addedEvent)
@@ -128,12 +171,12 @@ func (s *ServiceHandle) OnServiceInstanceChanged(name string, addrList []string)
 	}
 
 	cachedService.ServerList = newInstances
-	err = CacheService(s.config.CachePath, cachedService)
+	err = CacheService(cb.bootCfg.CachePath, cachedService)
 	if err != nil {
 		log.Println("CacheService failed")
 	}
 
-	ok := s.ChangedHandler.OnServiceInstanceChanged(name, eventList)
+	ok := cb.uh.OnServiceInstanceChanged(name, eventList)
 	if !ok {
 		log.Println("OnServiceInstanceChanged is not ok")
 	}
@@ -173,7 +216,7 @@ func getDeletedInstEvent(addrList []string, insts []*common.ServiceInstance) ([]
 	return oldInstances, event
 }
 
-func getAddedInstEvents(zm *zkutil.ZkManager, servicePath string, addrList []string, insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
+func getAddedInstEvents(sm storage.StorageManager, servicePath string, addrList []string, insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
 	var event *common.ServiceInstanceChangedEvent
 	var addedInstances []*common.ServiceInstance
 	var added bool
@@ -185,7 +228,7 @@ func getAddedInstEvents(zm *zkutil.ZkManager, servicePath string, addrList []str
 			}
 		}
 		if added {
-			inst, err := getServiceInstance(zm, servicePath, addr)
+			inst, err := getServiceInstance(sm, servicePath, addr)
 			if err != nil {
 				log.Println(err)
 				// todo
@@ -209,19 +252,44 @@ func getAddedInstEvents(zm *zkutil.ZkManager, servicePath string, addrList []str
 	return event
 }
 
-type ConfigHandle struct {
-	config         *common.BootConfig
-	ChangedHandler common.ConfigChangedHandler
+type ConfigChangedCallback struct {
+	name      string
+	eventType string
+	uh        common.ConfigChangedHandler
+	bootCfg   *common.BootConfig
+	sm        storage.StorageManager
+	root      string
 }
 
-func (s *ConfigHandle) OnConfigFileChanged(name string, data []byte) {
+func NewConfigChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ConfigChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager) ConfigChangedCallback {
+	return ConfigChangedCallback{
+		name:      serviceName,
+		eventType: watchType,
+		root:      rootPath,
+		uh:        userHandle,
+		bootCfg:   bootConfig,
+		sm:        storageMgr,
+	}
+}
+
+func (cb *ConfigChangedCallback) DataChangedCallback(path string, node string, data []byte) {
+	if cb.eventType == CONFIG_CHANGED {
+		cb.OnConfigFileChanged(cb.name, data)
+	}
+}
+
+func (cb *ConfigChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
+
+}
+
+func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte) {
 	pushID, file, err := common.DecodeValue(data)
 	if err != nil {
 		// todo
 	} else {
 		f := &common.ConfigFeedback{
 			PushID:       pushID,
-			ServiceMete:  s.config.MeteData,
+			ServiceMete:  cb.bootCfg.MeteData,
 			Config:       name,
 			UpdateTime:   time.Now().Unix(),
 			UpdateStatus: 1,
@@ -231,9 +299,9 @@ func (s *ConfigHandle) OnConfigFileChanged(name string, data []byte) {
 			File: file,
 		}
 
-		ok := s.ChangedHandler.OnConfigFileChanged(c)
+		ok := cb.uh.OnConfigFileChanged(c)
 		if ok {
-			err = CacheConfig(s.config.CachePath, c)
+			err = CacheConfig(cb.bootCfg.CachePath, c)
 			if err != nil {
 				log.Println(err)
 				// todo
@@ -243,7 +311,7 @@ func (s *ConfigHandle) OnConfigFileChanged(name string, data []byte) {
 			f.LoadStatus = 1
 		}
 		f.LoadTime = time.Now().Unix()
-		err = pushConfigFeedback(s.config.CompanionUrl, f)
+		err = pushConfigFeedback(cb.bootCfg.CompanionUrl, f)
 		if err != nil {
 			log.Println(err)
 		}
