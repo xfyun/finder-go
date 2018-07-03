@@ -309,10 +309,10 @@ func WithMaxConnBufferSize(maxBufferSize int) connOption {
 
 func (c *Conn) Close() {
 	log.Printf("called Close from conn.go")
-	_, closed := <-c.shouldQuit
-	if !closed {
-		close(c.shouldQuit)
-	}
+	//_, closed := <-c.shouldQuit
+	//if !closed {
+	close(c.shouldQuit)
+	//}
 
 	select {
 	case <-c.queueRequest(opClose, &closeRequest{}, &closeResponse{}, nil):
@@ -720,7 +720,7 @@ func (c *Conn) authenticate() error {
 }
 
 func (c *Conn) sendData(req *request) error {
-	log.Println("sendData:", req)
+	// log.Println("sendData:", req)
 	header := &requestHeader{req.xid, req.opcode}
 	n, err := encodePacket(c.buf[4:], header)
 	if err != nil {
@@ -768,7 +768,7 @@ func (c *Conn) sendLoop() error {
 	for {
 		select {
 		case req := <-c.sendChan:
-			log.Printf("sendLoop:c.sendChan")
+			// log.Printf("sendLoop:c.sendChan")
 			if err := c.sendData(req); err != nil {
 				return err
 			}
@@ -924,11 +924,13 @@ func (c *Conn) queueRequest(opcode int32, req interface{}, res interface{}, recv
 		recvFunc:   recvFunc,
 	}
 	c.sendChan <- rq
+
 	return rq.recvChan
 }
 
 func (c *Conn) request(opcode int32, req interface{}, res interface{}, recvFunc func(*request, *responseHeader, error)) (int64, error) {
 	r := <-c.queueRequest(opcode, req, res, recvFunc)
+
 	return r.zxid, r.err
 }
 
