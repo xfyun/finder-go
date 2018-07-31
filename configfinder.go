@@ -97,6 +97,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	configFiles := make(map[string]*common.Config)
 	path := ""
 	for _, n := range name {
+
 		if c, ok := f.usedConfig.Load(name); ok {
 			// todo
 			if config, ok := c.(common.Config); ok {
@@ -115,14 +116,16 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			if err != nil {
 				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 			} else {
+				//对配置信息进行解码
 				_, fData, err := common.DecodeValue(data)
 				if err != nil {
 					onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 				} else {
 					config := &common.Config{Name: n, File: fData}
 					configFiles[n] = config
+					//缓存到内存
 					f.usedConfig.Store(n, config)
-
+					//放到文件中
 					err = CacheConfig(f.config.CachePath, config)
 					if err != nil {
 						logger.Error("CacheConfig:", err)

@@ -8,6 +8,7 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/byteutil"
 )
 
+//pushIDLenByte+pushIDByte+data
 func EncodeValue(pushID string, data []byte) ([]byte, error) {
 	var err error
 	if len(data) == 0 {

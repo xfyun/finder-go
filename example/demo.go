@@ -21,7 +21,7 @@ func main() {
 	newProviderFinder("127.0.0.1:8081")
 	newConsumerFinder("127.0.0.1:8082")
 	newConfigFinder("127.0.0.1:10010", []string{"xsfc.toml"})
-	newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
+	//	newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
 
 	for {
 		time.Sleep(time.Second * 60)

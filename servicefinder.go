@@ -13,10 +13,11 @@ import (
 )
 
 type ServiceFinder struct {
-	locker            sync.Mutex
-	rootPath          string
-	config            *common.BootConfig
-	storageMgr        storage.StorageManager
+	locker     sync.Mutex
+	rootPath   string
+	config     *common.BootConfig
+	storageMgr storage.StorageManager
+	//当前服务下有哪些提供者
 	usedService       map[string]*common.Service
 	subscribedService map[string]*common.Service
 	mutex             sync.Mutex
@@ -79,6 +80,7 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 
 		servicePath := fmt.Sprintf("%s/%s/provider", f.rootPath, n)
 		logger.Info("useservice:", servicePath)
+		//获取服务提供者
 		addrList, err = f.storageMgr.GetChildren(servicePath)
 		if err != nil {
 			logger.Info("useservice:", err)
