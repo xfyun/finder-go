@@ -39,43 +39,24 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 		return nil, err
 	}
 	if r.Ret != 0 {
-		err = &errors.FinderError{
-			Ret:  errors.ZkGetInfoError,
-			Func: "GetStorageInfo",
-			Desc: r.Msg,
-		}
+		err = errors.NewFinderError(errors.ZkGetInfoError)
 		return nil, err
 	}
 
 	ok := true
 	if _, ok = r.Data["config_path"]; !ok {
-		err = &errors.FinderError{
-			Ret:  errors.ZkMissRootPath,
-			Func: "GetStorageInfo",
-			Desc: "miss config path",
-		}
-
+		err = errors.NewFinderError(errors.ZkInfoMissConfigRootPath)
 		return nil, err
 	}
 
 	if _, ok = r.Data["service_path"]; !ok {
-		err = &errors.FinderError{
-			Ret:  errors.ZkMissRootPath,
-			Func: "GetStorageInfo",
-			Desc: "miss service path",
-		}
-
+		err = errors.NewFinderError(errors.ZkInfoMissServiceRootPath)
 		return nil, err
 	}
 
 	var zkAddr []string
 	if _, ok = r.Data["zk_addr"]; !ok {
-		err = &errors.FinderError{
-			Ret:  errors.ZkMissAddr,
-			Func: "GetStorageInfo",
-			Desc: "miss zk_info",
-		}
-
+		err = errors.NewFinderError(errors.ZkInfoMissAddr)
 		return nil, err
 	}
 
@@ -83,12 +64,7 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 	if value, ok = r.Data["zk_addr"].([]interface{}); ok {
 		zkAddr = convert(value)
 		if len(zkAddr) == 0 {
-			err = &errors.FinderError{
-				Ret:  errors.ZkMissAddr,
-				Func: "GetStorageInfo",
-				Desc: "convert failure",
-			}
-
+			err = errors.NewFinderError(errors.ZkInfoAddrConvertError)
 			return nil, err
 		}
 	}

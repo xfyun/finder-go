@@ -32,13 +32,8 @@ func FeedbackForConfig(hc *http.Client, url string, f *common.ConfigFeedback) er
 		return err
 	}
 	if r.Ret != 0 {
-		err = &errors.FinderError{
-			Ret:  errors.FeedbackConfigError,
-			Func: "FeedbackForConfig",
-			Desc: r.Msg,
-		}
-
-		log.Println("FeedbackForConfig err:", err)
+		err = errors.NewFinderError(errors.FeedbackConfigError)
+		log.Println("FeedbackForConfig err:", r.Msg)
 		return err
 	}
 
@@ -62,12 +57,8 @@ func FeedbackForService(hc *http.Client, url string, f *common.ServiceFeedback) 
 		return err
 	}
 	if r.Ret != 0 {
-		err = &errors.FinderError{
-			Ret:  errors.FeedbackServiceError,
-			Func: "FeedbackForService",
-			Desc: r.Msg,
-		}
-
+		err = errors.NewFinderError(errors.FeedbackServiceError)
+		log.Println("FeedbackServiceError :", r.Msg)
 		return err
 	}
 

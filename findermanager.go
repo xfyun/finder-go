@@ -180,11 +180,7 @@ func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage
 func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	// logger := common.NewDefaultLogger()
 	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
-		err := &errors.FinderError{
-			Ret:  errors.MissCompanionUrl,
-			Func: "NewFinder",
-		}
-
+		err := errors.NewFinderError(errors.MissCompanionUrl)
 		return nil, err
 	}
 
@@ -234,10 +230,7 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	}
 
 	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
-		err := &errors.FinderError{
-			Ret:  errors.MissCompanionUrl,
-			Func: "NewFinder",
-		}
+		err := errors.NewFinderError(errors.MissCompanionUrl)
 		return nil, err
 	}
 

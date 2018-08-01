@@ -1,13 +1,13 @@
 package zookeeper
 
 import (
-	"errors"
 	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/storage/common"
 	"github.com/cooleric/go-zookeeper/zk"
 )
@@ -31,13 +31,13 @@ func NewZkManager(params map[string]string) (*ZkManager, error) {
 func (zm *ZkManager) Init() error {
 	serverStr, exist := zm.params["servers"]
 	if !exist || len(serverStr) == 0 {
-		return errors.New("the param servers is empty")
+		return errors.NewFinderError(errors.ZkParamsMissServers)
 	}
 	servers := strings.Split(serverStr, ",")
 
 	timeout, exist := zm.params["session_timeout"]
 	if !exist || len(timeout) == 0 {
-		return errors.New("the param session_timeout is empty")
+		return errors.NewFinderError(errors.ZkParamsMissSessionTimeout)
 	}
 
 	sessionTimeout, err := strconv.Atoi(timeout)
@@ -224,7 +224,7 @@ func (zm *ZkManager) SetPath(path string) error {
 
 func (zm *ZkManager) SetPathWithData(path string, data []byte) error {
 	if data == nil {
-		return errors.New("data can not be nil.")
+		return errors.NewFinderError(errors.ZkDataCanotNil)
 	}
 	_, err := zm.conn.Create(path, data, PERSISTENT, zk.WorldACL(zk.PermAll))
 	if err == zk.ErrNoNode {
@@ -253,7 +253,7 @@ func (zm *ZkManager) SetTempPath(path string) error {
 
 func (zm *ZkManager) SetTempPathWithData(path string, data []byte) error {
 	if data == nil {
-		return errors.New("data can not be nil.")
+		return errors.NewFinderError(errors.ZkDataCanotNil)
 	}
 	_, err := zm.conn.Create(path, data, EPHEMERAL, zk.WorldACL(zk.PermAll))
 	if err == zk.ErrNoNode {
@@ -285,7 +285,7 @@ func (zm *ZkManager) SetTempPathWithData(path string, data []byte) error {
 
 func (zm *ZkManager) SetData(path string, value []byte) error {
 	if value == nil {
-		return errors.New("data can not be nil.")
+		return errors.NewFinderError(errors.ZkDataCanotNil)
 	}
 	_, err := zm.conn.Set(path, value, DEFAULT_VERSION)
 	return err

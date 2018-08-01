@@ -59,11 +59,7 @@ func (f *ServiceFinder) UnRegisterServiceWithAddr(addr string) error {
 func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, error) {
 	var err error
 	if len(name) == 0 {
-		err = &errors.FinderError{
-			Ret:  errors.ServiceMissName,
-			Func: "UseService",
-		}
-
+		err = errors.NewFinderError(errors.ServiceMissName)
 		return nil, err
 	}
 
@@ -117,11 +113,7 @@ func (f *ServiceFinder) UseService(name []string) (map[string]*common.Service, e
 func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.ServiceChangedHandler) (map[string]*common.Service, error) {
 	var err error
 	if len(name) == 0 {
-		err = &errors.FinderError{
-			Ret:  errors.ServiceMissName,
-			Func: "UseAndSubscribeService",
-		}
-
+		err = errors.NewFinderError(errors.ServiceMissName)
 		return nil, err
 	}
 
@@ -186,10 +178,7 @@ func (f *ServiceFinder) UseAndSubscribeService(name []string, handler common.Ser
 func (f *ServiceFinder) UnSubscribeService(name string) error {
 	var err error
 	if len(name) == 0 {
-		err = &errors.FinderError{
-			Ret:  errors.ServiceMissName,
-			Func: "UnSubscribeService",
-		}
+		err = errors.NewFinderError(errors.ServiceMissName)
 		return err
 	}
 
@@ -203,11 +192,7 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 
 func (f *ServiceFinder) registerService(addr string) error {
 	if stringutil.IsNullOrEmpty(addr) {
-		err := &errors.FinderError{
-			Ret:  errors.ServiceMissAddr,
-			Func: "RegisterService",
-		}
-
+		err := errors.NewFinderError(errors.ServiceMissAddr)
 		logger.Error("RegisterService:", err)
 		return err
 	}
@@ -234,11 +219,7 @@ func (f *ServiceFinder) registerService(addr string) error {
 
 func (f *ServiceFinder) registerConsumer(service string, addr string) error {
 	if stringutil.IsNullOrEmpty(addr) {
-		err := &errors.FinderError{
-			Ret:  errors.ServiceMissAddr,
-			Func: "registerConsumer",
-		}
-
+		err := errors.NewFinderError(errors.ServiceMissAddr)
 		logger.Error("registerConsumer:", err)
 		return err
 	}

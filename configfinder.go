@@ -35,11 +35,7 @@ func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManag
 // UseConfig for
 func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error) {
 	if len(name) == 0 {
-		err := &errors.FinderError{
-			Ret:  errors.ConfigMissName,
-			Func: "UseConfig",
-		}
-
+		err := errors.NewFinderError(errors.ConfigMissName)
 		return nil, err
 	}
 
@@ -83,11 +79,7 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 // UseAndSubscribeConfig for
 func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
 	if len(name) == 0 {
-		err := &errors.FinderError{
-			Ret:  errors.ConfigMissName,
-			Func: "UseConfig",
-		}
-
+		err := errors.NewFinderError(errors.ConfigMissName)
 		return nil, err
 	}
 
@@ -142,10 +134,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	var err error
 	if len(name) == 0 {
-		err = &errors.FinderError{
-			Ret:  errors.ConfigMissName,
-			Func: "UnSubscribeConfig",
-		}
+		err = errors.NewFinderError(errors.ConfigMissName)
 		return err
 	}
 
