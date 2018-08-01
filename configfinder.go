@@ -108,14 +108,12 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			if err != nil {
 				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 			} else {
-				//对配置信息进行解码
 				_, fData, err := common.DecodeValue(data)
 				if err != nil {
 					onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 				} else {
 					config := &common.Config{Name: n, File: fData}
 					configFiles[n] = config
-					//缓存到内存
 					f.usedConfig.Store(n, config)
 					//放到文件中
 					err = CacheConfig(f.config.CachePath, config)
