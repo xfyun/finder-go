@@ -20,6 +20,7 @@ func FeedbackForConfig(hc *http.Client, url string, f *common.ConfigFeedback) er
 	result, err := httputil.DoPost(hc, contentType, url, params)
 	if err != nil {
 		log.Println("FeedbackForConfig err:", err)
+		err = errors.NewFinderError(errors.FeedbackPostErr)
 		return err
 	} else {
 		log.Println("FeedbackForConfig result:", string(result))
@@ -29,10 +30,11 @@ func FeedbackForConfig(hc *http.Client, url string, f *common.ConfigFeedback) er
 	err = json.Unmarshal([]byte(result), &r)
 	if err != nil {
 		log.Println("FeedbackForConfig err:", err)
+		err = errors.NewFinderError(errors.JsonUnmarshalErr)
 		return err
 	}
 	if r.Ret != 0 {
-		err = errors.NewFinderError(errors.FeedbackConfigError)
+		err = errors.NewFinderError(errors.FeedbackConfigErr)
 		log.Println("FeedbackForConfig err:", r.Msg)
 		return err
 	}
@@ -48,16 +50,19 @@ func FeedbackForService(hc *http.Client, url string, f *common.ServiceFeedback) 
 	result, err := httputil.DoPost(hc, contentType, url, params)
 	if err != nil {
 		log.Println(err)
+		err = errors.NewFinderError(errors.FeedbackPostErr)
 		return err
 	}
 
 	var r JSONResult
 	err = json.Unmarshal([]byte(result), &r)
 	if err != nil {
+		log.Println("[FeedbackForService][json]", err)
+		err = errors.NewFinderError(errors.JsonUnmarshalErr)
 		return err
 	}
 	if r.Ret != 0 {
-		err = errors.NewFinderError(errors.FeedbackServiceError)
+		err = errors.NewFinderError(errors.FeedbackServiceErr)
 		log.Println("FeedbackServiceError :", r.Msg)
 		return err
 	}

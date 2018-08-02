@@ -2,11 +2,10 @@ package zookeeper
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"strings"
 	"unicode"
 
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"github.com/cooleric/go-zookeeper/zk"
 )
 
@@ -134,11 +133,11 @@ func joinPath(parent string, children ...string) string {
 // Validate the provided znode path string
 func validatePath(path string) error {
 	if len(path) == 0 {
-		return errors.New("Path cannot be null")
+		return errors.NewFinderError(errors.ZkPathCannotNil)
 	}
 
 	if !strings.HasPrefix(path, PATH_SEPARATOR) {
-		return errors.New("Path must start with / character")
+		return errors.NewFinderError(errors.ZkPathPrefixIllegal)
 	}
 
 	if len(path) == 1 {
@@ -146,7 +145,7 @@ func validatePath(path string) error {
 	}
 
 	if strings.HasSuffix(path, PATH_SEPARATOR) {
-		return errors.New("Path must not end with / character")
+		return errors.NewFinderError(errors.ZkPathSuffixIllegal)
 	}
 
 	lastc := '/'
@@ -155,19 +154,19 @@ func validatePath(path string) error {
 		if i == 0 {
 			continue
 		} else if c == 0 {
-			return fmt.Errorf("null character not allowed @ %d", i)
+			return errors.NewFinderError(errors.ZkPathNullCharacterNotAllowed)
 		} else if c == '/' && lastc == '/' {
-			return fmt.Errorf("empty node name specified @ %d", i)
+			return errors.NewFinderError(errors.ZkPathEmptyNodeNameNotAllowed)
 		} else if c == '.' && lastc == '.' {
 			if path[i-2] == '/' && (i+1 == len(path) || path[i+1] == '/') {
-				return fmt.Errorf("relative paths not allowed @ %d", i)
+				return errors.NewFinderError(errors.ZkPathRelativePathNotAllowed)
 			}
 		} else if c == '.' {
 			if path[i-1] == '/' && (i+1 == len(path) || path[i+1] == '/') {
-				return fmt.Errorf("relative paths not allowed @ %d", i)
+				return errors.NewFinderError(errors.ZkPathRelativePathNotAllowed)
 			}
 		} else if unicode.In(c, invalidCharaters) {
-			return fmt.Errorf("invalid charater @ %d", i)
+			return errors.NewFinderError(errors.ZkPathInvalidCharacterNotAllowed)
 		}
 
 		lastc = c

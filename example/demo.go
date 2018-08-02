@@ -19,10 +19,10 @@ import (
 
 func main() {
 	newProviderFinder("127.0.0.1:8081")
-//	newConsumerFinder("127.0.0.1:8082")
-//	newConfigFinder("127.0.0.1:10010", []string{"xsfc.toml"})
-	//	newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
-	
+	newConsumerFinder("127.0.0.1:8082")
+	newConfigFinder("127.0.0.1:10010", []string{"xsfc.toml"})
+	newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
+
 	for {
 		time.Sleep(time.Second * 60)
 		log.Println("I'm running.")
@@ -38,7 +38,7 @@ func newProviderFinder(addr string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-	//	CompanionUrl:  "http://10.1.86.223:9080",
+		CompanionUrl:  "http://10.1.86.223:9080",
 		CachePath:     cachePath,
 		ExpireTimeout: 5 * time.Second,
 		// MeteData: &common.ServiceMeteData{
