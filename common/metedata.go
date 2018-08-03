@@ -26,8 +26,12 @@ type StorageInfo struct {
 }
 
 type Config struct {
+	//文件名
 	Name string
+	//文件内容
 	File []byte
+	//toml文件解析后的数据
+	ConfigMap map[string]interface{}
 }
 
 type ServiceInstanceConfig struct {
@@ -68,6 +72,7 @@ type ConfigFeedback struct {
 	UpdateStatus int
 	LoadTime     int64
 	LoadStatus   int
+	GrayGroupId  string
 }
 
 type ServiceFeedback struct {

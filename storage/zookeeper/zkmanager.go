@@ -34,7 +34,7 @@ func (zm *ZkManager) Init() error {
 		return errors.NewFinderError(errors.ZkParamsMissServers)
 	}
 	servers := strings.Split(serverStr, ",")
-
+	//len(servers)
 	timeout, exist := zm.params["session_timeout"]
 	if !exist || len(timeout) == 0 {
 		return errors.NewFinderError(errors.ZkParamsMissSessionTimeout)

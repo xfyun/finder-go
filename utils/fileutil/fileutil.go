@@ -1,7 +1,11 @@
 package fileutil
 
-import "os"
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+)
 
 func ExistPath(path string) (bool, error) {
 	_, err := os.Stat(path)
@@ -40,6 +44,48 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
+func IsTomlFile(name string) bool {
+	return strings.HasSuffix(name, ".toml")
+}
 func ReadFile(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)
+}
+
+func ParseTomlFile(file []byte) map[string]interface{} {
+	tomlConfig := make(map[string]interface{})
+	content := string(file)
+
+	fmt.Println(content)
+	var currentGroup string
+	lineList := strings.Split(content, "\x0d\x0a")
+	for _, line := range lineList {
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		} else if strings.HasPrefix(line, "#") {
+			continue
+		} else if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			currentGroup = strings.TrimSpace(line[1 : len(line)-1])
+		} else if !strings.Contains(line, "=") {
+			continue
+		} else {
+			if strings.Contains(line, "#") {
+				contentAndComment := strings.Split(line, "#")
+				contentValue := strings.Split(strings.TrimSpace(contentAndComment[0]), "=")
+				if len(currentGroup) == 0 {
+					tomlConfig[strings.TrimSpace(contentValue[0])] = strings.TrimSpace(contentValue[1])
+				} else {
+					tomlConfig[currentGroup+"."+strings.TrimSpace(contentValue[0])] = strings.TrimSpace(contentValue[1])
+				}
+			} else {
+				contentValue := strings.Split(strings.TrimSpace(line), "=")
+				if len(currentGroup) == 0 {
+					tomlConfig[strings.TrimSpace(contentValue[0])] = strings.TrimSpace(contentValue[1])
+				} else {
+					tomlConfig[currentGroup+"."+strings.TrimSpace(contentValue[0])] = strings.TrimSpace(contentValue[1])
+				}
+			}
+		}
+	}
+	return tomlConfig
 }

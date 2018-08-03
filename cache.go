@@ -45,7 +45,16 @@ func GetStorageInfoFromCache(cachePath string) (*common.StorageInfo, error) {
 
 func CacheConfig(cachePath string, config *common.Config) error {
 	cachePath = fmt.Sprintf("%s/config_%s.findercache", cachePath, config.Name)
-	err := fileutil.WriteFile(cachePath, config.File)
+
+	var err error
+	if fileutil.IsTomlFile(config.Name) {
+		//如果是toml文件，则直接存入解析后的数据
+		data, _ := json.Marshal(config.ConfigMap)
+		err = fileutil.WriteFile(cachePath, data)
+	} else {
+		//如果是普通文件，则写入文件数据
+		err = fileutil.WriteFile(cachePath, config.File)
+	}
 	if err != nil {
 		log.Println(err)
 		return err
@@ -56,16 +65,13 @@ func CacheConfig(cachePath string, config *common.Config) error {
 
 func GetConfigFromCache(cachePath string, name string) (*common.Config, error) {
 	cachePath = fmt.Sprintf("%s/config_%s.findercache", cachePath, name)
+
 	exist, err := fileutil.ExistPath(cachePath)
 	if err != nil {
 		log.Println(err)
 	}
 	if !exist {
-		err = &errors.FinderError{
-			Ret:  errors.ConfigMissCacheFile,
-			Func: "GetConfigFromCache",
-		}
-
+		err = errors.NewFinderError(errors.ConfigMissCacheFile)
 		log.Printf(cachePath, err)
 		return nil, err
 	}
@@ -73,8 +79,17 @@ func GetConfigFromCache(cachePath string, name string) (*common.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return &common.Config{Name: name, File: data}, nil
+	if fileutil.IsTomlFile(name) {
+		//如果是toml文件
+		var tomlConfig = make(map[string]interface{})
+		err = json.Unmarshal(data, &tomlConfig)
+		if err != nil {
+			return nil, err
+		}
+		return &common.Config{Name: name, ConfigMap: tomlConfig}, nil
+	} else {
+		return &common.Config{Name: name, File: data}, nil
+	}
 }
 
 func CacheService(cachePath string, service *common.Service) error {

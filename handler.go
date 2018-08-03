@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	companion "git.xfyun.cn/AIaaS/finder-go/companion"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
+	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
 )
 
 const (
@@ -16,6 +18,7 @@ const (
 	SERVICE_CONFIG_CHANGED          = "SERVICE_CONFIG"
 	SERVICE_INSTANCE_CONFIG_CHANGED = "SERVICE_INSTANCE_CONFIG"
 	CONFIG_CHANGED                  = "CONFIG"
+	GRAY_CONFIG_CHANGED             = "GRAY_CONFIG"
 )
 
 type ServiceChangedCallback struct {
@@ -253,12 +256,13 @@ func getAddedInstEvents(sm storage.StorageManager, servicePath string, addrList 
 }
 
 type ConfigChangedCallback struct {
-	name      string
-	eventType string
-	uh        common.ConfigChangedHandler
-	bootCfg   *common.BootConfig
-	sm        storage.StorageManager
-	root      string
+	name        string
+	eventType   string
+	grayGroupId string
+	uh          common.ConfigChangedHandler
+	bootCfg     *common.BootConfig
+	sm          storage.StorageManager
+	root        string
 }
 
 func NewConfigChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ConfigChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager) ConfigChangedCallback {
@@ -275,13 +279,48 @@ func NewConfigChangedCallback(serviceName string, watchType string, rootPath str
 func (cb *ConfigChangedCallback) DataChangedCallback(path string, node string, data []byte) {
 	if cb.eventType == CONFIG_CHANGED {
 		cb.OnConfigFileChanged(cb.name, data)
+	} else if cb.eventType == GRAY_CONFIG_CHANGED {
+		cb.OnGrayConfigChanged(cb.name, data)
 	}
+
 }
 
 func (cb *ConfigChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
 
 }
 
+func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
+
+	groupId := cb.grayGroupId
+	if grayGroupId, ok := ParseGrayConfigData(cb.bootCfg.MeteData.Address, data); ok {
+		if strings.Compare(groupId, grayGroupId) == 0 {
+			//如果之前的group和现在的一样，则代表没有切换灰度组。直接结束
+			return
+		} else {
+			//不相等，则代表灰度组有改变。需要重新获取节点配置信息
+			basePath := cb.root + "/gray/" + grayGroupId + "/" + cb.name
+			data, err := cb.sm.GetDataWithWatch(basePath, cb)
+			if err != nil {
+				logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取灰度配置失败 ", err)
+				return
+			}
+			//成功的话，调用OnConfigFileChanged来执行用户设定的回调函数
+			cb.OnConfigFileChanged(cb.name, data)
+		}
+
+	} else if len(groupId) != 0 {
+		//现在不在灰度组，以前在灰度组中，则需要重新获取配置信息
+		data, err := cb.sm.GetDataWithWatch(cb.root+"/"+cb.name, cb)
+		if err != nil {
+			logger.Info(" [OnGrayConfigChanged] 重新从路径 ", cb.root+"/"+cb.name, " 获取灰度配置失败 ", err)
+			return
+		}
+		cb.OnConfigFileChanged(cb.name, data)
+	} else {
+		//当前不在灰度组中，以前也不在，则配置信息无需再次更新
+		return
+	}
+}
 func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte) {
 	pushID, file, err := common.DecodeValue(data)
 	if err != nil {
@@ -294,9 +333,14 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte) {
 			UpdateTime:   time.Now().Unix(),
 			UpdateStatus: 1,
 		}
+		tomlConfig := make(map[string]interface{})
+		if fileutil.IsTomlFile(name) {
+			tomlConfig = fileutil.ParseTomlFile(file)
+		}
 		c := &common.Config{
-			Name: name,
-			File: file,
+			Name:      name,
+			File:      file,
+			ConfigMap: tomlConfig,
 		}
 
 		ok := cb.uh.OnConfigFileChanged(c)

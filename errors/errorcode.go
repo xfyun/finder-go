@@ -41,6 +41,7 @@ var retCodeToString = map[ReturnCode]string{
 	ZkPathEmptyNodeNameNotAllowed:    "zk中的path不允许存在空的节点名字",
 	ZkPathRelativePathNotAllowed:     "zk中的path不允许相对路径",
 	ZkPathInvalidCharacterNotAllowed: "zk中的path不允许非法字符",
+	ZkGetDataErr:                     "从zk中获取数据出错",
 }
 
 const (
@@ -69,7 +70,7 @@ const (
 	ZkInfoMissServiceRootPath
 	ZkInfoMissAddr
 	ZkInfoAddrConvertError
-
+	ZkGetDataErr
 	ZkParamsMissServers
 	ZkParamsMissSessionTimeout
 	ZkDataCanotNil

@@ -18,10 +18,12 @@ import (
 )
 
 func main() {
-	newProviderFinder("127.0.0.1:8081")
-	newConsumerFinder("127.0.0.1:8082")
-	newConfigFinder("127.0.0.1:10010", []string{"xsfc.toml"})
-	newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
+	//	data, _ := fileutil.ReadFile("C:\\Users\\admin\\Desktop\\11.toml")
+	//	fileutil.ParseTomlFile(data)
+	//newProviderFinder("299.99.99.99:99")
+	//newConsumerFinder("127.0.0.1:8082")
+	newConfigFinder("127.0.0.1:10010", []string{"11.toml"})
+	//newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
 
 	for {
 		time.Sleep(time.Second * 60)
@@ -38,7 +40,7 @@ func newProviderFinder(addr string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  "http://10.1.86.223:9080",
+		CompanionUrl:  "http://10.1.87.70:6868",
 		CachePath:     cachePath,
 		ExpireTimeout: 5 * time.Second,
 		// MeteData: &common.ServiceMeteData{
@@ -79,7 +81,8 @@ func newProviderFinder(addr string) {
 	} else {
 		//testUseConfigAsync(f)
 		//testCache(cachePath)
-		testServiceAsync(f)
+		testGrayData(f)
+		//testServiceAsync(f)
 		//testUseService(f)
 
 		//testConfigFeedback()
@@ -140,14 +143,14 @@ func newConfigFinder(addr string, name []string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  "http://10.1.86.223:9080",
+		CompanionUrl:  "http://10.1.87.70:6868",
 		CachePath:     cachePath,
 		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
-			Project: "AIaaS",
-			Group:   "dx",
-			Service: "iatExecutor",
-			Version: "2.0.7",
+			Project: "qq",
+			Group:   "qq",
+			Service: "qq",
+			Version: "2.0",
 			Address: addr,
 		},
 	}
@@ -345,6 +348,9 @@ func testUseService(f *finder.FinderManager) {
 	}
 }
 
+func testGrayData(f *finder.FinderManager) {
+	f.ConfigFinder.UseConfig([]string{"ddd"})
+}
 func testServiceAsync(f *finder.FinderManager) {
 	var err error
 	err = f.ServiceFinder.RegisterService()
@@ -544,7 +550,6 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 		log.Println(c.Name, ":\r\n", string(c.File))
 	}
 
-	return
 	for {
 		//fmt.Println("The ", count, "th show:")
 		//configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
@@ -559,7 +564,7 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 			break
 		}
 		count++
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second * 3)
 	}
 
 }
