@@ -7,7 +7,7 @@ docker pull 172.16.59.153/aiaas/findergo-demo:2.0.0
 ````
 mkdir -p /opt/finder
 ````
-#### 在finder目录下创建配置文件 config.cfg如下,请自行修改companionUrl 和 address以及group信息
+#### 在finder目录下创建配置文件 conf.json如下,请自行修改companionUrl 和 address以及group信息
 
 /opt/finder/conf.json:
 ````
@@ -28,7 +28,7 @@ mkdir -p /opt/finder
 
 ````
 
-#### 如果一台机器上需要启动多个客户端，创建多个config.cfg文件，放在不同的目录挂载上去,address也要不一样。
+#### 如果一台机器上需要启动多个客户端，创建多个conf.json文件，放在不同的目录挂载上去,address也要不一样。
 ````
 /opt/finder/conf.json
 /opt/finder/conf1.json
