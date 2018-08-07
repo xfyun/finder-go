@@ -17,12 +17,37 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
+type TestConfig struct {
+	CompanionUrl  string
+	Address       string
+	Project       string
+	Group         string
+	Service       string
+	Version       string
+	SubscribeFile []string
+}
+
 func main() {
 	//	data, _ := fileutil.ReadFile("C:\\Users\\admin\\Desktop\\11.toml")
 	//	fileutil.ParseTomlFile(data)
 	//newProviderFinder("299.99.99.99:99")
 	//newConsumerFinder("127.0.0.1:8082")
-	newConfigFinder("127.0.0.1:10010", []string{"11.toml", "test2.yml"})
+	args := os.Args
+	if len(args) != 2 {
+		log.Println("参数错误")
+		return
+	}
+	file, _ := os.Open(args[1])
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	conf := TestConfig{}
+	err := decoder.Decode(&conf)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	//	fmt.Println(conf)
+	newConfigFinder(conf)
 	//newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
 
 	for {
@@ -135,7 +160,7 @@ func newConsumerFinder(addr string) {
 	}
 }
 
-func newConfigFinder(addr string, name []string) {
+func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
 	if err != nil {
 		return
@@ -143,15 +168,15 @@ func newConfigFinder(addr string, name []string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  "http://10.1.87.70:6868",
+		CompanionUrl:  conf.CompanionUrl,
 		CachePath:     cachePath,
 		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
-			Project: "qq",
-			Group:   "qq",
-			Service: "qq",
-			Version: "2.0",
-			Address: addr,
+			Project: conf.Project,
+			Group:   conf.Group,
+			Service: conf.Service,
+			Version: conf.Version,
+			Address: conf.Address,
 		},
 	}
 
@@ -159,7 +184,7 @@ func newConfigFinder(addr string, name []string) {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		testUseConfigAsyncByName(f, name)
+		testUseConfigAsyncByName(f, conf.SubscribeFile)
 		//	testUserConfig(f, name)
 		//testCache(cachePath)
 		//testUseServiceAsync(f)
