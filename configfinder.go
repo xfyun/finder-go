@@ -116,7 +116,15 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		logger.Info("获取灰度配置信息出错", err)
 		return nil, err
 	}
-
+	consumerPath := f.rootPath + "/consumer"
+	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
+		//如果在灰度组。则进行注册到灰度组中
+		consumerPath += "/gray/" + groupId.(string) + "/" + f.config.MeteData.Address
+		f.storageMgr.SetTempPath(consumerPath)
+	} else {
+		consumerPath += "/normal/" + f.config.MeteData.Address
+		f.storageMgr.SetTempPath(consumerPath)
+	}
 	configFiles := make(map[string]*common.Config)
 	path := ""
 	for _, n := range name {
@@ -176,7 +184,7 @@ func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 		err = errors.NewFinderError(errors.ConfigMissName)
 		return err
 	}
-	
+
 	// todo
 
 	return nil

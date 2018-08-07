@@ -299,11 +299,11 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 	}
 
 	if len(currentGrayGroupId) == 0 && strings.Contains(path, "/gray/") {
-	//	logger.Info("当前不在灰度组，但是通知是属于灰度组的，不进行处理")
+		//	logger.Info("当前不在灰度组，但是通知是属于灰度组的，不进行处理")
 		return
 	}
 	if len(currentGrayGroupId) != 0 && !strings.Contains(path, "/"+currentGrayGroupId) {
-	//	logger.Info("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
+		//	logger.Info("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
 		return
 	}
 
@@ -329,6 +329,7 @@ func (cb *ConfigChangedCallback) ChildrenChangedCallback(path string, node strin
 func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 	var currentGrayGroupId string
 	var prevGrayGroupId string
+	consumerPath := cb.configFinder.rootPath + "/consumer"
 	if grayConfig, ok := ParseGrayConfigData(cb.bootCfg.MeteData.Address, data); ok {
 
 		if groupId, ok := cb.configFinder.grayConfig.Load(cb.configFinder.config.MeteData.Address); ok {
@@ -344,7 +345,15 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 		} else if len(currentGrayGroupId) != 0 {
 			//当前在灰度组
 			//不相等，则代表灰度组有改变。需要重新获取节点配置信息
-
+			if len(prevGrayGroupId) == 0 {
+				removePath := consumerPath + "/normal/" + cb.configFinder.config.MeteData.Address
+				cb.sm.Remove(removePath)
+			} else {
+				removePath := consumerPath + "/gray/" + prevGrayGroupId + "/" + cb.configFinder.config.MeteData.Address
+				cb.sm.Remove(removePath)
+			}
+			consumerPath += "/gray/" + currentGrayGroupId + "/" + cb.configFinder.config.MeteData.Address
+			cb.sm.SetTempPath(consumerPath)
 			f := cb.configFinder
 			for _, fileName := range f.fileSubscribe {
 				callback := NewConfigChangedCallback(fileName, CONFIG_CHANGED, f.rootPath, cb.uh, f.config, f.storageMgr, f)
@@ -358,6 +367,10 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 			}
 
 		} else {
+			removePath := consumerPath + "/gray/" + prevGrayGroupId + "/" + cb.configFinder.config.MeteData.Address
+			cb.sm.Remove(removePath)
+			consumerPath += "/normal/" + cb.configFinder.config.MeteData.Address
+			cb.sm.SetTempPath(consumerPath)
 			f := cb.configFinder
 			for _, fileName := range f.fileSubscribe {
 				callback := NewConfigChangedCallback(fileName, CONFIG_CHANGED, f.rootPath, cb.uh, f.config, f.storageMgr, f)
