@@ -14,11 +14,14 @@ var (
 )
 
 type ConfigFinder struct {
-	locker     sync.Mutex
-	rootPath   string
-	config     *common.BootConfig
-	storageMgr storage.StorageManager
-	usedConfig sync.Map
+	locker           sync.Mutex
+	rootPath         string
+	currentWatchPath string
+	config           *common.BootConfig
+	storageMgr       storage.StorageManager
+	usedConfig       sync.Map
+	fileSubscribe    []string
+	grayConfig       sync.Map
 }
 
 func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManager) *ConfigFinder {
@@ -34,7 +37,7 @@ func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManag
 	return finder
 }
 
-// UseConfig for
+// UseConfig for 订阅相关配置文件
 func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error) {
 	if len(name) == 0 {
 		err := errors.NewFinderError(errors.ConfigMissName)
@@ -43,14 +46,18 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 
 	f.locker.Lock()
 	defer f.locker.Unlock()
-
+	err := GetGrayConfigData(f, f.rootPath, nil)
+	if err != nil {
+		logger.Info("获取灰度配置信息出错", err)
+		return nil, err
+	}
 	configFiles := make(map[string]*common.Config)
 	for _, n := range name {
 		if c, ok := f.usedConfig.Load(name); !ok {
-			//先获取gray的数据
+			//先获取gray的数据，用于判断订阅的配置是否在灰度组中
 			basePath := f.rootPath
-			if groupId, ok := GetGrayConfigData(f, f.rootPath, nil); ok {
-				basePath += "/gray/" + groupId
+			if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
+				basePath += "/gray/" + groupId.(string)
 			}
 			//真正获取数据
 			data, err := f.storageMgr.GetData(basePath + "/" + n)
@@ -99,15 +106,22 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		err := errors.NewFinderError(errors.ConfigMissName)
 		return nil, err
 	}
-
 	f.locker.Lock()
 	defer f.locker.Unlock()
+
+	//先查看灰度组的设置
+	callback := NewConfigChangedCallback(f.config.MeteData.Address, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
+	err := GetGrayConfigData(f, f.rootPath, &callback)
+	if err != nil {
+		logger.Info("获取灰度配置信息出错", err)
+		return nil, err
+	}
 
 	configFiles := make(map[string]*common.Config)
 	path := ""
 	for _, n := range name {
-
-		if c, ok := f.usedConfig.Load(name); ok {
+		f.fileSubscribe = append(f.fileSubscribe, n)
+		if c, ok := f.usedConfig.Load(n); ok {
 			// todo
 			if config, ok := c.(common.Config); ok {
 				configFiles[n] = &config
@@ -119,20 +133,14 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			continue
 		} else {
 			basePath := f.rootPath
-
-			//先查看灰度组的设置
-			grayCallBack := NewConfigChangedCallback(n, GRAY_CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr)
-			if groupId, ok := GetGrayConfigData(f, f.rootPath, &grayCallBack); ok {
-				basePath += "/gray/" + groupId
-				//TODO 这个地方有点问题
-				grayCallBack.grayGroupId = groupId
+			if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
+				basePath += "/gray/" + groupId.(string)
 			}
+			callback := NewConfigChangedCallback(n, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
 
 			//根据获取的灰度组设置的结果，来到特定的节点获取配置文件数据
 			path = basePath + "/" + n
-			callback := NewConfigChangedCallback(n, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr)
-			data, err := f.storageMgr.GetDataWithWatch(path, &callback)
-			logger.Info(path)
+			data, err := f.storageMgr.GetDataWithWatchV2(path, &callback)
 			if err != nil {
 				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 			} else {

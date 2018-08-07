@@ -31,6 +31,10 @@ type Logger interface {
 	Errorf(fmt string, v ...interface{})
 }
 
+func init() {
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
+}
+
 type DefaultLogger struct {
 }
 

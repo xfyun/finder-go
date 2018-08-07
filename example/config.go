@@ -12,6 +12,6 @@ type ConfigChangedHandle struct {
 
 // OnConfigFileChanged OnConfigFileChanged
 func (s *ConfigChangedHandle) OnConfigFileChanged(config *common.Config) bool {
-	fmt.Println(config.Name, " has changed:\r\n", string(config.File))
+	fmt.Println("收到 【", config.Name, " 】配置文件修改，最新内容如下 :\r\n", string(config.File))
 	return true
 }

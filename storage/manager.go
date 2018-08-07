@@ -11,6 +11,7 @@ type StorageManager interface {
 	Init() error
 	Destroy() error
 	GetData(path string) ([]byte, error)
+	GetDataWithWatchV2(path string, callback common.ChangedCallback) ([]byte, error)
 	GetDataWithWatch(path string, callback common.ChangedCallback) ([]byte, error)
 	GetChildren(path string) ([]string, error)
 	GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error)

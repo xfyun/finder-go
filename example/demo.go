@@ -22,7 +22,7 @@ func main() {
 	//	fileutil.ParseTomlFile(data)
 	//newProviderFinder("299.99.99.99:99")
 	//newConsumerFinder("127.0.0.1:8082")
-	newConfigFinder("127.0.0.1:10010", []string{"11.toml"})
+	newConfigFinder("127.0.0.1:10010", []string{"11.toml", "test2.yml"})
 	//newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
 
 	for {
@@ -160,6 +160,7 @@ func newConfigFinder(addr string, name []string) {
 		fmt.Println(err)
 	} else {
 		testUseConfigAsyncByName(f, name)
+		//	testUserConfig(f, name)
 		//testCache(cachePath)
 		//testUseServiceAsync(f)
 
@@ -531,18 +532,8 @@ func testUseConfigAsync(f *finder.FinderManager) {
 	}
 
 }
-
-func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
-	// configFiles, err := f.ConfigFinder.UseConfig([]string{"test.toml"})
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	handler := new(ConfigChangedHandle)
-	count := 0
-
-	f.InternalLogger.Info("The ", count, "th show:")
-	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
-	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig(name, handler)
+func testUserConfig(f *finder.FinderManager, name []string) {
+	configFiles, err := f.ConfigFinder.UseConfig(name)
 	if err != nil {
 		log.Println(err)
 	}
@@ -550,21 +541,24 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 		log.Println(c.Name, ":\r\n", string(c.File))
 	}
 
-	for {
-		//fmt.Println("The ", count, "th show:")
-		//configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
+}
 
-		//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.tmol"}, handler)
-		//configFiles, err := f.ConfigFinder.UseConfig([]string{"xsfc.tmol"})
+func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
+	// configFiles, err := f.ConfigFinder.UseConfig([]string{"test.toml"})
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	handler := new(ConfigChangedHandle)
+	//count := 0
 
-		if count > 200 {
-			f.ConfigFinder.UnSubscribeConfig("default.toml")
-		}
-		if count > 600 {
-			break
-		}
-		count++
-		time.Sleep(time.Second * 3)
+	//f.InternalLogger.Info("The ", count, "th show:")
+	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
+	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig(name, handler)
+	if err != nil {
+		log.Println(err)
+	}
+	for _, c := range configFiles {
+		log.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
 	}
 
 }

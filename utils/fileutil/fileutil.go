@@ -1,7 +1,6 @@
 package fileutil
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -55,7 +54,6 @@ func ParseTomlFile(file []byte) map[string]interface{} {
 	tomlConfig := make(map[string]interface{})
 	content := string(file)
 
-	fmt.Println(content)
 	var currentGroup string
 	lineList := strings.Split(content, "\x0d\x0a")
 	for _, line := range lineList {

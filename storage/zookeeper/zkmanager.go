@@ -17,12 +17,15 @@ type ZkManager struct {
 	params    map[string]string
 	exit      chan bool
 	tempPaths sync.Map
+	//记录了path对应的Watcher
+	dataWatcher sync.Map
 }
 
 func NewZkManager(params map[string]string) (*ZkManager, error) {
 	zm := &ZkManager{
-		tempPaths: sync.Map{},
-		params:    params,
+		tempPaths:   sync.Map{},
+		params:      params,
+		dataWatcher: sync.Map{},
 	}
 
 	return zm, nil
@@ -50,10 +53,11 @@ func (zm *ZkManager) Init() error {
 		return err
 	}
 	zm.conn = conn
+	go func(dataWatcher sync.Map) {
 
+	}(zm.dataWatcher)
 	return nil
 }
-
 func (zm *ZkManager) eventCallback(e zk.Event) {
 	switch e.Type {
 	case zk.EventSession:
@@ -131,24 +135,67 @@ func (zm *ZkManager) GetData(path string) ([]byte, error) {
 	return data, err
 }
 
-func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallback) ([]byte, error) {
+func (zm *ZkManager) GetDataWithWatchV2(path string, callback common.ChangedCallback) ([]byte, error) {
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	//返回的event
+	go func(zm *ZkManager, p string, event <-chan zk.Event) {
+		select {
+		case e, ok := <-event:
+			if !ok {
+				log.Println("<-event; !ok")
+				return
+			}
+			callback.Process(e.Path, getNodeFromPath(e.Path))
+			break
+		case exit, ok := <-zm.exit:
+			if !ok {
+				log.Println("<-exit; !ok")
+				return
+			}
+			if exit {
+				log.Println("received exit sigterm.")
+				return
+			}
+		}
 
+	}(zm, path, event)
+
+	return data, err
+}
+
+func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallback) ([]byte, error) {
+
+	data, _, event, err := zm.conn.GetW(path)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	//返回的event
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
 		for {
 			select {
 			case e, ok := <-event:
 				if !ok {
 					log.Println("<-event; !ok")
+					continue
 				}
+				var retryCount int32
 				for {
+					//这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
+					//这个地方如果一直注册Watcher 会存在问题。。
+
 					data, _, event, err = zm.conn.GetW(path)
 					if err != nil {
-						log.Println(err)
+						log.Println("[ zkWatcher] 从", path, "获取数据失败 ", err)
+						retryCount++
+						if retryCount > 3 {
+							time.Sleep(1 * time.Second)
+							break
+						}
 						continue
 					} else {
 						callback.DataChangedCallback(e.Path, getNodeFromPath(e.Path), data)
@@ -190,6 +237,7 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 			case e, ok := <-event:
 				if !ok {
 					log.Println("<-event; !ok")
+					continue
 				}
 				for {
 					data, _, event, err = zm.conn.ChildrenW(path)

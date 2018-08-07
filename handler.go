@@ -132,7 +132,9 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(name string, data []byt
 		log.Println(err)
 	}
 }
+func (cb *ServiceChangedCallback) Process(path string, node string) {
 
+}
 func (cb *ServiceChangedCallback) OnServiceInstanceChanged(name string, addrList []string) {
 	eventList := make([]*common.ServiceInstanceChangedEvent, 0)
 	newInstances := []*common.ServiceInstance{}
@@ -256,31 +258,66 @@ func getAddedInstEvents(sm storage.StorageManager, servicePath string, addrList 
 }
 
 type ConfigChangedCallback struct {
-	name        string
-	eventType   string
-	grayGroupId string
-	uh          common.ConfigChangedHandler
-	bootCfg     *common.BootConfig
-	sm          storage.StorageManager
-	root        string
+	name         string
+	eventType    string
+	grayGroupId  string
+	uh           common.ConfigChangedHandler
+	bootCfg      *common.BootConfig
+	sm           storage.StorageManager
+	root         string
+	configFinder *ConfigFinder
 }
 
-func NewConfigChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ConfigChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager) ConfigChangedCallback {
+func NewConfigChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ConfigChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager, configFinder *ConfigFinder) ConfigChangedCallback {
 	return ConfigChangedCallback{
-		name:      serviceName,
-		eventType: watchType,
-		root:      rootPath,
-		uh:        userHandle,
-		bootCfg:   bootConfig,
-		sm:        storageMgr,
+		name:         serviceName,
+		eventType:    watchType,
+		root:         rootPath,
+		uh:           userHandle,
+		bootCfg:      bootConfig,
+		sm:           storageMgr,
+		configFinder: configFinder,
 	}
 }
 
-func (cb *ConfigChangedCallback) DataChangedCallback(path string, node string, data []byte) {
-	if cb.eventType == CONFIG_CHANGED {
-		cb.OnConfigFileChanged(cb.name, data)
-	} else if cb.eventType == GRAY_CONFIG_CHANGED {
+func (cb *ConfigChangedCallback) Process(path string, node string) {
+
+	if strings.HasSuffix(path, "/gray") {
+		//如果是gray节点数据改变
+		data, err := cb.sm.GetDataWithWatchV2(path, cb)
+		if err != nil {
+			logger.Info(" [ Process] 从 ", path, " 获取数据失败")
+			return
+		}
 		cb.OnGrayConfigChanged(cb.name, data)
+		return
+	}
+
+	var currentGrayGroupId string
+	if groupId, ok := cb.configFinder.grayConfig.Load(cb.configFinder.config.MeteData.Address); ok {
+		currentGrayGroupId = groupId.(string)
+	}
+
+	if len(currentGrayGroupId) == 0 && strings.Contains(path, "/gray/") {
+	//	logger.Info("当前不在灰度组，但是通知是属于灰度组的，不进行处理")
+		return
+	}
+	if len(currentGrayGroupId) != 0 && !strings.Contains(path, "/"+currentGrayGroupId) {
+	//	logger.Info("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
+		return
+	}
+
+	data, err := cb.sm.GetDataWithWatchV2(path, cb)
+	if err != nil {
+		logger.Info(" [ Process] 从 ", path, " 获取数据失败")
+		return
+	}
+	cb.OnConfigFileChanged(cb.name, data, path)
+}
+func (cb *ConfigChangedCallback) DataChangedCallback(path string, node string, data []byte) {
+
+	if cb.eventType == CONFIG_CHANGED {
+		cb.OnConfigFileChanged(cb.name, data, path)
 	}
 
 }
@@ -290,38 +327,61 @@ func (cb *ConfigChangedCallback) ChildrenChangedCallback(path string, node strin
 }
 
 func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
+	var currentGrayGroupId string
+	var prevGrayGroupId string
+	if grayConfig, ok := ParseGrayConfigData(cb.bootCfg.MeteData.Address, data); ok {
 
-	groupId := cb.grayGroupId
-	if grayGroupId, ok := ParseGrayConfigData(cb.bootCfg.MeteData.Address, data); ok {
-		if strings.Compare(groupId, grayGroupId) == 0 {
+		if groupId, ok := cb.configFinder.grayConfig.Load(cb.configFinder.config.MeteData.Address); ok {
+			prevGrayGroupId = groupId.(string)
+		}
+		if groupId, ok := grayConfig[cb.configFinder.config.MeteData.Address]; ok {
+			currentGrayGroupId = groupId
+		}
+		cb.configFinder.grayConfig.Store(cb.configFinder.config.MeteData.Address, currentGrayGroupId)
+		if strings.Compare(prevGrayGroupId, currentGrayGroupId) == 0 {
 			//如果之前的group和现在的一样，则代表没有切换灰度组。直接结束
 			return
-		} else {
+		} else if len(currentGrayGroupId) != 0 {
+			//当前在灰度组
 			//不相等，则代表灰度组有改变。需要重新获取节点配置信息
-			basePath := cb.root + "/gray/" + grayGroupId + "/" + cb.name
-			data, err := cb.sm.GetDataWithWatch(basePath, cb)
-			if err != nil {
-				logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取灰度配置失败 ", err)
-				return
+
+			f := cb.configFinder
+			for _, fileName := range f.fileSubscribe {
+				callback := NewConfigChangedCallback(fileName, CONFIG_CHANGED, f.rootPath, cb.uh, f.config, f.storageMgr, f)
+				basePath := cb.root + "/gray/" + currentGrayGroupId + "/" + fileName
+				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
+				if err != nil {
+					logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取灰度配置失败 ", err)
+					return
+				}
+				cb.OnConfigFileChanged(fileName, data, basePath)
 			}
-			//成功的话，调用OnConfigFileChanged来执行用户设定的回调函数
-			cb.OnConfigFileChanged(cb.name, data)
+
+		} else {
+			f := cb.configFinder
+			for _, fileName := range f.fileSubscribe {
+				callback := NewConfigChangedCallback(fileName, CONFIG_CHANGED, f.rootPath, cb.uh, f.config, f.storageMgr, f)
+				basePath := cb.root + "/" + fileName
+				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
+				if err != nil {
+					logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取灰度配置失败 ", err)
+					return
+				}
+				cb.OnConfigFileChanged(fileName, data, basePath)
+			}
+
 		}
 
-	} else if len(groupId) != 0 {
-		//现在不在灰度组，以前在灰度组中，则需要重新获取配置信息
-		data, err := cb.sm.GetDataWithWatch(cb.root+"/"+cb.name, cb)
-		if err != nil {
-			logger.Info(" [OnGrayConfigChanged] 重新从路径 ", cb.root+"/"+cb.name, " 获取灰度配置失败 ", err)
-			return
-		}
-		cb.OnConfigFileChanged(cb.name, data)
-	} else {
-		//当前不在灰度组中，以前也不在，则配置信息无需再次更新
-		return
 	}
+
 }
-func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte) {
+func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, path string) {
+	var currentGrayGroupId string
+	if groupId, ok := cb.configFinder.grayConfig.Load(cb.configFinder.config.MeteData.Address); ok {
+		currentGrayGroupId = groupId.(string)
+	} else {
+		currentGrayGroupId = "0"
+	}
 	pushID, file, err := common.DecodeValue(data)
 	if err != nil {
 		// todo
@@ -332,6 +392,7 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte) {
 			Config:       name,
 			UpdateTime:   time.Now().Unix(),
 			UpdateStatus: 1,
+			GrayGroupId:  currentGrayGroupId,
 		}
 		tomlConfig := make(map[string]interface{})
 		if fileutil.IsTomlFile(name) {
