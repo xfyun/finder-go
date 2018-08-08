@@ -185,6 +185,7 @@ func newConfigFinder(conf TestConfig) {
 		fmt.Println(err)
 	} else {
 		testUseConfigAsyncByName(f, conf.SubscribeFile)
+
 		//	testUserConfig(f, name)
 		//testCache(cachePath)
 		//testUseServiceAsync(f)
@@ -585,5 +586,5 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 	for _, c := range configFiles {
 		log.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
 	}
-
+	//f.ConfigFinder.UnSubscribeConfig("11.toml")
 }

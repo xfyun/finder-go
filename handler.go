@@ -306,7 +306,15 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 		//	logger.Info("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
 		return
 	}
-
+	var isSubscribeFile bool
+	for _, value := range cb.configFinder.fileSubscribe {
+		if strings.Compare(cb.name, value) == 0 {
+			isSubscribeFile = true
+		}
+	}
+	if !isSubscribeFile {
+		return
+	}
 	data, err := cb.sm.GetDataWithWatchV2(path, cb)
 	if err != nil {
 		logger.Info(" [ Process] 从 ", path, " 获取数据失败")
@@ -389,6 +397,7 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 
 }
 func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, path string) {
+
 	var currentGrayGroupId string
 	if groupId, ok := cb.configFinder.grayConfig.Load(cb.configFinder.config.MeteData.Address); ok {
 		currentGrayGroupId = groupId.(string)

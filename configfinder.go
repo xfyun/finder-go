@@ -1,6 +1,8 @@
 package finder
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
@@ -184,8 +186,14 @@ func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 		err = errors.NewFinderError(errors.ConfigMissName)
 		return err
 	}
-
+	fmt.Println("之前  ", f.fileSubscribe)
+	for index, value := range f.fileSubscribe {
+		if strings.Compare(name, value) == 0 {
+			f.fileSubscribe = append(f.fileSubscribe[:index], f.fileSubscribe[index+1:]...)
+		}
+	}
 	// todo
+	fmt.Println("之后  ", f.fileSubscribe)
 
 	return nil
 }
