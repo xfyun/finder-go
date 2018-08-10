@@ -18,4 +18,5 @@ func (s *ConfigChangedHandle) OnConfigFileChanged(config *common.Config) bool {
 	}else{
 		fmt.Println(config.Name, " has changed:\r\n", string(config.File))
 	}
+	return true
 }
