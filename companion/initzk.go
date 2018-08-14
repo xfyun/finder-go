@@ -2,7 +2,6 @@ package finder
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
@@ -18,11 +17,10 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 	retryNum := 0
 	for {
 		result, err = httputil.DoGet(hc, url)
+		//log.Println("向")
 		if err != nil {
-			log.Println(err)
 			if retryNum < 3 {
 				retryNum++
-				log.Println("The ", retryNum, "th GetStorageInfo")
 				time.Sleep(time.Millisecond * 100)
 				continue
 			} else {

@@ -111,28 +111,6 @@ func onZkInfoChanged(smr storage.StorageManager) {
 	// todo.
 }
 
-func watchStorageInfo(smr *storage.StorageManager) {
-	// for t := range smr.checkZkInfoTicker.C {
-	// 	//log.Println(t)
-	// 	if t.IsZero() {
-
-	// 	}
-	// 	metadata, err := companion.GetStorageInfo(hc, url)
-	// 	if err != nil {
-	// 		// todo.
-	// 		continue
-	// 	}
-	// 	vchanged := checkAddr(metadata.Addr, zm.MetaData.Addr)
-	// 	if vchanged {
-	// 		zm.MetaData.ZkAddr = metadata.ZkAddr
-	// 		zm.MetaData.ConfigRootPath = metadata.ConfigRootPath
-	// 		zm.MetaData.ServiceRootPath = metadata.ServiceRootPath
-	// 		// 通知zkinfo更新，执行相关逻辑
-	// 		onZkInfoChanged(zm)
-	// 	}
-	// }
-}
-
 func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error) {
 	checkConfig(config)
 	info, err := getStorageInfo(config)
@@ -140,8 +118,7 @@ func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error)
 		return nil, err
 	}
 	//zm.checkZkInfoTicker = time.NewTicker(config.TickerDuration)
-	// 开启一个协程去检测zkinfo变化
-	//go watchStorageInfo(zm)
+	//	go watchStorageInfo(zm)
 
 	storageConfig := &storage.StorageConfig{
 		Name:   "zookeeper",
@@ -213,11 +190,14 @@ func NewFinder(config common.BootConfig) (*FinderManager, error) {
 	var storageCfg *storage.StorageConfig
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
 	if err != nil {
-		return nil, err
+		logger.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
+		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
+		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
+		//return nil, err
+	} else {
+		fm.ConfigFinder = NewConfigFinder(storageCfg.ConfigRootPath, fm.config, fm.storageMgr)
+		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 	}
-
-	fm.ConfigFinder = NewConfigFinder(storageCfg.ConfigRootPath, fm.config, fm.storageMgr)
-	fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 
 	return fm, nil
 }
@@ -262,16 +242,55 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	// 初始化zk
 	var storageCfg *storage.StorageConfig
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
+
 	if err != nil {
-		return nil, err
+		logger.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
+		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
+		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
+		go watchStorageInfo(fm)
+	} else {
+		fm.ConfigFinder = NewConfigFinder(storageCfg.ConfigRootPath, fm.config, fm.storageMgr)
+		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 	}
-
-	fm.ConfigFinder = NewConfigFinder(storageCfg.ConfigRootPath, fm.config, fm.storageMgr)
-	fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
-
 	return fm, nil
 }
+func watchStorageInfo(fm *FinderManager) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			storageMgr, storageCfg, err := initStorageMgr(fm.config)
+			if err != nil {
+				logger.Info("初始化zk信息出错，重新尝试")
+			} else {
+				fm.storageMgr = storageMgr
+				fm.ConfigFinder.storageMgr = storageMgr
+				fm.ConfigFinder.rootPath = storageCfg.ConfigRootPath
+				fm.ConfigFinder.config = fm.config
 
+				fm.ServiceFinder.storageMgr = storageMgr
+				fm.ServiceFinder.rootPath = storageCfg.ServiceRootPath
+				//fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
+			}
+		}
+		logger.Info("-------------------")
+		if fm.storageMgr != nil {
+			logger.Info("**********", fm.ServiceFinder.subscribedService)
+
+			if len(fm.ServiceFinder.subscribedService) != 0 {
+				var subscribedService []common.ServiceSubscribeItem
+				for _, value := range fm.ServiceFinder.subscribedService {
+					var item = common.ServiceSubscribeItem{ServiceName: value.ServiceName, ApiVersion: value.ApiVersion}
+					subscribedService = append(subscribedService, item)
+				}
+				ser, _ := fm.ServiceFinder.UseAndSubscribeService(subscribedService, fm.ServiceFinder.handler)
+				logger.Info("**********", ser)
+			}
+			break
+		}
+	}
+}
 func DestroyFinder(finder *FinderManager) {
 	finder.storageMgr.Destroy()
 	// todo

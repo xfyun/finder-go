@@ -93,7 +93,7 @@ func GetConfigFromCache(cachePath string, name string) (*common.Config, error) {
 }
 
 func CacheService(cachePath string, service *common.Service) error {
-	cachePath = fmt.Sprintf("%s/service_%s.findercache", cachePath, service.Name)
+	cachePath = fmt.Sprintf("%s/service_%s_%s.findercache", cachePath, service.ServiceName, service.ApiVersion)
 	data, err := json.Marshal(service)
 	if err != nil {
 		log.Println(err)
@@ -108,8 +108,8 @@ func CacheService(cachePath string, service *common.Service) error {
 	return nil
 }
 
-func GetServiceFromCache(cachePath string, name string) (*common.Service, error) {
-	cachePath = fmt.Sprintf("%s/service_%s.findercache", cachePath, name)
+func GetServiceFromCache(cachePath string, item common.ServiceSubscribeItem) (*common.Service, error) {
+	cachePath = fmt.Sprintf("%s/service_%s_%s.findercache", cachePath, item.ServiceName, item.ApiVersion)
 	data, err := fileutil.ReadFile(cachePath)
 	if err != nil {
 		log.Println(err)

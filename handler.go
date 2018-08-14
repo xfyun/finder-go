@@ -1,43 +1,40 @@
 package finder
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	companion "git.xfyun.cn/AIaaS/finder-go/companion"
+	"git.xfyun.cn/AIaaS/finder-go/route"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
+	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
 )
 
 const (
 	SERVICE_INSTANCE_CHANGED        = "SERVICE_INSTANCE"
 	SERVICE_CONFIG_CHANGED          = "SERVICE_CONFIG"
 	SERVICE_INSTANCE_CONFIG_CHANGED = "SERVICE_INSTANCE_CONFIG"
+	SERVICE_ROUTE_CHANGED           = "SERVICE_ROUTE"
 	CONFIG_CHANGED                  = "CONFIG"
 	GRAY_CONFIG_CHANGED             = "GRAY_CONFIG"
 )
 
 type ServiceChangedCallback struct {
-	name      string
-	eventType string
-	uh        common.ServiceChangedHandler
-	bootCfg   *common.BootConfig
-	sm        storage.StorageManager
-	root      string
+	serviceItem   common.ServiceSubscribeItem
+	eventType     string
+	uh            common.ServiceChangedHandler
+	serviceFinder *ServiceFinder
 }
 
-func NewServiceChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ServiceChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager) ServiceChangedCallback {
+func NewServiceChangedCallback(serviceItem common.ServiceSubscribeItem, watchType string, serviceFinder *ServiceFinder, userHandle common.ServiceChangedHandler) ServiceChangedCallback {
 	return ServiceChangedCallback{
-		name:      serviceName,
-		eventType: watchType,
-		root:      rootPath,
-		uh:        userHandle,
-		bootCfg:   bootConfig,
-		sm:        storageMgr,
+		serviceItem:   serviceItem,
+		eventType:     watchType,
+		uh:            userHandle,
+		serviceFinder: serviceFinder,
 	}
 }
 
@@ -50,84 +47,207 @@ func NewServiceChangedCallback(serviceName string, watchType string, rootPath st
 // }
 
 func (cb *ServiceChangedCallback) DataChangedCallback(path string, node string, data []byte) {
+
 	if cb.eventType == SERVICE_CONFIG_CHANGED {
-		cb.OnServiceConfigChanged(cb.name, data)
+		cb.OnServiceConfigChanged(cb.serviceItem, data)
 	} else if cb.eventType == SERVICE_INSTANCE_CONFIG_CHANGED {
-		cb.OnServiceInstanceConfigChanged(cb.name, node, data)
+		cb.OnServiceInstanceConfigChanged(cb.serviceItem, node, data)
+	} else if cb.eventType == SERVICE_ROUTE_CHANGED {
+		cb.onRouteChangedCallback(cb.serviceItem, data)
+	}
+	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[cb.serviceItem.ServiceName+"_"+cb.serviceItem.ApiVersion])
+}
+
+//路由配置信息有改变
+func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceSubscribeItem, data []byte) {
+	pushID, routeData, err := common.DecodeValue(data)
+	f := &common.ServiceFeedback{
+		PushID:          pushID,
+		ServiceMete:     cb.serviceFinder.config.MeteData,
+		Provider:        service.ServiceName,
+		ProviderVersion: service.ApiVersion,
+		UpdateTime:      time.Now().Unix(),
+		UpdateStatus:    1,
+		Type:            1,
+	}
+	if err != nil {
+		f.LoadStatus = -1
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+		return
+	}
+	serviceRoute := route.ParseRouteData(routeData)
+	prevProviderList := cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].ProviderList
+	providerMap := cb.serviceFinder.serviceZkData[service.ServiceName+"_"+service.ApiVersion].ProviderList
+	var maxProviderList []*common.ServiceInstance
+
+	//通过是否有效，先过滤一下服务提供者
+	for _, value := range providerMap {
+		if value.Config.IsValid {
+			maxProviderList = append(maxProviderList, value)
+		}
+	}
+
+	//根据路由规则来决定最后的服务提供者是那些
+	providerList := route.FilterServiceByRouteData(serviceRoute, cb.serviceFinder.config.MeteData.Address, maxProviderList)
+	logger.Info("经过路由过滤后的数据是:", providerList)
+	logger.Info("之前的路由结果是:", prevProviderList)
+	//变更全局数据
+	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].ProviderList = providerList
+	//根据之前的提供者，和目前合法的提供者，来产生相应的事件
+	eventList := serviceutil.CompareServiceInstanceList(prevProviderList, providerList)
+	logger.Info("eventList数据为：", eventList)
+	if len(eventList) == 0 {
+		f.LoadStatus = 1
+		f.LoadTime = time.Now().Unix()
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+		return
+	}
+	if ok := cb.uh.OnServiceInstanceChanged(service.ServiceName, eventList); ok {
+		f.LoadStatus = 1
+		f.LoadTime = time.Now().Unix()
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+	} else {
+		f.LoadStatus = -1
+		f.LoadTime = time.Now().Unix()
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 	}
 }
 
 func (cb *ServiceChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
+	logger.Info("收到来自:", path, " 的回调 子节点列表为:", children)
 	if cb.eventType == SERVICE_INSTANCE_CHANGED {
-		cb.OnServiceInstanceChanged(cb.name, children)
+		cb.OnServiceInstanceChanged(cb.serviceItem, children)
 	}
 }
 
-func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(name string, addr string, data []byte) {
-	pushID, config, err := common.DecodeValue(data)
+//服务的实例的配置发生改变 看is_valid是否被禁用
+func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.ServiceSubscribeItem, addr string, data []byte) {
+	var serviceId = service.ServiceName + "_" + service.ApiVersion
+	pushID, serviceConfData, err := common.DecodeValue(data)
+	f := &common.ServiceFeedback{
+		PushID:          pushID,
+		ServiceMete:     cb.serviceFinder.config.MeteData,
+		Provider:        service.ServiceName,
+		ProviderVersion: service.ApiVersion,
+		UpdateTime:      time.Now().Unix(),
+		UpdateStatus:    1,
+		Type:            2,
+	}
+
 	if err != nil {
-		// todo
+		f.LoadStatus = -1
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
 	}
 
-	f := &common.ServiceFeedback{
-		PushID:          pushID,
-		ServiceMete:     cb.bootCfg.MeteData,
-		Provider:        name,
-		ProviderVersion: "",
-		UpdateTime:      time.Now().Unix(),
-		UpdateStatus:    1,
+	serviceConf := serviceutil.ParseServiceConfigData(serviceConfData)
+	prevConfig := cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config
+	if prevConfig.IsValid == serviceConf.IsValid && strings.Compare(prevConfig.UserConfig, serviceConf.UserConfig) == 0 {
+		logger.Info("服务实例配置信息没有变化")
+		f.LoadStatus = 1
+		f.LoadTime = time.Now().Unix()
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+		return
 	}
-	c := &common.ServiceInstanceConfig{}
-	err = json.Unmarshal(config, c)
-	if err != nil {
-		f.LoadStatus = -1
-		log.Println(err)
-	} else {
-		ok := cb.uh.OnServiceInstanceConfigChanged(name, addr, c)
-		if ok {
-			log.Println("load success:", pushID)
-			f.LoadStatus = 1
+	cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config = serviceConf
+
+	providerList := cb.serviceFinder.subscribedService[serviceId].ProviderList
+	logger.Info("【OnServiceInstanceConfigChanged】providerList", providerList)
+	var isPrevProvider bool = false
+	//处理从可用到无用的变化
+	for index, provider := range providerList {
+		if strings.Compare(provider.Addr, addr) == 0 {
+			isPrevProvider = true
+			if !serviceConf.IsValid {
+				//之前在服务提供者中，现在不在了。。 服务从可用变为不可用了
+				cb.serviceFinder.subscribedService[serviceId].ProviderList = append(providerList[:index], providerList[index+1:]...) //调用
+				provider.Config.IsValid = false
+				evetn := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: []*common.ServiceInstance{provider}}
+				cb.uh.OnServiceInstanceChanged(service.ServiceName, []*common.ServiceInstanceChangedEvent{&evetn})
+			}
 		}
 	}
 
-	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(cb.bootCfg.CompanionUrl, f)
+	//处理从无用到可用的变化
+	var shouldAdd bool = true
+	logger.Info("【OnServiceInstanceConfigChanged】serviceConf", serviceConf)
+
+	if serviceConf.IsValid && !isPrevProvider {
+		//之前不在提供者中，现在根据route信息来决定是否放入服务提供者中
+		serviceRoutes := cb.serviceFinder.serviceZkData[serviceId].Route.RouteItem
+		for _, route := range serviceRoutes {
+			providers := route.Provider
+			for _, provider := range providers {
+				if strings.Compare(provider, addr) == 0 && strings.Compare(route.Only, "Y") == 0 {
+					shouldAdd = false
+					//在路由组中，且该路由组的only为 YES。。所以跳过该通知
+					logger.Info("该服务提供者在路由组中，且only为yes.所以跳过")
+				}
+			}
+		}
+		if shouldAdd {
+			serviceInstance := common.ServiceInstance{Addr: addr, Config: serviceConf}
+			//增加服务提供者
+			cb.serviceFinder.subscribedService[serviceId].ProviderList = append(providerList, &serviceInstance)
+			evetn := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: []*common.ServiceInstance{serviceInstance.Dumplication()}}
+			cb.uh.OnServiceInstanceChanged(service.ServiceName, []*common.ServiceInstanceChangedEvent{&evetn})
+		}
+
+	}
+	//无用到无用
+	f.LoadStatus = 1
+	if serviceConf.IsValid && shouldAdd {
+		ok := cb.uh.OnServiceInstanceConfigChanged(service.ServiceName, addr, serviceConf)
+		if !ok {
+			f.LoadStatus = -1
+		}
+	}
+	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 	if err != nil {
-		log.Println(err)
+		logger.Info("反馈数据到companion出错", err)
 	}
 }
 
-func (cb *ServiceChangedCallback) OnServiceConfigChanged(name string, data []byte) {
-	pushID, config, err := common.DecodeValue(data)
-	if err != nil {
-		// todo
-		return
-	}
-
+//服务的全局配置发生变化，很简单，直接透传就行
+func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceSubscribeItem, data []byte) {
+	pushID, configData, err := common.DecodeValue(data)
 	f := &common.ServiceFeedback{
 		PushID:          pushID,
-		ServiceMete:     cb.bootCfg.MeteData,
-		Provider:        name,
-		ProviderVersion: "",
+		ServiceMete:     cb.serviceFinder.config.MeteData,
+		Provider:        service.ServiceName,
+		ProviderVersion: service.ApiVersion,
 		UpdateTime:      time.Now().Unix(),
 		UpdateStatus:    1,
+		Type:            0,
 	}
-	c := &common.ServiceConfig{}
-	err = json.Unmarshal(config, c)
+	//
 	if err != nil {
+		logger.Info("pushID：", pushID, " 从data中反序列化数据出错 ", err)
 		f.LoadStatus = -1
-		log.Println(err)
-	} else {
-		ok := cb.uh.OnServiceConfigChanged(name, c)
-		if ok {
-			log.Println("load success:", pushID)
-			f.LoadStatus = 1
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+		if err != nil {
+			log.Println("反馈数据到companion出错 ", err)
 		}
+		return
 	}
-
+	prevConfig := cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config.JsonConfig
+	if strings.Compare(prevConfig, string(configData)) == 0 {
+		logger.Info("服务配置信息没有变化。")
+		f.LoadStatus = 1
+		f.LoadTime = time.Now().Unix()
+		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+		return
+	}
+	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
+	cb.serviceFinder.serviceZkData[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
+	ok := cb.uh.OnServiceConfigChanged(service.ServiceName, &common.ServiceConfig{JsonConfig: string(configData)})
+	if ok {
+		log.Println("load success:", pushID)
+		f.LoadStatus = 1
+	}
 	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(cb.bootCfg.CompanionUrl, f)
+	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+
 	if err != nil {
 		log.Println(err)
 	}
@@ -135,126 +255,108 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(name string, data []byt
 func (cb *ServiceChangedCallback) Process(path string, node string) {
 
 }
-func (cb *ServiceChangedCallback) OnServiceInstanceChanged(name string, addrList []string) {
-	eventList := make([]*common.ServiceInstanceChangedEvent, 0)
-	newInstances := []*common.ServiceInstance{}
-	cachedService, err := GetServiceFromCache(cb.bootCfg.CachePath, name)
-	if err != nil {
-		log.Println("GetServiceFromCache", name, err)
-		cachedService = &common.Service{Name: name, ServerList: newInstances}
-	}
-	if len(addrList) > 0 {
-		servicePath := fmt.Sprintf("%s/%s/provider", cb.root, name)
-		if len(cachedService.ServerList) > 0 {
-			oldInstances, deletedEvent := getDeletedInstEvent(addrList, cachedService.ServerList)
-			if deletedEvent != nil {
-				eventList = append(eventList, deletedEvent)
-			}
-			if oldInstances != nil {
-				newInstances = append(newInstances, oldInstances...)
-			}
-			addedEvent := getAddedInstEvents(cb.sm, servicePath, addrList, cachedService.ServerList)
-			if addedEvent != nil {
-				newInstances = append(newInstances, addedEvent.ServerList...)
-				eventList = append(eventList, addedEvent)
-			}
-		} else {
-			addedEvent := getAddedInstEvents(cb.sm, servicePath, addrList, cachedService.ServerList)
-			if addedEvent != nil {
-				newInstances = append(newInstances, addedEvent.ServerList...)
-				eventList = append(eventList, addedEvent)
-			}
-		}
-	} else {
-		oldInstances, deletedEvent := getDeletedInstEvent(addrList, cachedService.ServerList)
-		if deletedEvent != nil {
-			eventList = append(eventList, deletedEvent)
-		}
-		if oldInstances != nil {
-			newInstances = append(newInstances, oldInstances...)
+func getAddProviderAddrList(prevProviderMap map[string]*common.ServiceInstance, currentProviderList []string) []string {
+	var addProviderAddrList = make([]string, 0)
+	for _, providerAddr := range currentProviderList {
+		if _, ok := prevProviderMap[providerAddr]; !ok {
+			addProviderAddrList = append(addProviderAddrList, providerAddr)
 		}
 	}
-
-	cachedService.ServerList = newInstances
-	err = CacheService(cb.bootCfg.CachePath, cachedService)
-	if err != nil {
-		log.Println("CacheService failed")
+	return addProviderAddrList
+}
+func getRemoveProviderAddrList(prevProviderMap map[string]*common.ServiceInstance, currentProviderList []string) []string {
+	var removeProviderAddrList = make([]string, 0)
+	tempMap := make(map[string]string)
+	for _, addr := range currentProviderList {
+		tempMap[addr] = addr
 	}
-
-	ok := cb.uh.OnServiceInstanceChanged(name, eventList)
-	if !ok {
-		log.Println("OnServiceInstanceChanged is not ok")
+	for providerAddr, _ := range prevProviderMap {
+		if _, ok := tempMap[providerAddr]; !ok {
+			//在之前的提供者中，不在现在的
+			removeProviderAddrList = append(removeProviderAddrList, providerAddr)
+		}
 	}
+	return removeProviderAddrList
 }
 
-func getDeletedInstEvent(addrList []string, insts []*common.ServiceInstance) ([]*common.ServiceInstance, *common.ServiceInstanceChangedEvent) {
-	var event *common.ServiceInstanceChangedEvent
-	var oldInstances []*common.ServiceInstance
-	var deletedInstances []*common.ServiceInstance
-	var deleted bool
-	for _, inst := range insts {
-		deleted = true
-		for _, addr := range addrList {
-			if addr == inst.Addr {
-				deleted = false
-				if oldInstances == nil {
-					oldInstances = []*common.ServiceInstance{}
-				}
-				oldInstances = append(oldInstances, inst)
-			}
-		}
-		if deleted {
-			if deletedInstances == nil {
-				deletedInstances = []*common.ServiceInstance{}
-			}
-			deletedInstances = append(deletedInstances, inst)
-		}
-	}
+//实例的数量有增加或者减少 没有推送ID 。。则不进行反馈
+func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.ServiceSubscribeItem, addrList []string) {
+	cb.serviceFinder.locker.Lock()
+	defer cb.serviceFinder.locker.Unlock()
+	serviceId := serviceItem.ServiceName + "_" + serviceItem.ApiVersion
+	providerMap := cb.serviceFinder.serviceZkData[serviceId].ProviderList
 
-	if deletedInstances != nil {
-		event = &common.ServiceInstanceChangedEvent{
-			EventType:  common.INSTANCEREMOVE,
-			ServerList: deletedInstances,
-		}
-	}
+	// 当一个节点的回话失效的时候，其所对应的全部节点都会失效。一下子会有多个节点改变
+	event := make([]*common.ServiceInstanceChangedEvent, 0)
 
-	return oldInstances, event
-}
-
-func getAddedInstEvents(sm storage.StorageManager, servicePath string, addrList []string, insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
-	var event *common.ServiceInstanceChangedEvent
-	var addedInstances []*common.ServiceInstance
-	var added bool
-	for _, addr := range addrList {
-		added = true
-		for _, inst := range insts {
-			if addr == inst.Addr {
-				added = false
-			}
-		}
-		if added {
-			inst, err := getServiceInstance(sm, servicePath, addr)
-			if err != nil {
-				log.Println(err)
-				// todo
+	//获取多的提供者实例
+	addProviderList := getAddProviderAddrList(providerMap, addrList)
+	logger.Info(addProviderList)
+	if len(addProviderList) != 0 {
+		//有新增的服务提供者
+		rootPath := cb.serviceFinder.rootPath + "/" + serviceItem.ServiceName + "/" + serviceItem.ApiVersion + "/provider"
+		serviceInstanceList := cb.serviceFinder.getServiceInstanceByAddrList(addProviderList, rootPath, cb)
+		var filterInstanceList = make([]*common.ServiceInstance, 0)
+		for _, instance := range serviceInstanceList {
+			providerMap[instance.Addr] = instance
+			if !instance.Config.IsValid {
 				continue
 			}
+			filterInstanceList = append(filterInstanceList, instance)
+		}
+		resultList := route.FilterServiceByRouteData(cb.serviceFinder.serviceZkData[serviceId].Route, cb.serviceFinder.config.MeteData.Address, filterInstanceList)
+		if len(resultList) == 0 {
+			logger.Info("新增的实例，被路由给过滤了")
 
-			if addedInstances == nil {
-				addedInstances = []*common.ServiceInstance{}
+		} else {
+			cb.serviceFinder.subscribedService[serviceId].ProviderList = append(cb.serviceFinder.subscribedService[serviceId].ProviderList, resultList...)
+			addEvent := getAddInstanceEvent(resultList)
+			event = append(event, addEvent)
+		}
+	}
+	//看是否有服务提供者减小
+	removeProviderList := getRemoveProviderAddrList(providerMap, addrList)
+	changeProviderList := make([]*common.ServiceInstance, 0)
+	if len(removeProviderList) != 0 {
+
+		for _, addr := range removeProviderList {
+			//从原有的提供者中删除
+			delete(providerMap, addr)
+			visibleProviderList := cb.serviceFinder.subscribedService[serviceId].ProviderList
+			for index, provider := range visibleProviderList {
+				if strings.Compare(provider.Addr, addr) == 0 {
+					cb.serviceFinder.subscribedService[serviceId].ProviderList = append(visibleProviderList[:index], visibleProviderList[index+1:]...)
+					changeProviderList = append(changeProviderList, provider)
+					break
+				}
 			}
-			addedInstances = append(addedInstances, inst)
+
+		}
+		if len(changeProviderList) != 0 {
+			removeEvent := getRemoveInstnceEvent(changeProviderList)
+			event = append(event, removeEvent)
 		}
 	}
-
-	if addedInstances != nil {
-		event = &common.ServiceInstanceChangedEvent{
-			EventType:  common.INSTANCEADDED,
-			ServerList: addedInstances,
-		}
+	if len(event) != 0 {
+		//通知
+		cb.uh.OnServiceInstanceChanged(serviceItem.ServiceName, event)
 	}
+	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[serviceId])
 
-	return event
+}
+func getRemoveInstnceEvent(insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
+	event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: make([]*common.ServiceInstance, 0)}
+	for _, inst := range insts {
+		event.ServerList = append(event.ServerList, inst.Dumplication())
+	}
+	return &event
+}
+func getAddInstanceEvent(insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
+	event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: make([]*common.ServiceInstance, 0)}
+	for _, inst := range insts {
+		event.ServerList = append(event.ServerList, inst.Dumplication())
+	}
+	return &event
 }
 
 type ConfigChangedCallback struct {
@@ -455,7 +557,7 @@ func pushServiceFeedback(companionUrl string, f *common.ServiceFeedback) error {
 	return companion.FeedbackForService(hc, url, f)
 }
 
-func pushService(companionUrl string, project string, group string, service string) error {
+func pushService(companionUrl string, project string, group string, service string, apiVersion string) error {
 	url := companionUrl + "/finder/register_service_info"
-	return companion.RegisterService(hc, url, project, group, service)
+	return companion.RegisterService(hc, url, project, group, service, apiVersion)
 }

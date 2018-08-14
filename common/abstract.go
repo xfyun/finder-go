@@ -3,8 +3,12 @@ package finder
 import "log"
 
 type ServiceChangedHandler interface {
+
+	//服务实例上的配置信息发生变化
 	OnServiceInstanceConfigChanged(name string, addr string, config *ServiceInstanceConfig) bool
+	//服务整体配置信息发生变化
 	OnServiceConfigChanged(name string, config *ServiceConfig) bool
+	//服务实例发生变化
 	OnServiceInstanceChanged(name string, eventList []*ServiceInstanceChangedEvent) bool
 }
 

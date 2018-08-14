@@ -30,7 +30,7 @@ var retCodeToString = map[ReturnCode]string{
 	DecodeVauleDataEmptyErr:          "解码数据的时候，数据为空",
 	DecodeVauleDataNotFullErr:        "解码数据的时候，数据不完整",
 	DecodeVauleDataFormatErr:         "解码数据的时候，数据格式出错",
-	ServiceMissName:                  "[service] 没有service的名字信息",
+	ServiceMissItem:                  "[service] 没有service的信息",
 	ServiceMissAddr:                  "[service] 缺失service对应的地址信息",
 	JsonUnmarshalErr:                 "Json在反序列化的时候出错",
 	JsonMarshalErr:                   "json在序列化的时候出错",
@@ -42,6 +42,9 @@ var retCodeToString = map[ReturnCode]string{
 	ZkPathRelativePathNotAllowed:     "zk中的path不允许相对路径",
 	ZkPathInvalidCharacterNotAllowed: "zk中的path不允许非法字符",
 	ZkGetDataErr:                     "从zk中获取数据出错",
+	ServiceMissApiVersion:            "[service] 缺失版本号",
+	ZkGetNilData:                     "zk中节点上的数据为空",
+	ZkConnectionLoss:                 "zk连接不存在",
 }
 
 const (
@@ -65,6 +68,8 @@ const (
 //zk相关错误
 const (
 	ZkGetInfoError ReturnCode = 10200 + iota
+	ZkGetNilData
+	ZkConnectionLoss
 	ZkInfoMissRootPath
 	ZkInfoMissConfigRootPath
 	ZkInfoMissServiceRootPath
@@ -86,7 +91,8 @@ const (
 //service相关错误
 const (
 	ServiceMissAddr ReturnCode = 10300 + iota
-	ServiceMissName
+	ServiceMissItem
+	ServiceMissApiVersion
 )
 
 //feedback相关错误

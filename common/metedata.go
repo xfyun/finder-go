@@ -35,8 +35,8 @@ type Config struct {
 }
 
 type ServiceInstanceConfig struct {
-	Weight  int  `json:"weight"`
-	IsValid bool `json:"is_valid"`
+	IsValid    bool `json:"is_valid"`
+	UserConfig string
 }
 
 type ConsumerInstanceConfig struct {
@@ -53,17 +53,50 @@ type ServiceInstance struct {
 	Config *ServiceInstanceConfig
 }
 
+func (ints *ServiceInstance) Dumplication() *ServiceInstance {
+	var dump ServiceInstance
+	dump.Addr = ints.Addr
+	dump.Config = &ServiceInstanceConfig{IsValid: ints.Config.IsValid, UserConfig: ints.Config.UserConfig}
+	return &dump
+}
+
 type ServiceConfig struct {
-	ProxyMode       string `json:"proxy_mode"`
-	LoadBalanceMode string `json:"lb_mode"`
+	JsonConfig string
 }
-
+type RouteItem struct {
+	Id       string
+	Consumer []string
+	Provider []string
+	Only     string
+	Name     string
+}
+type ServiceRoute struct {
+	RouteItem []*RouteItem
+}
 type Service struct {
-	Name       string
-	ServerList []*ServiceInstance
-	Config     *ServiceConfig
+	ServiceName  string
+	ApiVersion   string
+	ProviderList []*ServiceInstance
+	Config       *ServiceConfig
 }
 
+func (service *Service) Dumplication() Service {
+	var dump Service
+	dump.ApiVersion = service.ApiVersion
+	dump.ServiceName = service.ServiceName
+	var providerList = make([]*ServiceInstance, len(service.ProviderList))
+	for index, provider := range service.ProviderList {
+		providerList[index] = &ServiceInstance{Addr: provider.Addr, Config: &ServiceInstanceConfig{IsValid: provider.Config.IsValid, UserConfig: provider.Config.UserConfig}}
+	}
+	dump.ProviderList = providerList
+	dump.Config = &ServiceConfig{JsonConfig: service.Config.JsonConfig}
+	return dump
+}
+
+type ServiceSubscribeItem struct {
+	ServiceName string
+	ApiVersion  string
+}
 type ConfigFeedback struct {
 	PushID       string
 	ServiceMete  *ServiceMeteData
@@ -84,4 +117,5 @@ type ServiceFeedback struct {
 	UpdateStatus    int
 	LoadTime        int64
 	LoadStatus      int
+	Type            int
 }

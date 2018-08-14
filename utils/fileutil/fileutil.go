@@ -57,8 +57,8 @@ func ParseTomlFile(file []byte) map[string]interface{} {
 	var currentGroup string
 	lineList := strings.Split(content, "\x0d\x0a")
 	var fullLine []string
-	for _,line :=range lineList{
-		fullLine=append(fullLine,strings.Split(line,"\n")...)
+	for _, line := range lineList {
+		fullLine = append(fullLine, strings.Split(line, "\n")...)
 	}
 	for _, line := range fullLine {
 		line = strings.TrimSpace(line)

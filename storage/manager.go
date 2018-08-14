@@ -23,6 +23,7 @@ type StorageManager interface {
 	Remove(path string) error
 	RemoveInRecursive(path string) error
 	UnWatch(path string) error
+	CheckExists(path string) (bool, error)
 }
 
 func NewManager(config *StorageConfig) (StorageManager, error) {

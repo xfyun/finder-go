@@ -12,40 +12,35 @@ type ServiceChangedHandle struct {
 
 // OnServiceInstanceConfigChanged OnServiceInstanceConfigChanged
 func (s *ServiceChangedHandle) OnServiceInstanceConfigChanged(name string, instance string, config *common.ServiceInstanceConfig) bool {
-	fmt.Println(name, " update begin:")
-	fmt.Println("name:", name)
-	fmt.Println("addr:", instance)
-	fmt.Println("weight:", config.Weight)
-	fmt.Println("is_valid:", config.IsValid)
-
-	fmt.Println("got service update finish.")
+	fmt.Println("服务实例配置信息更改开始:  ", name)
+	fmt.Println("当前配置为:  ", config.IsValid, "  ", config.UserConfig)
+	fmt.Println("服务实例配置信息更改结束:  ", name)
 	return true
 }
 
 // OnServiceConfigChanged OnServiceConfigChanged
 func (s *ServiceChangedHandle) OnServiceConfigChanged(name string, config *common.ServiceConfig) bool {
-	fmt.Println(name, " update begin:")
-	fmt.Println("name:", name)
-	fmt.Println("lb_mode:", config.LoadBalanceMode)
-	fmt.Println("proxy_mode:", config.ProxyMode)
+	fmt.Println(name, "服务配置信息更改开始：")
+	fmt.Println("服务名为：", name, " 当前配置为: ", config.JsonConfig)
 
-	fmt.Println("got service update finish.")
+	fmt.Println("服务配置信息更改结束：")
 	return true
 }
 
-
 // OnServiceInstanceChanged OnServiceInstanceChanged
 func (s *ServiceChangedHandle) OnServiceInstanceChanged(name string, eventList []*common.ServiceInstanceChangedEvent) bool {
-	fmt.Println(name, " update begin:")
+	fmt.Println("服务实例变化通知开始 :")
 	for _, e := range eventList {
-		fmt.Println("event:", e)
+		if e.EventType == common.INSTANCEREMOVE {
+			fmt.Println("服务提供者节点减少事件:", e.ServerList)
+		} else {
+			fmt.Println("服务提供者节点增加事件:", e.ServerList)
+		}
 		for _, inst := range e.ServerList {
-			fmt.Println("addr:", inst.Addr)
-			fmt.Println("weight:", inst.Config.Weight)
-			fmt.Println("is_valid:", inst.Config.IsValid)
+			fmt.Println("服务提供者节点地址: addr:", inst.Addr)
 		}
 	}
 
-	fmt.Println("got service update finish.")
+	fmt.Println("服务实例变化通知结束 :")
 	return true
 }

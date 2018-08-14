@@ -171,8 +171,9 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
+		//TODO 如果错误类型是data为空。。则不返回
 		log.Println(err)
-		return nil, err
+		//	return nil, err
 	}
 	//返回的event
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
@@ -181,13 +182,15 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 			case e, ok := <-event:
 				if !ok {
 					log.Println("<-event; !ok")
-					continue
 				}
 				var retryCount int32
 				for {
 					//这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
 					//这个地方如果一直注册Watcher 会存在问题。。
-
+					if e.Type == zk.EventNodeDeleted {
+						break
+					}
+					log.Println("收到path的信息：再次注册Watcher   ：", path)
 					data, _, event, err = zm.conn.GetW(path)
 					if err != nil {
 						log.Println("[ zkWatcher] 从", path, "获取数据失败 ", err)
@@ -227,7 +230,7 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
 	data, _, event, err := zm.conn.ChildrenW(path)
 	if err != nil {
-		log.Println(err)
+		log.Println("[ GetChildrenWithWatch ]通过path :", path, "获取数据失败", err)
 		return nil, err
 	}
 
@@ -269,7 +272,13 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 func (zm *ZkManager) SetPath(path string) error {
 	return zm.SetPathWithData(path, []byte{})
 }
-
+func (zm *ZkManager) CheckExists(path string) (bool, error) {
+	exists, _, err := zm.conn.Exists(path)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
 func (zm *ZkManager) SetPathWithData(path string, data []byte) error {
 	if data == nil {
 		return errors.NewFinderError(errors.ZkDataCanotNil)

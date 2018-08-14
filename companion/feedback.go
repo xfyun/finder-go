@@ -44,9 +44,9 @@ func FeedbackForConfig(hc *http.Client, url string, f *common.ConfigFeedback) er
 
 func FeedbackForService(hc *http.Client, url string, f *common.ServiceFeedback) error {
 	contentType := "application/x-www-form-urlencoded"
-	params := []byte(fmt.Sprintf("push_id=%s&project=%s&group=%s&consumer=%s&consumer_version=%s&addr=%s&provider=%s&provider_version=%s&update_time=%d&update_status=%d&load_time=%d&load_status=%d",
+	params := []byte(fmt.Sprintf("push_id=%s&project=%s&group=%s&consumer=%s&consumer_version=%s&addr=%s&provider=%s&provider_version=%s&update_time=%d&update_status=%d&load_time=%d&load_status=%d&api_version=%s&type=%d",
 		f.PushID, f.ServiceMete.Project, f.ServiceMete.Group, f.ServiceMete.Service, f.ServiceMete.Version, f.ServiceMete.Address,
-		f.Provider, f.ProviderVersion, f.UpdateTime, f.UpdateStatus, f.LoadTime, f.LoadStatus))
+		f.Provider, f.ProviderVersion, f.UpdateTime, f.UpdateStatus, f.LoadTime, f.LoadStatus, f.ProviderVersion, f.Type))
 	result, err := httputil.DoPost(hc, contentType, url, params)
 	if err != nil {
 		log.Println(err)

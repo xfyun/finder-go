@@ -11,9 +11,9 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
-func RegisterService(hc *http.Client, url string, project string, group string, service string) error {
+func RegisterService(hc *http.Client, url string, project string, group string, service string, apiVersion string) error {
 	contentType := "application/x-www-form-urlencoded"
-	params := []byte(fmt.Sprintf("project=%s&group=%s&service=%s", project, group, service))
+	params := []byte(fmt.Sprintf("project=%s&group=%s&service=%s&api_version=%s", project, group, service, apiVersion))
 	result, err := httputil.DoPost(hc, contentType, url, params)
 	if err != nil {
 		log.Println(err)
