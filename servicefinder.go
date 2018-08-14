@@ -11,6 +11,7 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
+	"strings"
 )
 
 type ServiceFinder struct {
@@ -142,12 +143,11 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 		return serviceList, nil
 	}
 	for _, item := range serviceItems {
-		logger.Info("ddddddddd")
 		serviceId := item.ServiceName + "_" + item.ApiVersion
 		servicePath := fmt.Sprintf("%s/%s/%s", f.rootPath, item.ServiceName, item.ApiVersion)
 		service, err := f.getServiceWithWatcher(servicePath, item, handler)
 		if err != nil {
-			logger.Info(" [ UseAndSubscribeService ] 订阅服务出错", err)
+			logger.Info(" [ UseAndSubscribeService ] 订阅【服务名:",item.ServiceName,",版本号:",item.ApiVersion,"】 出错", err)
 			continue
 		}
 		serviceList[serviceId] = service.Dumplication()
@@ -395,11 +395,10 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 	callback := NewServiceChangedCallback(serviceItem, SERVICE_INSTANCE_CHANGED, f, handler)
 	//获取数据的时候添加子节点变更的Watcher
 	providerList, err := f.storageMgr.GetChildrenWithWatch(providerPath, &callback)
-	logger.Info("提供者列表 ：{}", providerList)
 	//TODO 提供者为空的情况
 	if err != nil {
 		logger.Info("从path: ", providerPath, " 获取服务提供者出错", err)
-		return nil, nil
+		return nil, err
 	}
 	if len(providerList) == 0 {
 		logger.Info(" [ getServiceWithWatcher ]目前没有服务提供者存在")
@@ -421,14 +420,18 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 		service.ProviderList = append(service.ProviderList, serviceInstance)
 	}
 
-	logger.Info("zk中的数据：", serviceZkData.ProviderList)
-	logger.Info("zk中的数据：", service.ProviderList)
-
 	//获取config下的信息
 	confCallBack := NewServiceChangedCallback(serviceItem, SERVICE_CONFIG_CHANGED, f, handler)
 	confData, err := f.storageMgr.GetDataWithWatch(confPath, &confCallBack)
 	if err != nil {
+
 		logger.Info("从path: ", confPath, " 获取配置数据出错", err)
+		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST,err.Error()) ==0{
+			logger.Info("新建节点: ", confPath)
+			f.storageMgr.SetPath(confPath)
+		}
+		service.Config = &common.ServiceConfig{JsonConfig: ""}
+
 	} else if len(confData) == 0 {
 		service.Config = &common.ServiceConfig{JsonConfig: ""}
 		logger.Info("从path: ", confPath, " 获取配置为空，没有对应的配置信息")
@@ -440,15 +443,20 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 		service.Config = &common.ServiceConfig{JsonConfig: string(fData)}
 		serviceZkData.Config = &common.ServiceConfig{JsonConfig: string(fData)}
 	}
-	logger.Info("配置节点的数据为:", string(confData))
 	//获取route数据
 	routeCallBack := NewServiceChangedCallback(serviceItem, SERVICE_ROUTE_CHANGED, f, handler)
 	routeData, err := f.storageMgr.GetDataWithWatch(routePath, &routeCallBack)
-	logger.Info("路由数据为:", string(routeData))
 	if err != nil {
 		logger.Info("从path: ", routePath, " 获取路由数据出错", err)
+		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST,err.Error()) ==0{
+			logger.Info("新建节点: ", routePath)
+			f.storageMgr.SetPath(routePath)
+		}
+		serviceZkData.Route = &common.ServiceRoute{RouteItem:[]*common.RouteItem{}}
+
 	} else if routeData != nil && len(routeData) == 0 {
 		logger.Info("从path: ", routePath, " 获取路由数据为空")
+		serviceZkData.Route = &common.ServiceRoute{RouteItem:[]*common.RouteItem{}}
 	} else {
 		_, fData, err := common.DecodeValue(routeData)
 		if err != nil {

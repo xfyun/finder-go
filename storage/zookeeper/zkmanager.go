@@ -171,7 +171,7 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
-		//TODO 如果错误类型是data为空。。则不返回
+
 		log.Println(err)
 		//	return nil, err
 	}
@@ -230,6 +230,14 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
 	data, _, event, err := zm.conn.ChildrenW(path)
 	if err != nil {
+		if strings.Compare("zk: node does not exist",err.Error())==0{
+			//节点不存在，则新建之
+			err := zm.SetPath(path)
+			if err!=nil{
+				log.Println("[ GetChildrenWithWatch ] 创建节点: ",path)
+			}
+			return []string{},nil
+		}
 		log.Println("[ GetChildrenWithWatch ]通过path :", path, "获取数据失败", err)
 		return nil, err
 	}

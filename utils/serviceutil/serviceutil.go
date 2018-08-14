@@ -9,14 +9,12 @@ import (
 
 func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
 	var configJson map[string]interface{}
-	fmt.Println("[ ParseServiceConfigData ]", string(data))
 	serviceInstanceConfig := &common.ServiceInstanceConfig{}
 	err := json.Unmarshal(data, &configJson)
 	if err != nil {
 		fmt.Println("【ParseServiceConfigData】出错", err)
 		return nil
 	}
-	//TODO  解析sdk配置信息...注意这里的数据格式可能有所变化
 	sdkConfig := configJson["sdk"].(map[string]interface{})
 
 	if isValid, ok := sdkConfig["is_valid"].(bool); ok {
@@ -27,7 +25,6 @@ func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
 	delete(configJson, "sdk")
 	userData, _ := json.Marshal(configJson)
 	serviceInstanceConfig.UserConfig = string(userData)
-	fmt.Println("【ParseServiceConfigData】serviceInstanceConfig", serviceInstanceConfig)
 
 	return serviceInstanceConfig
 }

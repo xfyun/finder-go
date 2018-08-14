@@ -20,15 +20,11 @@ func ParseRouteData(data []byte) *common.ServiceRoute {
 
 func FilterServiceByRouteData(serviceRoute *common.ServiceRoute, consumerAddr string, providerList []*common.ServiceInstance) []*common.ServiceInstance {
 	var removeProviderList = make([]string, 0)
-	fmt.Println(consumerAddr)
 	var resultProvider = make([]*common.ServiceInstance, 0)
 	for _, item := range serviceRoute.RouteItem {
-
 		routeConsumer := item.Consumer
 		routeProvider := item.Provider
-
 		only := item.Only
-		fmt.Println(item)
 		//如果在消费者组中，则直接返回对应的数据
 		for _, consumer := range routeConsumer {
 			if strings.Compare(consumerAddr, consumer) == 0 {
@@ -47,7 +43,6 @@ func FilterServiceByRouteData(serviceRoute *common.ServiceRoute, consumerAddr st
 		}
 	}
 
-	fmt.Println("removeProviderList:", removeProviderList)
 	if len(removeProviderList) == 0 {
 		return providerList
 	}
@@ -68,12 +63,10 @@ func containProvider(providerList []*common.ServiceInstance, provider string) (*
 func deleteProvider(providerList []*common.ServiceInstance, provider string) []*common.ServiceInstance {
 	fmt.Println(provider)
 	for index, value := range providerList {
-		fmt.Println("---------------------", *value)
 		if strings.Compare(value.Addr, provider) == 0 {
 			providerList = append(providerList[:index], providerList[index+1:]...)
 			break
 		}
 	}
-	fmt.Println("providerList", providerList)
 	return providerList
 }

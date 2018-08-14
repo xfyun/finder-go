@@ -89,20 +89,17 @@ func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceS
 
 	//根据路由规则来决定最后的服务提供者是那些
 	providerList := route.FilterServiceByRouteData(serviceRoute, cb.serviceFinder.config.MeteData.Address, maxProviderList)
-	logger.Info("经过路由过滤后的数据是:", providerList)
-	logger.Info("之前的路由结果是:", prevProviderList)
 	//变更全局数据
 	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].ProviderList = providerList
 	//根据之前的提供者，和目前合法的提供者，来产生相应的事件
 	eventList := serviceutil.CompareServiceInstanceList(prevProviderList, providerList)
-	logger.Info("eventList数据为：", eventList)
 	if len(eventList) == 0 {
 		f.LoadStatus = 1
 		f.LoadTime = time.Now().Unix()
 		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
 	}
-	if ok := cb.uh.OnServiceInstanceChanged(service.ServiceName, eventList); ok {
+	if ok := cb.uh.OnServiceInstanceChanged(service.ServiceName,service.ApiVersion, eventList); ok {
 		f.LoadStatus = 1
 		f.LoadTime = time.Now().Unix()
 		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
@@ -118,6 +115,7 @@ func (cb *ServiceChangedCallback) ChildrenChangedCallback(path string, node stri
 	if cb.eventType == SERVICE_INSTANCE_CHANGED {
 		cb.OnServiceInstanceChanged(cb.serviceItem, children)
 	}
+	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[cb.serviceItem.ServiceName+"_"+cb.serviceItem.ApiVersion])
 }
 
 //服务的实例的配置发生改变 看is_valid是否被禁用
@@ -152,7 +150,6 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config = serviceConf
 
 	providerList := cb.serviceFinder.subscribedService[serviceId].ProviderList
-	logger.Info("【OnServiceInstanceConfigChanged】providerList", providerList)
 	var isPrevProvider bool = false
 	//处理从可用到无用的变化
 	for index, provider := range providerList {
@@ -163,14 +160,13 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 				cb.serviceFinder.subscribedService[serviceId].ProviderList = append(providerList[:index], providerList[index+1:]...) //调用
 				provider.Config.IsValid = false
 				evetn := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: []*common.ServiceInstance{provider}}
-				cb.uh.OnServiceInstanceChanged(service.ServiceName, []*common.ServiceInstanceChangedEvent{&evetn})
+				cb.uh.OnServiceInstanceChanged(service.ServiceName,service.ApiVersion, []*common.ServiceInstanceChangedEvent{&evetn})
 			}
 		}
 	}
 
 	//处理从无用到可用的变化
 	var shouldAdd bool = true
-	logger.Info("【OnServiceInstanceConfigChanged】serviceConf", serviceConf)
 
 	if serviceConf.IsValid && !isPrevProvider {
 		//之前不在提供者中，现在根据route信息来决定是否放入服务提供者中
@@ -190,14 +186,14 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 			//增加服务提供者
 			cb.serviceFinder.subscribedService[serviceId].ProviderList = append(providerList, &serviceInstance)
 			evetn := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: []*common.ServiceInstance{serviceInstance.Dumplication()}}
-			cb.uh.OnServiceInstanceChanged(service.ServiceName, []*common.ServiceInstanceChangedEvent{&evetn})
+			cb.uh.OnServiceInstanceChanged(service.ServiceName,service.ApiVersion, []*common.ServiceInstanceChangedEvent{&evetn})
 		}
 
 	}
 	//无用到无用
 	f.LoadStatus = 1
 	if serviceConf.IsValid && shouldAdd {
-		ok := cb.uh.OnServiceInstanceConfigChanged(service.ServiceName, addr, serviceConf)
+		ok := cb.uh.OnServiceInstanceConfigChanged(service.ServiceName, service.ApiVersion,addr, serviceConf)
 		if !ok {
 			f.LoadStatus = -1
 		}
@@ -240,7 +236,7 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 	}
 	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
 	cb.serviceFinder.serviceZkData[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
-	ok := cb.uh.OnServiceConfigChanged(service.ServiceName, &common.ServiceConfig{JsonConfig: string(configData)})
+	ok := cb.uh.OnServiceConfigChanged(service.ServiceName,service.ApiVersion, &common.ServiceConfig{JsonConfig: string(configData)})
 	if ok {
 		log.Println("load success:", pushID)
 		f.LoadStatus = 1
@@ -339,7 +335,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 	}
 	if len(event) != 0 {
 		//通知
-		cb.uh.OnServiceInstanceChanged(serviceItem.ServiceName, event)
+		cb.uh.OnServiceInstanceChanged(serviceItem.ServiceName,serviceItem.ApiVersion, event)
 	}
 	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[serviceId])
 

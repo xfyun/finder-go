@@ -16,3 +16,5 @@ const (
 	INSTANCEADDED  InstanceChangedEventType = "INSTANCEADDED"
 	INSTANCEREMOVE InstanceChangedEventType = "INSTANCEREMOVE"
 )
+
+const ZK_NODE_DOSE_NOT_EXIST  ="zk: node does not exist"
