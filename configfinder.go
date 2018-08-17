@@ -153,7 +153,12 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			path = basePath + "/" + n
 			data, err := f.storageMgr.GetDataWithWatchV2(path, &callback)
 			if err != nil {
+				if strings.Compare(err.Error(),common.ZK_NODE_DOSE_NOT_EXIST)==0{
+					log.Println("配置文件不存在，请先配置文件。文件:",name)
+					continue
+				}
 				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
+
 			} else {
 				_, fData, err := common.DecodeValue(data)
 				if err != nil {
