@@ -9,9 +9,9 @@ mkdir -p /opt/finder
 ````
 #### 在finder目录下创建配置文件 conf.json如下,请自行修改companionUrl 和 address以及group信息
 
-#### 配置type=3 ，然后修改address、service、version信息来注册多个服务
-#### 配置type=2 ,修改subribeServiceItem来订阅多个服务。启动一个demo。代表一个服务提供者
-#### 配置type=1,修改subscribeFile来订阅不同文件
+##### 配置type=3 ，然后修改address、service、version信息来注册多个服务，启动一个demo，代表一个服务提供者
+##### 配置type=2 ,修改subribeServiceItem来订阅多个服务。
+##### 配置type=1,修改subscribeFile来订阅不同文件
 /opt/finder/conf.json:
 ````
 {
