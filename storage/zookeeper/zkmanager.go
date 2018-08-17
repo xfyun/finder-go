@@ -145,6 +145,7 @@ func (zm *ZkManager) GetData(path string) ([]byte, error) {
 func (zm *ZkManager) GetDataWithWatchV2(path string, callback common.ChangedCallback) ([]byte, error) {
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
+
 		log.Println(err)
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	storageCommon "git.xfyun.cn/AIaaS/finder-go/storage/common"
+	"log"
 )
 
 const (
@@ -48,14 +49,24 @@ func GetGrayConfigData(f *ConfigFinder, path string, callback storageCommon.Chan
 	var data []byte
 	var err error
 	if callback != nil {
+
 		data, err = f.storageMgr.GetDataWithWatchV2(path, callback)
 	} else {
 		data, err = f.storageMgr.GetData(path)
 
 	}
 	if err != nil {
-		logger.Info(" [getGrayData] 根据 path:", path, "获取数据出错：", err)
+		if strings.Compare(err.Error(),common.ZK_NODE_DOSE_NOT_EXIST)==0{
+			err:=f.storageMgr.SetPath(path)
+			if err != nil {
+				log.Println(" [getGrayData] 根据 path:", path, "创建节点出错：", err)
+			}
+			return nil
+		}
 		return err
+	}
+	if data==nil || len(data)==0{
+		return nil
 	}
 	if grayConfig, ok := ParseGrayConfigData(serverId, data); ok {
 		for key, value := range grayConfig {
