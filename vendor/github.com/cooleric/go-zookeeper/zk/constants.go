@@ -63,7 +63,7 @@ const (
 	StateSaslAuthenticated State = 6
 	StateExpired           State = -112
 
-	StateConnected  = State(100)
+	StateConnected  State=3
 	StateHasSession = State(101)
 )
 

@@ -23,6 +23,7 @@ type StorageInfo struct {
 	Addr            []string
 	ConfigRootPath  string
 	ServiceRootPath string
+	ZkNodePath      string
 }
 
 type Config struct {

@@ -31,6 +31,13 @@ func NewZkManager(params map[string]string) (*ZkManager, error) {
 	return zm, nil
 }
 
+func (zm *ZkManager) GetZkNodePath()(string,error){
+	if path,ok:=zm.params["zk_node_path"];ok{
+		return path,nil
+	}else{
+		return "",errors.NewFinderError(errors.ZkInfoMissZkNodePath)
+	}
+}
 func (zm *ZkManager) Init() error {
 	serverStr, exist := zm.params["servers"]
 	if !exist || len(serverStr) == 0 {
@@ -171,9 +178,7 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
-
-		log.Println(err)
-		//	return nil, err
+		log.Println("[ GetDataWithWatch ]获取数据出错",err)
 	}
 	//返回的event
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
@@ -181,16 +186,17 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 			select {
 			case e, ok := <-event:
 				if !ok {
-					log.Println("<-event; !ok")
+					log.Println("路径是: ",path, " 回调有误  ",e)
+				}
+				log.Println("收到通知，",e)
+				if e.Type == zk.EventNodeDeleted {
+					log.Println("节点删除事件，不再获取该节点的数据 ",e)
+					return
 				}
 				var retryCount int32
 				for {
-					//这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
-					//这个地方如果一直注册Watcher 会存在问题。。
-					if e.Type == zk.EventNodeDeleted {
-						break
-					}
-					log.Println("收到path的信息：再次注册Watcher   ：", path)
+					// 这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
+
 					data, _, event, err = zm.conn.GetW(path)
 					if err != nil {
 						log.Println("[ zkWatcher] 从", path, "获取数据失败 ", err)
@@ -247,13 +253,13 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 			select {
 			case e, ok := <-event:
 				if !ok {
-					log.Println("<-event; !ok")
+					log.Println("[ GetChildrenWithWatch ]  <-event; !ok")
 					continue
 				}
 				for {
 					data, _, event, err = zm.conn.ChildrenW(path)
 					if err != nil {
-						log.Println(err)
+						log.Println("[ GetChildrenWithWatch ] 再次获取字节点信息出错 ",err)
 						continue
 					} else {
 						callback.ChildrenChangedCallback(e.Path, getNodeFromPath(e.Path), data)

@@ -2,9 +2,9 @@ package serviceutil
 
 import (
 	"encoding/json"
-	"fmt"
 	"git.xfyun.cn/AIaaS/finder-go/common"
 	common "git.xfyun.cn/AIaaS/finder-go/common"
+	"log"
 )
 
 func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
@@ -12,9 +12,10 @@ func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
 	serviceInstanceConfig := &common.ServiceInstanceConfig{}
 	err := json.Unmarshal(data, &configJson)
 	if err != nil {
-		fmt.Println("【ParseServiceConfigData】出错", err)
+		log.Println("【ParseServiceConfigData】出错 ", err,"   ",string(data)  )
 		return nil
 	}
+	log.Println("[ ParseServiceConfigData ] configJson: ",configJson,"  data: ",string(data))
 	sdkConfig := configJson["sdk"].(map[string]interface{})
 
 	if isValid, ok := sdkConfig["is_valid"].(bool); ok {
@@ -29,6 +30,8 @@ func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
 	return serviceInstanceConfig
 }
 
+
+
 //采用内存换时间的策略
 func CompareServiceInstanceList(prevProviderList []*common.ServiceInstance, currentProviderList []*common.ServiceInstance) []*common.ServiceInstanceChangedEvent {
 
@@ -41,10 +44,11 @@ func CompareServiceInstanceList(prevProviderList []*common.ServiceInstance, curr
 		providerMap[provider.Addr] = provider
 		countMap[provider.Addr] += 1
 	}
+
+	//看看是否有新增的
 	var incrFlag = false
 	for _, provider := range currentProviderList {
 		if _, ok := providerMap[provider.Addr]; !ok {
-
 			//找到新增的 就是在原来的不存在的
 			var instance common.ServiceInstance
 			instance.Addr = provider.Addr
@@ -55,6 +59,7 @@ func CompareServiceInstanceList(prevProviderList []*common.ServiceInstance, curr
 			countMap[provider.Addr] += 1
 		}
 	}
+	log.Println(" countMap:",countMap)
 	if incrFlag {
 		eventList = append(eventList, &addServiceInstance)
 	}
@@ -66,7 +71,7 @@ func CompareServiceInstanceList(prevProviderList []*common.ServiceInstance, curr
 			var instance common.ServiceInstance
 			instance.Addr = provider.Addr
 			instance.Config = &common.ServiceInstanceConfig{IsValid: provider.Config.IsValid, UserConfig: provider.Config.UserConfig}
-			removeServiceInstance.ServerList = append(addServiceInstance.ServerList, &instance)
+			removeServiceInstance.ServerList = append(removeServiceInstance.ServerList, &instance)
 			decrFlag = true
 		}
 	}

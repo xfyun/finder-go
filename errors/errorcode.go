@@ -45,6 +45,7 @@ var retCodeToString = map[ReturnCode]string{
 	ServiceMissApiVersion:            "[service] 缺失版本号",
 	ZkGetNilData:                     "zk中节点上的数据为空",
 	ZkConnectionLoss:                 "zk连接不存在",
+	ZkInfoMissZkNodePath:             "zk的地址所在的节点信息不存在",
 }
 
 const (
@@ -74,6 +75,7 @@ const (
 	ZkInfoMissConfigRootPath
 	ZkInfoMissServiceRootPath
 	ZkInfoMissAddr
+	ZkInfoMissZkNodePath
 	ZkInfoAddrConvertError
 	ZkGetDataErr
 	ZkParamsMissServers

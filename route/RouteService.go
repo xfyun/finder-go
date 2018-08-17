@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 
-	"fmt"
 )
 
 func ParseRouteData(data []byte) *common.ServiceRoute {
@@ -61,7 +60,6 @@ func containProvider(providerList []*common.ServiceInstance, provider string) (*
 }
 
 func deleteProvider(providerList []*common.ServiceInstance, provider string) []*common.ServiceInstance {
-	fmt.Println(provider)
 	for index, value := range providerList {
 		if strings.Compare(value.Addr, provider) == 0 {
 			providerList = append(providerList[:index], providerList[index+1:]...)

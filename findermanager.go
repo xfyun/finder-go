@@ -25,6 +25,48 @@ var (
 	logger common.Logger
 )
 
+type zkAddrChangeCallback struct {
+	path string
+	fm   *FinderManager
+}
+
+func (callback *zkAddrChangeCallback) ChildrenChangedCallback(path string, node string, children []string) {
+
+}
+func (callback *zkAddrChangeCallback) Process(path string, node string) {
+
+}
+
+func (callback *zkAddrChangeCallback) DataChangedCallback(path string, node string, data []byte) {
+	newPath := string(data)
+	if strings.Compare(newPath, callback.path) == 0 {
+		return
+	}
+	fm := callback.fm
+	storageMgr, storageCfg, err := initStorageMgr(fm.config)
+	if err != nil {
+		logger.Info("zk信息出错，重新尝试")
+	} else {
+		fm.storageMgr = storageMgr
+		fm.ConfigFinder.storageMgr = storageMgr
+		fm.ConfigFinder.rootPath = storageCfg.ConfigRootPath
+		fm.ConfigFinder.config = fm.config
+		fm.ServiceFinder.storageMgr = storageMgr
+		fm.ServiceFinder.rootPath = storageCfg.ServiceRootPath
+		if len(fm.ServiceFinder.subscribedService) != 0 {
+			var subscribedService []common.ServiceSubscribeItem
+			for _, value := range fm.ServiceFinder.subscribedService {
+				var item = common.ServiceSubscribeItem{ServiceName: value.ServiceName, ApiVersion: value.ApiVersion}
+				subscribedService = append(subscribedService, item)
+			}
+			//prevSubscribedService :=fm.ServiceFinder.subscribedService
+			//TODO 延迟变化zk信息
+			fm.ServiceFinder.UseAndSubscribeService(subscribedService, fm.ServiceFinder.handler)
+
+		}
+	}
+}
+
 func init() {
 	hc = &http.Client{
 		Transport: &http.Transport{
@@ -117,9 +159,6 @@ func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error)
 	if err != nil {
 		return nil, err
 	}
-	//zm.checkZkInfoTicker = time.NewTicker(config.TickerDuration)
-	//	go watchStorageInfo(zm)
-
 	storageConfig := &storage.StorageConfig{
 		Name:   "zookeeper",
 		Params: make(map[string]string),
@@ -127,6 +166,7 @@ func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error)
 
 	storageConfig.Params["servers"] = strings.Join(info.Addr, ",")
 	storageConfig.Params["session_timeout"] = strconv.FormatInt(int64(config.ExpireTimeout/time.Millisecond), 10)
+	storageConfig.Params["zk_node_path"] = info.ZkNodePath
 	storageConfig.ConfigRootPath = info.ConfigRootPath
 	storageConfig.ServiceRootPath = info.ServiceRootPath
 
@@ -252,14 +292,26 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 		fm.ConfigFinder = NewConfigFinder(storageCfg.ConfigRootPath, fm.config, fm.storageMgr)
 		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 	}
+	//创建一个goroutine来执行监听zk地址的数据
+	go watchZkInfo(fm)
 	return fm, nil
 }
+
+func watchZkInfo(fm *FinderManager) {
+	zkNodePath, err := fm.storageMgr.GetZkNodePath()
+	if err != nil {
+		logger.Error("zk的节点信息为空")
+	}
+	fm.storageMgr.GetDataWithWatch(zkNodePath,&zkAddrChangeCallback{path:zkNodePath,fm:fm})
+}
+
 func watchStorageInfo(fm *FinderManager) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
+			getStorageConfig(fm.config)
 			storageMgr, storageCfg, err := initStorageMgr(fm.config)
 			if err != nil {
 				logger.Info("初始化zk信息出错，重新尝试")

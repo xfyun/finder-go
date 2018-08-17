@@ -9,6 +9,7 @@ import (
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
+	"log"
 )
 
 var (
@@ -176,7 +177,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 
 		}
 	}
-
+	log.Println("订阅的文件是：",f.fileSubscribe)
 	return configFiles, nil
 }
 

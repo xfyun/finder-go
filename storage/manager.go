@@ -8,6 +8,7 @@ import (
 )
 
 type StorageManager interface {
+	GetZkNodePath()(string ,error)
 	Init() error
 	Destroy() error
 	GetData(path string) ([]byte, error)

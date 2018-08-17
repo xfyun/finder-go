@@ -10,55 +10,70 @@ import (
 	"strings"
 	"time"
 
-	finder "git.xfyun.cn/AIaaS/finder-go"
+	"git.xfyun.cn/AIaaS/finder-go"
 
+	"encoding/json"
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
+type ServiceItemTest struct {
+	ServiceName string
+	ApiVersion  string
+}
+type RegisterItemTest struct {
+	ServiceAddr string
+	ApiVersion  string
+}
 type TestConfig struct {
-	CompanionUrl  string
-	Address       string
-	Project       string
-	Group         string
-	Service       string
-	Version       string
-	SubscribeFile []string
+	Type                int  //1：订阅配置 2.订阅服务 3.注册服务
+	CompanionUrl        string
+	Address             string
+	Project             string
+	Group               string
+	Service             string
+	Version             string
+	SubscribeFile       []string
+	SubribeServiceItem  []ServiceItemTest
 }
 
 func main() {
-	//	data, _ := fileutil.ReadFile("C:\\Users\\admin\\Desktop\\11.toml")
-	//	fileutil.ParseTomlFile(data)
-	//newProviderFinder("299.99.99.99:99")
-	//newConsumerFinder("127.0.0.1:8082")
-	// args := os.Args
-	// if len(args) != 2 {
-	// 	log.Println("参数错误")
-	// 	return
-	// }
-	// file, _ := os.Open(args[1])
-	// defer file.Close()
-	// decoder := json.NewDecoder(file)
-	// conf := TestConfig{}
-	// err := decoder.Decode(&conf)
-	// if err != nil {
-	// 	fmt.Println("Error:", err)
-	// 	return
-	// }
-	//	fmt.Println(conf)
-	//	newConfigFinder(conf)
+	args := os.Args
+	if len(args) != 2 {
+		log.Println("参数错误")
+		return
+	}
+	file, _ := os.Open(args[1])
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	conf := TestConfig{}
+	err := decoder.Decode(&conf)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(conf)
+	if( conf.Type== 1 ){
+		newConfigFinder(conf)
+	}else if(conf.Type==2){
+		newServiceFinder(conf)
+	}else if(conf.Type==3){
+		newProviderFinder(conf)
+	}else{
+		log.Println("输入的type有误，请重新输入")
+		return
+	}
 	//newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
 	//newProviderFinder("299.99.99.99:99")
 	//newProviderFinder("299.99.99.99:100")
 	//TODO  1. companion连不上怎么办，zk连不上怎么办
-	newServiceFinder("299.99.99.99:101")
 	for {
-		time.Sleep(time.Second * 60)
+		time.Sleep(time.Minute * 20)
 		log.Println("I'm running.")
 	}
 
 }
-func newServiceFinder(addr string) {
+func newServiceFinder(conf TestConfig) {
 
 	cachePath, err := os.Getwd()
 	if err != nil {
@@ -67,15 +82,15 @@ func newServiceFinder(addr string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  "http://10.1.87.70:6868",
+		CompanionUrl:  conf.CompanionUrl,
 		CachePath:     cachePath,
-		ExpireTimeout: 5 * time.Second,
+		ExpireTimeout: 10 * time.Second,
 		MeteData: &common.ServiceMeteData{
-			Project: "test0803",
-			Group:   "test0803",
-			Service: "test0803",
-			Version: "1.0",
-			Address: addr,
+			Project:  conf.Project,
+			Group:   conf.Group,
+			Service: conf.Service,
+			Version: conf.Version,
+			Address: conf.Address,
 		},
 	}
 
@@ -88,13 +103,13 @@ func newServiceFinder(addr string) {
 		//testCache(cachePath)
 		//testGrayData(f)
 		//testServiceAsync(f)
-		testUseServiceAsync(f)
+		testUseServiceAsync(f,conf.SubribeServiceItem)
 		//testUseService(f)
 
 		//testConfigFeedback()
 	}
 }
-func newProviderFinder(addr string) {
+func newProviderFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
 	if err != nil {
 		return
@@ -102,15 +117,15 @@ func newProviderFinder(addr string) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  "http://10.1.87.70:6868",
+		CompanionUrl: conf.CompanionUrl,
 		CachePath:     cachePath,
 		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
-			Project: "qq",
-			Group:   "qq",
-			Service: "qq",
-			Version: "1.0",
-			Address: addr,
+			Project: conf.Project,
+			Group:  conf.Group,
+			Service: conf.Service,
+			Version: conf.Version,
+			Address: conf.Address,
 		},
 	}
 
@@ -131,54 +146,11 @@ func newProviderFinder(addr string) {
 }
 
 func testRegisterService(f *finder.FinderManager) {
+
 	f.ServiceFinder.RegisterService()
 
 }
-func newConsumerFinder(addr string) {
-	cachePath, err := os.Getwd()
-	if err != nil {
-		return
-	}
-	cachePath += "/findercache"
-	config := common.BootConfig{
-		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  "http://10.1.86.223:9080",
-		CachePath:     cachePath,
-		ExpireTimeout: 5 * time.Second,
-		// MeteData: &common.ServiceMeteData{
-		// 	Project: "project",
-		// 	Group:   "group",
-		// 	Service: "xsf",
-		// 	Version: "1.0.0",
-		// 	Address: "127.0.0.1:9091",
-		// },
-		// MeteData: &common.ServiceMeteData{
-		// 	Project: "test",
-		// 	Group:   "default",
-		// 	Service: "xsf",
-		// 	Version: "1.0.0",
-		// 	Address: "127.0.0.1:9091",
-		// },
-		MeteData: &common.ServiceMeteData{
-			Project: "AIaaS",
-			Group:   "dx",
-			Service: "finder_test",
-			Version: "1.0",
-			Address: addr,
-		},
-	}
 
-	f, err := finder.NewFinderWithLogger(config, nil)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		//testUseConfigAsync(f)
-		//testCache(cachePath)
-		testUseServiceAsync(f)
-
-		//testConfigFeedback()
-	}
-}
 
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
@@ -400,17 +372,18 @@ func testServiceAsync(f *finder.FinderManager) {
 
 }
 
-func testUseServiceAsync(f *finder.FinderManager) {
+func testUseServiceAsync(f *finder.FinderManager,items []ServiceItemTest) {
 	handler := new(ServiceChangedHandle)
-	var subscribe1 = common.ServiceSubscribeItem{ServiceName: "test0803", ApiVersion: "1.0"}
-	var subscribe2 = common.ServiceSubscribeItem{ServiceName: "test0803", ApiVersion: "GGG3"}
-
-	serviceList, err := f.ServiceFinder.UseAndSubscribeService([]common.ServiceSubscribeItem{subscribe1,subscribe2}, handler)
+	subscri :=make([]common.ServiceSubscribeItem,0)
+	for _,item :=range items{
+		subscri=append(subscri, common.ServiceSubscribeItem{ServiceName:item.ServiceName, ApiVersion: item.ApiVersion})
+	}
+	serviceList, err := f.ServiceFinder.UseAndSubscribeService(subscri, handler)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		for _, s := range serviceList {
-			fmt.Println("订阅的服务：",s.ServiceName, ":",s.ApiVersion ," --->")
+			fmt.Println("订阅的服务：", s.ServiceName, ":", s.ApiVersion, " --->")
 			for _, item := range s.ProviderList {
 				fmt.Println("----提供者地址 :")
 				fmt.Println("--------:", item.Addr)
@@ -478,5 +451,5 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 	for _, c := range configFiles {
 		log.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
 	}
-	f.ConfigFinder.UnSubscribeConfig("11.toml")
+	//f.ConfigFinder.UnSubscribeConfig("11.toml")
 }

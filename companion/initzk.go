@@ -71,6 +71,7 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 		ConfigRootPath:  r.Data["config_path"].(string),
 		ServiceRootPath: r.Data["service_path"].(string),
 		Addr:            zkAddr,
+		ZkNodePath:      r.Data["zk_node_path"].(string),
 	}
 
 	return zkInfo, nil
