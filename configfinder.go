@@ -155,7 +155,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			if err != nil {
 				if strings.Compare(err.Error(),common.ZK_NODE_DOSE_NOT_EXIST)==0{
 					log.Println("配置文件不存在，请先配置文件。文件:",name)
-					continue
+					return nil,errors.NewFinderError(errors.ConfigFileNotExist)
 				}
 				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 
