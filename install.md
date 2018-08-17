@@ -7,19 +7,25 @@ docker pull 172.16.59.153/aiaas/findergo-demo:2.0.0
 ````
 mkdir -p /opt/finder
 ````
-#### 在finder目录下创建配置文件 conf.json如下,请自行修改companionUrl 和 address以及group信息
+#### 在finder目录下创建配置文件 conf.json如下,请自行修改companionUrl 和 address以及group信息,其中type=1 代表订阅配置，=2代表订阅服务，订阅的服务以subribeServiceItem标识，=3代表注册服务。注册的服务就是service、version、address所代表的字段
 
+### 配置type=3 ，然后修改address、service、version信息来注册多个服务
+### 配置type=2 ,修改subribeServiceItem来订阅多个服务。启动一个demo。代表一个服务提供者
+### 配置type=1,修改subscribeFile来订阅不同文件
 /opt/finder/conf.json:
 ````
 {
+	"type" :3,
 	"companionUrl": "http://10.1.87.70:6868",
 	"address": "127.0.0.1:10010",
-	"project": "qq",
-	"group": "qq",
-	"service": "qq",
+	"project": "zy_test",
+	"group": "zy_test",
+	"service": "zy_test1",
 	"version": "2.0",
-	"subscribeFile": ["11.toml", "test2.yml"]
+	"subscribeFile": ["11.toml"],
+	"subribeServiceItem" :[{"serviceName":"zy_test1","apiVersion":"1.0"},{"serviceName":"zy_test1","apiVersion":"2.0"}]
 }
+
 
 ````
 #### 创建start.sh
