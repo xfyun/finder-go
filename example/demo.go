@@ -62,7 +62,6 @@ func main() {
 	}else if(conf.Type==4){
 		newConfigFinder(conf)
 		newServiceFinder(conf)
-		newProviderFinder(conf)
 	}else{
 		log.Println("输入的type有误，请重新输入")
 		return

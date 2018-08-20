@@ -12,6 +12,7 @@ mkdir -p /opt/finder
 ##### 配置type=3 ，然后修改address、service、version信息来注册多个服务，启动一个demo，代表一个服务提供者
 ##### 配置type=2 ,修改subribeServiceItem来订阅多个服务。
 ##### 配置type=1,修改subscribeFile来订阅不同文件
+##### 配置type=4,订阅subscribeFile中的文件，订阅subribeServiceItem服务。
 /opt/finder/conf.json:
 ````
 {
