@@ -26,15 +26,16 @@ type RegisterItemTest struct {
 	ApiVersion  string
 }
 type TestConfig struct {
-	Type                int  //1：订阅配置 2.订阅服务 3.注册服务
-	CompanionUrl        string
-	Address             string
-	Project             string
-	Group               string
-	Service             string
-	Version             string
-	SubscribeFile       []string
-	SubribeServiceItem  []ServiceItemTest
+	Type               int //1：订阅配置 2.订阅服务 3.注册服务
+	CompanionUrl       string
+	Address            string
+	Project            string
+	Group              string
+	Service            string
+	Version            string
+	ProviderApiVersion string
+	SubscribeFile      []string
+	SubribeServiceItem []ServiceItemTest
 }
 
 func main() {
@@ -53,16 +54,16 @@ func main() {
 		return
 	}
 	fmt.Println(conf)
-	if( conf.Type== 1 ){
+	if conf.Type == 1 {
 		newConfigFinder(conf)
-	}else if(conf.Type==2){
+	} else if conf.Type == 2 {
 		newServiceFinder(conf)
-	}else if(conf.Type==3){
+	} else if conf.Type == 3 {
 		newProviderFinder(conf)
-	}else if(conf.Type==4){
+	} else if conf.Type == 4 {
 		newConfigFinder(conf)
 		newServiceFinder(conf)
-	}else{
+	} else {
 		log.Println("输入的type有误，请重新输入")
 		return
 	}
@@ -89,7 +90,7 @@ func newServiceFinder(conf TestConfig) {
 		CachePath:     cachePath,
 		ExpireTimeout: 10 * time.Second,
 		MeteData: &common.ServiceMeteData{
-			Project:  conf.Project,
+			Project: conf.Project,
 			Group:   conf.Group,
 			Service: conf.Service,
 			Version: conf.Version,
@@ -106,7 +107,7 @@ func newServiceFinder(conf TestConfig) {
 		//testCache(cachePath)
 		//testGrayData(f)
 		//testServiceAsync(f)
-		testUseServiceAsync(f,conf.SubribeServiceItem)
+		testUseServiceAsync(f, conf.SubribeServiceItem)
 		//testUseService(f)
 
 		//testConfigFeedback()
@@ -120,12 +121,12 @@ func newProviderFinder(conf TestConfig) {
 	cachePath += "/findercache"
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl: conf.CompanionUrl,
+		CompanionUrl:  conf.CompanionUrl,
 		CachePath:     cachePath,
 		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
 			Project: conf.Project,
-			Group:  conf.Group,
+			Group:   conf.Group,
 			Service: conf.Service,
 			Version: conf.Version,
 			Address: conf.Address,
@@ -141,19 +142,18 @@ func newProviderFinder(conf TestConfig) {
 		//testCache(cachePath)
 		//testGrayData(f)
 		//testServiceAsync(f)
-		testRegisterService(f)
+		testRegisterService(f,conf.Address,conf.ProviderApiVersion)
 		//testUseService(f)
 
 		//testConfigFeedback()
 	}
 }
 
-func testRegisterService(f *finder.FinderManager) {
+func testRegisterService(f *finder.FinderManager,addr string,apiVersion string) {
 
-	f.ServiceFinder.RegisterService()
+	f.ServiceFinder.RegisterServiceItem(addr,apiVersion)
 
 }
-
 
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
@@ -375,11 +375,11 @@ func testServiceAsync(f *finder.FinderManager) {
 
 }
 
-func testUseServiceAsync(f *finder.FinderManager,items []ServiceItemTest) {
+func testUseServiceAsync(f *finder.FinderManager, items []ServiceItemTest) {
 	handler := new(ServiceChangedHandle)
-	subscri :=make([]common.ServiceSubscribeItem,0)
-	for _,item :=range items{
-		subscri=append(subscri, common.ServiceSubscribeItem{ServiceName:item.ServiceName, ApiVersion: item.ApiVersion})
+	subscri := make([]common.ServiceSubscribeItem, 0)
+	for _, item := range items {
+		subscri = append(subscri, common.ServiceSubscribeItem{ServiceName: item.ServiceName, ApiVersion: item.ApiVersion})
 	}
 	serviceList, err := f.ServiceFinder.UseAndSubscribeService(subscri, handler)
 	if err != nil {
