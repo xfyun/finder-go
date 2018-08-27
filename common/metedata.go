@@ -34,7 +34,11 @@ type Config struct {
 	//toml文件解析后的数据
 	ConfigMap map[string]interface{}
 }
-
+type ConfigErrInfo struct {
+	FileName string
+	ErrCode  int
+	ErrMsg   string
+}
 type ServiceInstanceConfig struct {
 	IsValid    bool `json:"is_valid"`
 	UserConfig string

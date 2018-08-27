@@ -5,6 +5,7 @@ import (
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	"strings"
+	"log"
 )
 
 // ConfigChangedHandle ConfigChangedHandle
@@ -19,4 +20,8 @@ func (s *ConfigChangedHandle) OnConfigFileChanged(config *common.Config) bool {
 		fmt.Println(config.Name, " has changed:\r\n", string(config.File))
 	}
 	return true
+}
+
+func (s *ConfigChangedHandle) OnError(errInfo common.ConfigErrInfo){
+	log.Println("配置文件出错：",errInfo)
 }

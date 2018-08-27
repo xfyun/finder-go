@@ -59,6 +59,7 @@ func main() {
 	} else if conf.Type == 2 {
 		newServiceFinder(conf)
 	} else if conf.Type == 3 {
+		//提供者
 		newProviderFinder(conf)
 	} else if conf.Type == 4 {
 		newConfigFinder(conf)
@@ -75,6 +76,10 @@ func main() {
 		time.Sleep(time.Minute * 20)
 		log.Println("I'm running.")
 	}
+
+}
+
+func pressureTest (conf TestConfig) {
 
 }
 func newServiceFinder(conf TestConfig) {
@@ -99,7 +104,7 @@ func newServiceFinder(conf TestConfig) {
 	}
 
 	f, err := finder.NewFinderWithLogger(config, nil)
-
+	//f.ServiceFinder.UnRegisterServiceWithAddr()
 	if err != nil {
 		fmt.Println(err)
 	} else {

@@ -20,6 +20,6 @@ pipeline:
        registry: 172.16.59.153
        email: yangzhou10@iflytek.com
        repo: 172.16.59.153/aiaas/findergo-demo
-       tag: 2.0.0
+       tag: 3.0.0
        file: Dockerfile
        insecure: true

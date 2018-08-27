@@ -14,6 +14,7 @@ type ServiceChangedHandler interface {
 
 type ConfigChangedHandler interface {
 	OnConfigFileChanged(config *Config) bool
+	OnError(errInfo ConfigErrInfo)
 }
 
 type InternalServiceChangedHandler interface {

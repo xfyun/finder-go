@@ -26,7 +26,7 @@ func RegisterService(hc *http.Client, url string, project string, group string, 
 		return err
 	}
 	if r.Ret != 0 {
-		log.Println(r.Msg)
+		log.Println("向companion注册服务失败：companion返回失败：",r.Msg," code:",r.Ret)
 		err = errors.NewFinderError(errors.CompanionRegisterServiceErr)
 		return err
 	}

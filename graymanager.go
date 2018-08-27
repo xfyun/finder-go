@@ -57,9 +57,16 @@ func GetGrayConfigData(f *ConfigFinder, path string, callback storageCommon.Chan
 	}
 	if err != nil {
 		if strings.Compare(err.Error(),common.ZK_NODE_DOSE_NOT_EXIST)==0{
+			//创建节点
 			err:=f.storageMgr.SetPath(path)
 			if err != nil {
 				log.Println(" [getGrayData] 根据 path:", path, "创建节点出错：", err)
+			}
+			if callback != nil {
+				//监听对应的节点
+				data, err = f.storageMgr.GetDataWithWatchV2(path, callback)
+			} else {
+				data, err = f.storageMgr.GetData(path)
 			}
 			return nil
 		}

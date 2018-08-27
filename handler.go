@@ -492,8 +492,14 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 				callback := NewConfigChangedCallback(fileName, CONFIG_CHANGED, f.rootPath, cb.uh, f.config, f.storageMgr, f)
 				basePath := cb.root + "/gray/" + currentGrayGroupId + "/" + fileName
 				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
+				if err.Error()==common.ZK_NODE_DOSE_NOT_EXIST {
+					log.Println(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
+					var errInfo =common.ConfigErrInfo{FileName:fileName,ErrCode:0,ErrMsg:"配置文件不存在"}
+					cb.uh.OnError(errInfo)
+					return
+				}
 				if err != nil {
-					logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取灰度配置失败 ", err)
+					logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
 					return
 				}
 				cb.OnConfigFileChanged(fileName, data, basePath)
@@ -510,7 +516,7 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 				basePath := cb.root + "/" + fileName
 				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
 				if err != nil {
-					logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取灰度配置失败 ", err)
+					logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
 					return
 				}
 				cb.OnConfigFileChanged(fileName, data, basePath)

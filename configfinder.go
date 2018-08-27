@@ -1,7 +1,6 @@
 package finder
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 
@@ -111,6 +110,10 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	}
 	f.locker.Lock()
 	defer f.locker.Unlock()
+	//先检查文件是否存在
+	if ok:=f.checkFileExist(name);!ok {
+		return nil,errors.NewFinderError(errors.ConfigFileNotExist)
+	}
 
 	//先查看灰度组的设置
 	callback := NewConfigChangedCallback(f.config.MeteData.Address, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
@@ -186,24 +189,80 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	return configFiles, nil
 }
 
+func (f* ConfigFinder) checkFileExist(names []string) bool{
+	//TODO 判断文件是否存在，不存在则直接报错，
+	basePath := f.rootPath
+	files,err:=f.storageMgr.GetChildren(basePath)
+	if err != nil {
+		log.Println("获取配置文件出错，直接返回",err)
+		return false
+	}
+	if len(names) >len(files) {
+		log.Println("当前有的配置文件为：",files," 要订阅的配置文件为：",names,",两者不匹配！")
+		return false
+	}
+	for _,subFileName :=range names{
+		var isExist =false
+		for _,existFile :=range files{
+			if existFile==subFileName{
+				isExist=true
+			}
+		}
+		if !isExist {
+			log.Println("配置文件 ",subFileName," 不存在")
+			return false
+		}
+	}
+	return true
+
+}
 func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	var err error
 	if len(name) == 0 {
 		err = errors.NewFinderError(errors.ConfigMissName)
 		return err
 	}
-	fmt.Println("之前  ", f.fileSubscribe)
 	for index, value := range f.fileSubscribe {
 		if strings.Compare(name, value) == 0 {
 			f.fileSubscribe = append(f.fileSubscribe[:index], f.fileSubscribe[index+1:]...)
 		}
 	}
-	// todo
-	fmt.Println("之后  ", f.fileSubscribe)
+	if len(f.fileSubscribe) == 0 {
+		f.removeConfigConsumer()
+	}
 
 	return nil
 }
 
+func (f *ConfigFinder)removeConfigConsumer(){
+	//如果订阅文件的个数为0，则取消注册者
+	consumerPath := f.rootPath + "/consumer"
+	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
+		//如果在灰度组。则进行注册到灰度组中
+		consumerPath += "/gray/" + groupId.(string) + "/" + f.config.MeteData.Address
+		f.storageMgr.Remove(consumerPath)
+	} else {
+		consumerPath += "/normal/" + f.config.MeteData.Address
+		f.storageMgr.Remove(consumerPath)
+	}
+}
+func (f *ConfigFinder) BatchUnSubscribeConfig (names []string)error{
+	if len(names)==0 {
+		err := errors.NewFinderError(errors.ConfigMissName)
+		return err
+	}
+	for _,name :=range names{
+		for index, value := range f.fileSubscribe {
+			if strings.Compare(name, value) == 0 {
+				f.fileSubscribe = append(f.fileSubscribe[:index], f.fileSubscribe[index+1:]...)
+			}
+		}
+	}
+	if len(f.fileSubscribe) == 0 {
+		f.removeConfigConsumer()
+	}
+	return nil
+}
 // onUseConfigError with cache
 func onUseConfigErrorWithCache(configFiles map[string]*common.Config, name string, cachePath string, err error) {
 	logger.Error("onUseConfigError:", err)
