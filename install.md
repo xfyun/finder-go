@@ -1,7 +1,7 @@
 
 #### 下拉镜像
 ````
-docker pull 172.16.59.153/aiaas/findergo-demo:2.0.0
+docker pull 172.16.59.153/aiaas/findergo-demo:3.0.0
 ````
 #### 创建以下目录
 ````
@@ -9,10 +9,11 @@ mkdir -p /opt/finder
 ````
 #### 在finder目录下创建配置文件 conf.json如下,请自行修改companionUrl 和 address以及group信息
 
-##### 配置type=3 ，然后修改address、service、providerApiVersion信息来注册多个服务，启动一个demo，代表一个服务提供者
-##### 配置type=2 ,修改subribeServiceItem来订阅多个服务。
 ##### 配置type=1,修改subscribeFile来订阅不同文件
+##### 配置type=2 ,修改subribeServiceItem来订阅多个服务。
+##### 配置type=3 ，然后修改address、service、providerApiVersion信息来注册多个服务，启动一个demo，代表一个服务提供者
 ##### 配置type=4,订阅subscribeFile中的文件，订阅subribeServiceItem服务。
+##### 配置type=5,订阅subscribeFile中的文件，启动后按照unSubscribeTime（单位分钟）设定的时间取消unSubscribeFile指定的文件，
 /opt/finder/conf.json:
 ````
 {
@@ -25,6 +26,8 @@ mkdir -p /opt/finder
 	"version": "1.0",
 	"providerApiVersion":"3.0",
 	"subscribeFile": ["11.toml"],
+	"unSubscribeTime":1,
+	"unSubscribeFile":["11.toml"],
 	"subribeServiceItem" :[{"serviceName":"zy_test1","apiVersion":"1.0"},{"serviceName":"zy_test1","apiVersion":"2.0"}]
 }
 

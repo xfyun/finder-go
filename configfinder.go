@@ -112,6 +112,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	defer f.locker.Unlock()
 	//先检查文件是否存在
 	if ok:=f.checkFileExist(name);!ok {
+		log.Println("订阅的文件中，有不存在的，不进行订阅")
 		return nil,errors.NewFinderError(errors.ConfigFileNotExist)
 	}
 
@@ -209,7 +210,6 @@ func (f* ConfigFinder) checkFileExist(names []string) bool{
 			}
 		}
 		if !isExist {
-			log.Println("配置文件 ",subFileName," 不存在")
 			return false
 		}
 	}

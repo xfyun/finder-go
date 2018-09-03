@@ -427,15 +427,13 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 		return
 	}
 	var isSubscribeFile bool
-	log.Println("订阅的文件是: ",cb.configFinder.fileSubscribe," 当前的文件是：",cb.name)
 	for _, value := range cb.configFinder.fileSubscribe {
 		if strings.Compare(cb.name, value) == 0 {
 			isSubscribeFile = true
 		}
 	}
-	log.Println("是否是订阅的文件，",isSubscribeFile)
-
 	if !isSubscribeFile {
+		log.Println("不是订阅的文件，不进行推送")
 		return
 	}
 
@@ -492,13 +490,13 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 				callback := NewConfigChangedCallback(fileName, CONFIG_CHANGED, f.rootPath, cb.uh, f.config, f.storageMgr, f)
 				basePath := cb.root + "/gray/" + currentGrayGroupId + "/" + fileName
 				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
-				if err.Error()==common.ZK_NODE_DOSE_NOT_EXIST {
-					log.Println(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
-					var errInfo =common.ConfigErrInfo{FileName:fileName,ErrCode:0,ErrMsg:"配置文件不存在"}
-					cb.uh.OnError(errInfo)
-					return
-				}
 				if err != nil {
+					if err.Error()==common.ZK_NODE_DOSE_NOT_EXIST {
+						log.Println(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
+						var errInfo =common.ConfigErrInfo{FileName:fileName,ErrCode:0,ErrMsg:"配置文件不存在"}
+						cb.uh.OnError(errInfo)
+						return
+					}
 					logger.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
 					return
 				}

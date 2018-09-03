@@ -26,16 +26,18 @@ type RegisterItemTest struct {
 	ApiVersion  string
 }
 type TestConfig struct {
-	Type               int //1：订阅配置 2.订阅服务 3.注册服务
-	CompanionUrl       string
-	Address            string
-	Project            string
-	Group              string
-	Service            string
-	Version            string
-	ProviderApiVersion string
-	SubscribeFile      []string
-	SubribeServiceItem []ServiceItemTest
+	Type               int               `json:"type"`
+	CompanionUrl       string            `json:"companionUrl"`
+	Address            string            `json:"address"`
+	Project            string            `json:"project"`
+	Group              string            `json:"group"`
+	Service            string            `json:"service"`
+	Version            string            `json:"version"`
+	ProviderApiVersion string            `json:"providerApiVersion"`
+	SubscribeFile      []string          `json:"subscribeFile"`
+	UnSubscribeFile    []string          `json:"unSubscribeFile"`
+	SubribeServiceItem []ServiceItemTest `json:"subribeServiceItem"`
+	UnSubscribeTime    time.Duration               `json:"unSubscribeTime"`
 }
 
 func main() {
@@ -64,6 +66,9 @@ func main() {
 	} else if conf.Type == 4 {
 		newConfigFinder(conf)
 		newServiceFinder(conf)
+	} else if conf.Type == 5 {
+		newConfigFinder(conf)
+
 	} else {
 		log.Println("输入的type有误，请重新输入")
 		return
@@ -79,7 +84,7 @@ func main() {
 
 }
 
-func pressureTest (conf TestConfig) {
+func pressureTest(conf TestConfig) {
 
 }
 func newServiceFinder(conf TestConfig) {
@@ -147,16 +152,16 @@ func newProviderFinder(conf TestConfig) {
 		//testCache(cachePath)
 		//testGrayData(f)
 		//testServiceAsync(f)
-		testRegisterService(f,conf.Address,conf.ProviderApiVersion)
+		testRegisterService(f, conf.Address, conf.ProviderApiVersion)
 		//testUseService(f)
 
 		//testConfigFeedback()
 	}
 }
 
-func testRegisterService(f *finder.FinderManager,addr string,apiVersion string) {
+func testRegisterService(f *finder.FinderManager, addr string, apiVersion string) {
 
-	f.ServiceFinder.RegisterServiceItem(addr,apiVersion)
+	f.ServiceFinder.RegisterServiceItem(addr, apiVersion)
 
 }
 
@@ -185,7 +190,16 @@ func newConfigFinder(conf TestConfig) {
 		fmt.Println(err)
 	} else {
 		testUseConfigAsyncByName(f, conf.SubscribeFile)
+		if conf.Type==5 {
+			ss:=conf.UnSubscribeTime
+			tick:=time.NewTicker(ss * time.Minute)
+			select {
+				case  <- tick.C :
+				fmt.Println("开始取消文件")
+					go testUnscribeConfigfile(f,conf.UnSubscribeFile)
 
+			}
+		}
 		//	testUserConfig(f, name)
 		//testCache(cachePath)
 		//testUseServiceAsync(f)
@@ -193,7 +207,9 @@ func newConfigFinder(conf TestConfig) {
 		//testConfigFeedback()
 	}
 }
-
+func testUnscribeConfigfile(f *finder.FinderManager, names []string){
+	f.ConfigFinder.BatchUnSubscribeConfig(names)
+}
 func getLocalIP(url string) (string, error) {
 	var host string
 	var port string
