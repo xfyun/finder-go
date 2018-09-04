@@ -222,6 +222,7 @@ func (f* ConfigFinder) checkFileExist(basePath string,names []string) bool{
 			}
 		}
 		if !isExist {
+			log.Println("当前有的配置文件为：",files," 要订阅的配置文件 ",subFileName," 不存在！")
 			return false
 		}
 	}
