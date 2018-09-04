@@ -110,11 +110,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	}
 	f.locker.Lock()
 	defer f.locker.Unlock()
-	//先检查文件是否存在
-	if ok:=f.checkFileExist(name);!ok {
-		log.Println("订阅的文件中，有不存在的，不进行订阅")
-		return nil,errors.NewFinderError(errors.ConfigFileNotExist)
-	}
+
 
 	//先查看灰度组的设置
 	callback := NewConfigChangedCallback(f.config.MeteData.Address, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
@@ -123,6 +119,21 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		logger.Info("获取灰度配置信息出错", err)
 		return nil, err
 	}
+
+
+	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
+		//如果在灰度组。则进行注册到灰度组中
+		if ok:=f.checkFileExist(f.rootPath+"/gray/"+ groupId.(string),name);!ok {
+			log.Println("订阅的文件中，有不存在的，不进行订阅,path: ",f.rootPath+"/gray/"+ groupId.(string))
+			return nil,errors.NewFinderError(errors.ConfigFileNotExist)
+		}
+	} else {
+		if ok:=f.checkFileExist(f.rootPath,name);!ok {
+			log.Println("订阅的文件中，有不存在的，不进行订阅,path : ",f.rootPath)
+			return nil,errors.NewFinderError(errors.ConfigFileNotExist)
+		}
+	}
+
 	consumerPath := f.rootPath + "/consumer"
 	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
 		//如果在灰度组。则进行注册到灰度组中
@@ -132,6 +143,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		consumerPath += "/normal/" + f.config.MeteData.Address
 		f.storageMgr.SetTempPath(consumerPath)
 	}
+
 	configFiles := make(map[string]*common.Config)
 	path := ""
 	for _, n := range name {
@@ -190,9 +202,9 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	return configFiles, nil
 }
 
-func (f* ConfigFinder) checkFileExist(names []string) bool{
+func (f* ConfigFinder) checkFileExist(basePath string,names []string) bool{
 	//TODO 判断文件是否存在，不存在则直接报错，
-	basePath := f.rootPath
+
 	files,err:=f.storageMgr.GetChildren(basePath)
 	if err != nil {
 		log.Println("获取配置文件出错，直接返回",err)
