@@ -13,9 +13,10 @@ import (
 )
 
 type ZkManager struct {
-	conn      *zk.Conn
-	params    map[string]string
-	exit      chan bool
+	conn   *zk.Conn
+	params map[string]string
+	exit   chan bool
+	//记录了临时路径
 	tempPaths sync.Map
 	//记录了path对应的Watcher
 	dataWatcher sync.Map
@@ -27,42 +28,42 @@ func NewZkManager(params map[string]string) (*ZkManager, error) {
 		params:      params,
 		dataWatcher: sync.Map{},
 	}
-
 	return zm, nil
 }
 
-func (zm *ZkManager) GetZkNodePath()(string,error){
-	if path,ok:=zm.params["zk_node_path"];ok{
-		return path,nil
-	}else{
-		return "",errors.NewFinderError(errors.ZkInfoMissZkNodePath)
+
+func (zm *ZkManager) GetZkNodePath() (string, error) {
+	if path, ok := zm.params["zk_node_path"]; ok {
+		return path, nil
+	} else {
+		return "", errors.NewFinderError(errors.ZkInfoMissZkNodePath)
 	}
 }
 func (zm *ZkManager) Init() error {
+
+	//必要参数判断
 	serverStr, exist := zm.params["servers"]
 	if !exist || len(serverStr) == 0 {
 		return errors.NewFinderError(errors.ZkParamsMissServers)
 	}
+
 	servers := strings.Split(serverStr, ",")
-	//len(servers)
 	timeout, exist := zm.params["session_timeout"]
 	if !exist || len(timeout) == 0 {
 		return errors.NewFinderError(errors.ZkParamsMissSessionTimeout)
 	}
-
 	sessionTimeout, err := strconv.Atoi(timeout)
 	if err != nil {
 		return err
 	}
 
+	//新建zookeeper连接
 	conn, _, err := zk.Connect(servers, time.Duration(sessionTimeout)*time.Millisecond, zk.WithEventCallback(zm.eventCallback))
 	if err != nil {
 		return err
 	}
-	zm.conn = conn
-	go func(dataWatcher sync.Map) {
 
-	}(zm.dataWatcher)
+	zm.conn = conn
 	return nil
 }
 func (zm *ZkManager) eventCallback(e zk.Event) {
@@ -92,21 +93,24 @@ func (zm *ZkManager) eventCallback(e zk.Event) {
 		return
 	}
 }
-
+/**
+ * 在恢复会话的时候进行调用，用来恢复临时路径
+ */
 func (zm *ZkManager) recoverTempPaths() {
 	var err error
 	zm.tempPaths.Range(func(key, value interface{}) bool {
 		if value == nil {
+			//如果path上的数据为空。则直接设置path
 			for {
 				err = zm.SetTempPath(key.(string))
 				if err != nil {
 					log.Println("caught an error:zm.SetTempPath in recoverTempPaths:", err)
 					continue
 				}
-
 				break
 			}
 		} else {
+			//如果path上的数据不为空。则直接设置path和对应的数据
 			for {
 				err = zm.SetTempPathWithData(key.(string), value.([]byte))
 				if err != nil {
@@ -143,12 +147,13 @@ func (zm *ZkManager) GetData(path string) ([]byte, error) {
 }
 
 func (zm *ZkManager) GetDataWithWatchV2(path string, callback common.ChangedCallback) ([]byte, error) {
+
+	//获取数据，并注册Watch
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
-		log.Println("[ GetDataWithWatchV2 ]根据path找不到节点 : ",path, err)
 		return nil, err
 	}
-	//返回的event
+
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
 		select {
 		case e, ok := <-event:
@@ -156,6 +161,7 @@ func (zm *ZkManager) GetDataWithWatchV2(path string, callback common.ChangedCall
 				log.Println("<-event; !ok")
 				return
 			}
+			log.Println("---------------GetDataWithWatchV2: ", e)
 			callback.Process(e.Path, getNodeFromPath(e.Path))
 			break
 		case exit, ok := <-zm.exit:
@@ -178,7 +184,7 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
-		log.Println("[ GetDataWithWatch ]获取数据出错",err)
+		log.Println("[ GetDataWithWatch ]获取数据出错", err)
 	}
 	//返回的event
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
@@ -186,11 +192,11 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 			select {
 			case e, ok := <-event:
 				if !ok {
-					log.Println("路径是: ",path, " 回调有误  ",e)
+					log.Println("路径是: ", path, " 回调有误  ", e)
 				}
-				log.Println("收到通知，",e)
+				log.Println("收到通知，", e)
 				if e.Type == zk.EventNodeDeleted {
-					log.Println("节点删除事件，不再获取该节点的数据 ",e)
+					log.Println("节点删除事件，不再获取该节点的数据 ", e)
 					return
 				}
 				var retryCount int32
@@ -236,13 +242,13 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
 	data, _, event, err := zm.conn.ChildrenW(path)
 	if err != nil {
-		if strings.Compare("zk: node does not exist",err.Error())==0{
+		if strings.Compare("zk: node does not exist", err.Error()) == 0 {
 			//节点不存在，则新建之
 			err := zm.SetPath(path)
-			if err!=nil{
-				log.Println("[ GetChildrenWithWatch ] 创建节点: ",path)
+			if err != nil {
+				log.Println("[ GetChildrenWithWatch ] 创建节点: ", path)
 			}
-			return []string{},nil
+			return []string{}, nil
 		}
 		log.Println("[ GetChildrenWithWatch ]通过path :", path, "获取数据失败", err)
 		return nil, err
@@ -259,7 +265,7 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 				for {
 					data, _, event, err = zm.conn.ChildrenW(path)
 					if err != nil {
-						log.Println("[ GetChildrenWithWatch ] 再次获取字节点信息出错 ",err)
+						log.Println("[ GetChildrenWithWatch ] 再次获取字节点信息出错 ", err)
 						continue
 					} else {
 						callback.ChildrenChangedCallback(e.Path, getNodeFromPath(e.Path), data)

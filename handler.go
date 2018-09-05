@@ -60,8 +60,6 @@ func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceS
 	f := &common.ServiceFeedback{
 		PushID:          pushID,
 		ServiceMete:     cb.serviceFinder.config.MeteData,
-		Provider:        service.ServiceName,
-		ProviderVersion: service.ApiVersion,
 		UpdateTime:      time.Now().Unix(),
 		UpdateStatus:    1,
 		Type:            1,
@@ -204,8 +202,6 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 	f := &common.ServiceFeedback{
 		PushID:          pushID,
 		ServiceMete:     cb.serviceFinder.config.MeteData,
-		Provider:        service.ServiceName,
-		ProviderVersion: service.ApiVersion,
 		UpdateTime:      time.Now().Unix(),
 		UpdateStatus:    1,
 		Type:            0,
