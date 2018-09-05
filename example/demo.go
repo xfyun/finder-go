@@ -37,7 +37,7 @@ type TestConfig struct {
 	SubscribeFile      []string          `json:"subscribeFile"`
 	UnSubscribeFile    []string          `json:"unSubscribeFile"`
 	SubribeServiceItem []ServiceItemTest `json:"subribeServiceItem"`
-	UnSubscribeTime    time.Duration               `json:"unSubscribeTime"`
+	UnSubscribeTime    time.Duration     `json:"unSubscribeTime"`
 }
 
 func main() {
@@ -190,13 +190,13 @@ func newConfigFinder(conf TestConfig) {
 		fmt.Println(err)
 	} else {
 		testUseConfigAsyncByName(f, conf.SubscribeFile)
-		if conf.Type==5 {
-			ss:=conf.UnSubscribeTime
-			tick:=time.NewTicker(ss * time.Minute)
+		if conf.Type == 5 {
+			ss := conf.UnSubscribeTime
+			tick := time.NewTicker(ss * time.Minute)
 			select {
-				case  <- tick.C :
+			case <-tick.C:
 				fmt.Println("开始取消文件")
-					go testUnscribeConfigfile(f,conf.UnSubscribeFile)
+				go testUnscribeConfigfile(f, conf.UnSubscribeFile)
 
 			}
 		}
@@ -207,7 +207,7 @@ func newConfigFinder(conf TestConfig) {
 		//testConfigFeedback()
 	}
 }
-func testUnscribeConfigfile(f *finder.FinderManager, names []string){
+func testUnscribeConfigfile(f *finder.FinderManager, names []string) {
 	f.ConfigFinder.BatchUnSubscribeConfig(names)
 }
 func getLocalIP(url string) (string, error) {

@@ -38,13 +38,7 @@ func NewServiceChangedCallback(serviceItem common.ServiceSubscribeItem, watchTyp
 	}
 }
 
-// func (cb *ServiceChangedCallback) checkEventType(name string, path string) bool {
-// 	if paths, ok := cb.watchedTypes.Load(name); ok {
-// 		return arrayutil.Contains(path, paths)
-// 	}
 
-// 	return false
-// }
 
 func (cb *ServiceChangedCallback) DataChangedCallback(path string, node string, data []byte) {
 	cb.serviceFinder.locker.Lock()
@@ -77,6 +71,10 @@ func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceS
 		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
 	}
+	f.LoadStatus = 1
+	f.LoadTime = time.Now().Unix()
+	pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+
 	serviceId := service.ServiceName + "_" + service.ApiVersion
 	serviceRoute := route.ParseRouteData(routeData)
 	prevProviderList := cb.serviceFinder.subscribedService[serviceId].ProviderList
@@ -96,25 +94,11 @@ func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceS
 	//变更全局数据
 	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].ProviderList = providerList
 	//根据之前的提供者，和目前合法的提供者，来产生相应的事件
-	log.Println("prevProviderList：",prevProviderList)
-	log.Println("providerList：",providerList)
 	eventList := serviceutil.CompareServiceInstanceList(prevProviderList, providerList)
-	log.Println("eventList :",eventList)
-	if len(eventList) == 0 {
-		f.LoadStatus = 1
-		f.LoadTime = time.Now().Unix()
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
-		return
+	if len(eventList) != 0 {
+		cb.uh.OnServiceInstanceChanged(service.ServiceName, service.ApiVersion, eventList);
 	}
-	if ok := cb.uh.OnServiceInstanceChanged(service.ServiceName, service.ApiVersion, eventList); ok {
-		f.LoadStatus = 1
-		f.LoadTime = time.Now().Unix()
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
-	} else {
-		f.LoadStatus = -1
-		f.LoadTime = time.Now().Unix()
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
-	}
+
 }
 
 func (cb *ServiceChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
@@ -153,15 +137,14 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
 	}
-
+	f.LoadStatus = 1
+	f.LoadTime = time.Now().Unix()
+	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 	serviceConf := serviceutil.ParseServiceConfigData(serviceConfData)
 	prevConfig := cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config
 
 	if prevConfig.IsValid == serviceConf.IsValid && strings.Compare(prevConfig.UserConfig, serviceConf.UserConfig) == 0 {
 		logger.Info("服务实例配置信息没有变化")
-		f.LoadStatus = 1
-		f.LoadTime = time.Now().Unix()
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
 	}
 	cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config = serviceConf
@@ -210,20 +193,9 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	}
 
 	if strings.Compare(prevConfig.UserConfig, serviceConf.UserConfig) != 0 {
-		ok := cb.uh.OnServiceInstanceConfigChanged(service.ServiceName, service.ApiVersion, addr, &common.ServiceInstanceConfig{IsValid:serviceConf.IsValid,UserConfig:serviceConf.UserConfig})
-		if !ok {
-			f.LoadStatus = -1
-		} else {
-			f.LoadStatus = 1
-		}
-	} else {
-		f.LoadStatus = 1
+		cb.uh.OnServiceInstanceConfigChanged(service.ServiceName, service.ApiVersion, addr, &common.ServiceInstanceConfig{IsValid:serviceConf.IsValid,UserConfig:serviceConf.UserConfig})
 	}
-	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
-	if err != nil {
-		logger.Info("反馈数据到companion出错", err)
-	}
+
 }
 
 //服务的全局配置发生变化，很简单，直接透传就行
@@ -248,26 +220,19 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 		}
 		return
 	}
+	f.LoadStatus = 1
+	f.LoadTime = time.Now().Unix()
+	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 	prevConfig := cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config.JsonConfig
 	if strings.Compare(prevConfig, string(configData)) == 0 {
 		logger.Info("服务配置信息没有变化。")
-		f.LoadStatus = 1
-		f.LoadTime = time.Now().Unix()
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+
 		return
 	}
 	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
 	cb.serviceFinder.serviceZkData[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
-	ok := cb.uh.OnServiceConfigChanged(service.ServiceName, service.ApiVersion, &common.ServiceConfig{JsonConfig: string(configData)})
-	if ok {
-		f.LoadStatus = 1
-	}
-	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+	cb.uh.OnServiceConfigChanged(service.ServiceName, service.ApiVersion, &common.ServiceConfig{JsonConfig: string(configData)})
 
-	if err != nil {
-		log.Println(err)
-	}
 }
 func (cb *ServiceChangedCallback) Process(path string, node string) {
 
@@ -531,6 +496,7 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 
 }
 func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, path string) {
+
 	log.Println("[ OnConfigFileChanged ] name",name,"  数据: ",string(data)," path",path)
 	var currentGrayGroupId string
 	if groupId, ok := cb.configFinder.grayConfig.Load(cb.configFinder.config.MeteData.Address); ok {
@@ -549,7 +515,12 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 			UpdateTime:   time.Now().Unix(),
 			UpdateStatus: 1,
 			GrayGroupId:  currentGrayGroupId,
+			LoadStatus :1,
+			LoadTime:time.Now().Unix(),
 		}
+
+		pushConfigFeedback(cb.bootCfg.CompanionUrl, f)
+
 		tomlConfig := make(map[string]interface{})
 		if fileutil.IsTomlFile(name) {
 			tomlConfig = fileutil.ParseTomlFile(file)
@@ -568,13 +539,7 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 				// todo
 			}
 
-			log.Println("load success:", pushID)
-			f.LoadStatus = 1
-		}
-		f.LoadTime = time.Now().Unix()
-		err = pushConfigFeedback(cb.bootCfg.CompanionUrl, f)
-		if err != nil {
-			log.Println(err)
+
 		}
 	}
 }

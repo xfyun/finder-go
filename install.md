@@ -1,7 +1,7 @@
 
 #### 下拉镜像
 ````
-docker pull 172.16.59.153/aiaas/findergo-demo:3.0.1
+docker pull 172.16.59.153/aiaas/findergo-demo:3.0.2
 ````
 #### 创建以下目录
 ````
