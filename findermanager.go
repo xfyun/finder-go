@@ -288,6 +288,7 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
 		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
 		go watchStorageInfo(fm)
+		return fm, nil
 	} else {
 		fm.ConfigFinder = NewConfigFinder(storageCfg.ConfigRootPath, fm.config, fm.storageMgr)
 		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)

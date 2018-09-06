@@ -118,6 +118,7 @@ func (cb *ServiceChangedCallback) ChildrenChangedCallback(path string, node stri
  */
 func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.ServiceSubscribeItem, addr string, data []byte) {
 	var serviceId = service.ServiceName + "_" + service.ApiVersion
+
 	pushID, serviceConfData, err := common.DecodeValue(data)
 	f := &common.ServiceFeedback{
 		PushID:          pushID,
