@@ -122,7 +122,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	f := &common.ServiceFeedback{
 		PushID:          pushID,
 		ServiceMete:     cb.serviceFinder.config.MeteData,
-		Provider:        service.ServiceName,
+		Provider:        addr,
 		ProviderVersion: service.ApiVersion,
 		UpdateTime:      time.Now().Unix(),
 		UpdateStatus:    1,

@@ -31,7 +31,6 @@ func NewZkManager(params map[string]string) (*ZkManager, error) {
 	return zm, nil
 }
 
-
 func (zm *ZkManager) GetZkNodePath() (string, error) {
 	if path, ok := zm.params["zk_node_path"]; ok {
 		return path, nil
@@ -93,6 +92,7 @@ func (zm *ZkManager) eventCallback(e zk.Event) {
 		return
 	}
 }
+
 /**
  * 在恢复会话的时候进行调用，用来恢复临时路径
  */
@@ -142,6 +142,7 @@ func (zm *ZkManager) Destroy() error {
 }
 
 func (zm *ZkManager) GetData(path string) ([]byte, error) {
+	//获取节点数据
 	data, _, err := zm.conn.Get(path)
 	return data, err
 }
@@ -154,32 +155,33 @@ func (zm *ZkManager) GetDataWithWatchV2(path string, callback common.ChangedCall
 		return nil, err
 	}
 
-	go func(zm *ZkManager, p string, event <-chan zk.Event) {
-		select {
-		case e, ok := <-event:
-			if !ok {
-				log.Println("<-event; !ok")
-				return
-			}
-			log.Println("---------------GetDataWithWatchV2: ", e)
-			callback.Process(e.Path, getNodeFromPath(e.Path))
-			break
-		case exit, ok := <-zm.exit:
-			if !ok {
-				log.Println("<-exit; !ok")
-				return
-			}
-			if exit {
-				log.Println("received exit sigterm.")
-				return
-			}
-		}
-
-	}(zm, path, event)
+	//监听是否有watch到达
+	go watchEvent(zm, event, callback)
 
 	return data, err
 }
 
+func watchEvent(zm *ZkManager, event <-chan zk.Event, callback common.ChangedCallback) {
+	select {
+	case e, ok := <-event:
+		if !ok {
+			log.Println("<-event; !ok")
+			return
+		}
+		log.Println("---------------GetDataWithWatchV2: ", e)
+		callback.Process(e.Path, getNodeFromPath(e.Path))
+		break
+	case exit, ok := <-zm.exit:
+		if !ok {
+			log.Println("<-exit; !ok")
+			return
+		}
+		if exit {
+			log.Println("received exit sigterm.")
+			return
+		}
+	}
+}
 func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallback) ([]byte, error) {
 
 	data, _, event, err := zm.conn.GetW(path)
@@ -242,15 +244,7 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
 	data, _, event, err := zm.conn.ChildrenW(path)
 	if err != nil {
-		if strings.Compare("zk: node does not exist", err.Error()) == 0 {
-			//节点不存在，则新建之
-			err := zm.SetPath(path)
-			if err != nil {
-				log.Println("[ GetChildrenWithWatch ] 创建节点: ", path)
-			}
-			return []string{}, nil
-		}
-		log.Println("[ GetChildrenWithWatch ]通过path :", path, "获取数据失败", err)
+
 		return nil, err
 	}
 

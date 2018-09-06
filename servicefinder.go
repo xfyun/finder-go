@@ -12,6 +12,7 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
 	"strings"
+	"log"
 )
 
 type ServiceFinder struct {
@@ -397,8 +398,17 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 	callback := NewServiceChangedCallback(serviceItem, SERVICE_INSTANCE_CHANGED, f, handler)
 	//获取数据的时候添加子节点变更的Watcher
 	providerList, err := f.storageMgr.GetChildrenWithWatch(providerPath, &callback)
+
 	//TODO 提供者为空的情况
 	if err != nil {
+		if strings.Compare("zk: node does not exist", err.Error()) == 0 {
+			//节点不存在，则新建之
+			err := f.storageMgr.SetPath(providerPath)
+			if err != nil {
+				log.Println("[ GetChildrenWithWatch ] 创建节点: ", providerPath)
+			}
+			return nil,err
+		}
 		logger.Info("从path: ", providerPath, " 获取服务提供者出错", err)
 		return nil, err
 	}
