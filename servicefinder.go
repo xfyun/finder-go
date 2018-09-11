@@ -196,10 +196,10 @@ func (f *ServiceFinder) registerService(addr string, apiVersion string) error {
 		logger.Info("服务注册失败", err)
 		return err
 	}
-	err = pushService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service, apiVersion)
-	if err != nil {
-		logger.Error("RegisterService->registerService:", err)
-	}
+	go pushService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service, apiVersion)
+	//if err != nil {
+	//	logger.Error("RegisterService->registerService:", err)
+	//}
 	return nil
 }
 

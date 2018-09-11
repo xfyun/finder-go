@@ -66,12 +66,12 @@ func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceS
 	}
 	if err != nil {
 		f.LoadStatus = -1
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+		go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
 	}
 	f.LoadStatus = 1
 	f.LoadTime = time.Now().Unix()
-	pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+	go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 
 	serviceId := service.ServiceName + "_" + service.ApiVersion
 	serviceRoute := route.ParseRouteData(routeData)
@@ -133,12 +133,12 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	if err != nil {
 		log.Println("解码value出错 ",err)
 		f.LoadStatus = -1
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+		go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
 	}
 	f.LoadStatus = 1
 	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+	go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 	serviceConf := serviceutil.ParseServiceConfigData(serviceConfData)
 	prevConfig := cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config
 
@@ -211,15 +211,13 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 	if err != nil {
 		logger.Info("pushID：", pushID, " 从data中反序列化数据出错 ", err)
 		f.LoadStatus = -1
-		err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
-		if err != nil {
-			log.Println("反馈数据到companion出错 ", err)
-		}
+		go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+
 		return
 	}
 	f.LoadStatus = 1
 	f.LoadTime = time.Now().Unix()
-	err = pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
+	go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 	prevConfig := cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config.JsonConfig
 	if strings.Compare(prevConfig, string(configData)) == 0 {
 		logger.Info("服务配置信息没有变化。")
@@ -279,7 +277,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 		var filterInstanceList = make([]*common.ServiceInstance, 0)
 		for _, instance := range serviceInstanceList {
 			providerMap[instance.Addr] = instance
-			if !instance.Config.IsValid {
+			if  instance.Config!=nil && !instance.Config.IsValid {
 				continue
 			}
 			filterInstanceList = append(filterInstanceList, instance)
@@ -516,7 +514,7 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 			LoadTime:time.Now().Unix(),
 		}
 
-		pushConfigFeedback(cb.bootCfg.CompanionUrl, f)
+		go pushConfigFeedback(cb.bootCfg.CompanionUrl, f)
 
 		tomlConfig := make(map[string]interface{})
 		if fileutil.IsTomlFile(name) {
@@ -528,16 +526,11 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 			ConfigMap: tomlConfig,
 		}
 
-		ok := cb.uh.OnConfigFileChanged(c)
-		if ok {
-			err = CacheConfig(cb.bootCfg.CachePath, c)
-			if err != nil {
-				log.Println(err)
-				// todo
-			}
+		cb.uh.OnConfigFileChanged(c)
+
+		go CacheConfig(cb.bootCfg.CachePath, c)
 
 
-		}
 	}
 }
 
