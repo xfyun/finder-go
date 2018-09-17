@@ -23,6 +23,7 @@ import (
 var (
 	hc     *http.Client
 	logger common.Logger
+
 )
 
 type zkAddrChangeCallback struct {
@@ -194,7 +195,7 @@ func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage
 }
 
 // NewFinder for creating an instance
-func NewFinder(config common.BootConfig) (*FinderManager, error) {
+func newFinder(config common.BootConfig) (*FinderManager, error) {
 	// logger := common.NewDefaultLogger()
 	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
 		err := errors.NewFinderError(errors.MissCompanionUrl)
@@ -268,7 +269,6 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	if err != nil {
 		return nil, err
 	}
-
 	// 创建缓存目录
 	err = createCacheDir(p)
 	if err != nil {
@@ -280,7 +280,7 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	fm.InternalLogger = logger
 	fm.config = &config
 	// 初始化zk
-	var storageCfg *storage.StorageConfig
+	var storageCfg * storage.StorageConfig
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
 
 	if err != nil {
@@ -327,7 +327,6 @@ func watchStorageInfo(fm *FinderManager) {
 				//fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 			}
 		}
-		logger.Info("-------------------")
 		if fm.storageMgr != nil {
 			logger.Info("**********", fm.ServiceFinder.subscribedService)
 

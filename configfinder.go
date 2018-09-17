@@ -122,7 +122,6 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 
 
 	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
-		//如果在灰度组。则进行注册到灰度组中
 		if ok:=f.checkFileExist(f.rootPath+"/gray/"+ groupId.(string),name);!ok {
 			log.Println("订阅的文件中，有不存在的，不进行订阅,path: ",f.rootPath+"/gray/"+ groupId.(string))
 			return nil,errors.NewFinderError(errors.ConfigFileNotExist)

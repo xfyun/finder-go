@@ -57,11 +57,13 @@ func main() {
 	}
 	fmt.Println(conf)
 	if conf.Type == 1 {
+		//订阅配置文件。和之前的区别不大，主要是回调函数增加了OnError方法，如：当配置文件不存在的话，可以进行通知。可为空实现
 		newConfigFinder(conf)
 	} else if conf.Type == 2 {
+		//订阅服务。和之前的区别主要是增加了版本号的概念，用于指定服务的特定版本。。且回调函数的参数也增加了一个版本号的参数。。用于明确服务的版本信息
 		newServiceFinder(conf)
 	} else if conf.Type == 3 {
-		//提供者
+		//注册服务.和之前的区别是注册服务的时候，必须制定版本号
 		newProviderFinder(conf)
 	} else if conf.Type == 4 {
 		newConfigFinder(conf)
@@ -93,11 +95,17 @@ func newServiceFinder(conf TestConfig) {
 	if err != nil {
 		return
 	}
+	//缓存信息的存放路径
 	cachePath += "/findercache"
 	config := common.BootConfig{
-		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  conf.CompanionUrl,
-		CachePath:     cachePath,
+		//companion地址
+		CompanionUrl: conf.CompanionUrl,
+		//缓存路径
+		CachePath: cachePath,
+		//是否缓存服务信息
+		CacheService: true,
+		//是否缓存配置信息
+		CacheConfig:   true,
 		ExpireTimeout: 10 * time.Second,
 		MeteData: &common.ServiceMeteData{
 			Project: conf.Project,
@@ -109,18 +117,12 @@ func newServiceFinder(conf TestConfig) {
 	}
 
 	f, err := finder.NewFinderWithLogger(config, nil)
-	//f.ServiceFinder.UnRegisterServiceWithAddr()
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		//testUseConfigAsync(f)
-		//testCache(cachePath)
-		//testGrayData(f)
-		//testServiceAsync(f)
+		//订阅服务。和之前的区别是订阅服务的时候，除了指定服务名外，必须指定版本号
 		testUseServiceAsync(f, conf.SubribeServiceItem)
-		//testUseService(f)
 
-		//testConfigFeedback()
 	}
 }
 func newProviderFinder(conf TestConfig) {
@@ -130,9 +132,14 @@ func newProviderFinder(conf TestConfig) {
 	}
 	cachePath += "/findercache"
 	config := common.BootConfig{
-		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  conf.CompanionUrl,
-		CachePath:     cachePath,
+		CompanionUrl: conf.CompanionUrl,
+		//缓存路径
+		CachePath: cachePath,
+		//是否缓存服务信息
+		CacheService: true,
+		//是否缓存配置信息
+		CacheConfig: true,
+		//和zk之间的会话超时时间
 		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
 			Project: conf.Project,
@@ -148,20 +155,15 @@ func newProviderFinder(conf TestConfig) {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		//testUseConfigAsync(f)
-		//testCache(cachePath)
-		//testGrayData(f)
-		//testServiceAsync(f)
+		//和之前的区别是，必须指定对应的版本号
 		testRegisterService(f, conf.Address, conf.ProviderApiVersion)
-		//testUseService(f)
-
-		//testConfigFeedback()
 	}
 }
 
 func testRegisterService(f *finder.FinderManager, addr string, apiVersion string) {
 
-	f.ServiceFinder.RegisterServiceItem(addr, apiVersion)
+	//必须指定版本号
+	f.ServiceFinder.RegisterServiceWithAddr(addr, apiVersion)
 
 }
 
@@ -171,10 +173,20 @@ func newConfigFinder(conf TestConfig) {
 		return
 	}
 	cachePath += "/findercache"
+
+	//元数据信息
+
 	config := common.BootConfig{
 		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
-		CompanionUrl:  conf.CompanionUrl,
-		CachePath:     cachePath,
+		//compaion地址
+		CompanionUrl: conf.CompanionUrl,
+		//缓存文件的地址
+		CachePath: cachePath,
+		//缓存服务提供者的信息，当为true的时候，和zk连接不上的话，使用缓存信息
+		CacheService: true,
+		//缓存配置文件信息。
+		CacheConfig: true,
+		//和zk之间的会话时间
 		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
 			Project: conf.Project,
@@ -185,10 +197,12 @@ func newConfigFinder(conf TestConfig) {
 		},
 	}
 
+	//创建finder。
 	f, err := finder.NewFinderWithLogger(config, nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {
+		//使用并订阅文件的变更。。
 		testUseConfigAsyncByName(f, conf.SubscribeFile)
 		if conf.Type == 5 {
 			ss := conf.UnSubscribeTime
@@ -200,11 +214,7 @@ func newConfigFinder(conf TestConfig) {
 
 			}
 		}
-		//	testUserConfig(f, name)
-		//testCache(cachePath)
-		//testUseServiceAsync(f)
 
-		//testConfigFeedback()
 	}
 }
 func testUnscribeConfigfile(f *finder.FinderManager, names []string) {
@@ -385,7 +395,7 @@ func testGrayData(f *finder.FinderManager) {
 func testServiceAsync(f *finder.FinderManager) {
 
 	var err error
-	err = f.ServiceFinder.RegisterService()
+	err = f.ServiceFinder.RegisterService("1.0")
 	//err = f.ServiceFinder.RegisterServiceWithAddr("10.1.203.36:50052")
 	if err != nil {
 		fmt.Println(err)
@@ -402,6 +412,8 @@ func testUseServiceAsync(f *finder.FinderManager, items []ServiceItemTest) {
 	for _, item := range items {
 		subscri = append(subscri, common.ServiceSubscribeItem{ServiceName: item.ServiceName, ApiVersion: item.ApiVersion})
 	}
+
+	//订阅服务，订阅服务的还是，增加具体的版本号。。且必须制定订阅的是服务的那个版本。所有的回调函数增加服务版本号参数，用于说明具体的服务信息
 	serviceList, err := f.ServiceFinder.UseAndSubscribeService(subscri, handler)
 	if err != nil {
 		fmt.Println(err)
@@ -464,10 +476,8 @@ func testUserConfig(f *finder.FinderManager, name []string) {
 func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 
 	handler := ConfigChangedHandle{}
-	//count := 0
 
-	//f.InternalLogger.Info("The ", count, "th show:")
-	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
+	//使用并订阅文件的变更。回调函数相比之前多了一个OnError .用于在运行过程中出现解析文件错误的时候进行通知，可以为空的实现
 	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig(name, &handler)
 	if err != nil {
 		log.Println(err)
@@ -475,5 +485,4 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 	for _, c := range configFiles {
 		log.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
 	}
-	//f.ConfigFinder.UnSubscribeConfig("11.toml")
 }
