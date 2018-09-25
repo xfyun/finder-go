@@ -113,9 +113,13 @@ type Conn struct {
 type connOption func(c *Conn)
 
 type request struct {
-	xid        int32
-	opcode     int32
-	pkt        interface{}
+	//客户端id
+	xid int32
+	//操作码
+	opcode int32
+	//请求体
+	pkt interface{}
+	//接收体
 	recvStruct interface{}
 	recvChan   chan response
 
@@ -224,6 +228,11 @@ func Connect(servers []string, sessionTimeout time.Duration, options ...connOpti
 		close(conn.eventChan)
 	}()
 	return conn, ec, nil
+}
+func WithConnectionTimeout(connectionTimeout time.Duration) connOption {
+	return func(c *Conn) {
+		c.connectTimeout = connectionTimeout
+	}
 }
 
 // WithDialer returns a connection option specifying a non-default Dialer.
@@ -468,7 +477,8 @@ func (c *Conn) loop() {
 		switch {
 		case err == ErrSessionExpired:
 			c.logger.Printf("Authentication failed: %s", err)
-			c.invalidateWatches(err)
+			//废弃所有的Watcher
+			//	c.invalidateWatches(err)
 		case err != nil && c.conn != nil:
 			c.logger.Printf("Authentication failed: %s", err)
 			c.conn.Close()
@@ -704,8 +714,10 @@ func (c *Conn) authenticate() error {
 		return err
 	}
 	if r.SessionID == 0 {
+		//收到session过期的通知后，会把当前连接的sessionId给清零
 		atomic.StoreInt64(&c.sessionID, int64(0))
 		c.passwd = emptyPassword
+		//这个地方清零会导致，重新注册Wathch,收到最新的通知
 		c.lastZxid = 0
 		c.setState(StateExpired)
 		return ErrSessionExpired
@@ -805,6 +817,7 @@ func (c *Conn) recvLoop(conn net.Conn) error {
 	for {
 		// package length
 		conn.SetReadDeadline(time.Now().Add(c.recvTimeout))
+		//在这里阻塞者，如果网络断了，则直接返回err了
 		_, err := io.ReadFull(conn, buf[:4])
 		if err != nil {
 			return err
@@ -907,7 +920,7 @@ func (c *Conn) nextXid() int32 {
 func (c *Conn) addWatcher(path string, watchType watchType) <-chan Event {
 	c.watchersLock.Lock()
 	defer c.watchersLock.Unlock()
-
+	//新建一个chan..当监听的Watcher事件发生的时候，往该chan里面发送数据
 	ch := make(chan Event, 1)
 	wpt := watchPathType{path, watchType}
 	c.watchers[wpt] = append(c.watchers[wpt], ch)
@@ -929,6 +942,7 @@ func (c *Conn) queueRequest(opcode int32, req interface{}, res interface{}, recv
 }
 
 func (c *Conn) request(opcode int32, req interface{}, res interface{}, recvFunc func(*request, *responseHeader, error)) (int64, error) {
+	//这里等待请求发送出去，并得到结果
 	r := <-c.queueRequest(opcode, req, res, recvFunc)
 
 	return r.zxid, r.err
@@ -1016,7 +1030,6 @@ func (c *Conn) GetW(path string) ([]byte, *Stat, <-chan Event, error) {
 	}
 	return res.Data, &res.Stat, ech, err
 }
-
 func (c *Conn) Set(path string, data []byte, version int32) (*Stat, error) {
 	if err := validatePath(path, false); err != nil {
 		return nil, err

@@ -60,7 +60,7 @@ func (f *ServiceFinder) UnRegisterService(version string) error {
 	return f.storageMgr.RemoveInRecursive(servicePath)
 }
 
-func (f *ServiceFinder) UnRegisterServiceWithAddr(version string,addr string) error {
+func (f *ServiceFinder) UnRegisterServiceWithAddr(version string, addr string) error {
 	servicePath := fmt.Sprintf("%s/%s/%s/provider/%s", f.rootPath, f.config.MeteData.Service, version, addr)
 
 	return f.storageMgr.RemoveInRecursive(servicePath)
@@ -72,8 +72,7 @@ func (f *ServiceFinder) UseService(serviceItems []common.ServiceSubscribeItem) (
 		err = errors.NewFinderError(errors.ServiceMissItem)
 		return nil, err
 	}
-	//	getServiceInstance(f.storageMgr, "/polaris/service/05127d76c3a6fe7c3375562921560a20/test0803/1.0/provider", "13.22.3.34:8080")
-	//f.storageMgr.GetData("polaris/service/05127d76c3a6fe7c3375562921560a20/test0803/1.0/provider/13.22.3.34:8080")
+
 	f.locker.Lock()
 	defer f.locker.Unlock()
 
@@ -144,6 +143,10 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 	}
 	for _, item := range serviceItems {
 		serviceId := item.ServiceName + "_" + item.ApiVersion
+		if service, ok := f.subscribedService[serviceId]; ok {
+			serviceList[serviceId] = service.Dumplication()
+			continue
+		}
 		servicePath := fmt.Sprintf("%s/%s/%s", f.rootPath, item.ServiceName, item.ApiVersion)
 		service, err := f.getServiceWithWatcher(servicePath, item, handler)
 		if err != nil {
@@ -235,7 +238,6 @@ func (f *ServiceFinder) register(parentPath string, addr string) error {
 	logger.Info("call register func")
 	servicePath := parentPath + "/" + addr
 	logger.Info("servicePath:", servicePath)
-
 	return f.storageMgr.SetTempPath(servicePath)
 }
 

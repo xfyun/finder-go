@@ -21,6 +21,7 @@ type ConfigFinder struct {
 	currentWatchPath string
 	config           *common.BootConfig
 	storageMgr       storage.StorageManager
+	handler 			common.ConfigChangedHandler
 	usedConfig       sync.Map
 	fileSubscribe    []string
 	grayConfig       sync.Map
@@ -110,7 +111,19 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	}
 	f.locker.Lock()
 	defer f.locker.Unlock()
+	configFiles := make(map[string]*common.Config)
+	if f.storageMgr==nil{
+		if f.config.CacheConfig {
+			for _, n := range name {
+				configFiles[n] = getCachedConfig(n, f.config.CachePath)
+			}
+			return configFiles, nil
+		}else{
+			log.Println("连不上zk,不使用缓存，直接退出")
+			return nil,nil
+		}
 
+	}
 
 	//先查看灰度组的设置
 	callback := NewConfigChangedCallback(f.config.MeteData.Address, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
@@ -143,7 +156,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		f.storageMgr.SetTempPath(consumerPath)
 	}
 
-	configFiles := make(map[string]*common.Config)
+
 	path := ""
 	for _, n := range name {
 		f.fileSubscribe = append(f.fileSubscribe, n)
@@ -197,7 +210,6 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 
 		}
 	}
-	log.Println("订阅的文件是：",f.fileSubscribe)
 	return configFiles, nil
 }
 

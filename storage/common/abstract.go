@@ -14,4 +14,5 @@ type ChangedCallback interface {
 	DataChangedCallback(path string, node string, data []byte)
 	ChildrenChangedCallback(path string, node string, children []string)
 	Process(path string, node string)
+	ChildDeleteCallBack(path string)
 }

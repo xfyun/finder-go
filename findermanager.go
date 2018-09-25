@@ -2,7 +2,6 @@ package finder
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -23,31 +22,27 @@ import (
 var (
 	hc     *http.Client
 	logger common.Logger
-
 )
-
+const VERSION = "2.0.3"
 type zkAddrChangeCallback struct {
 	path string
 	fm   *FinderManager
 }
+func (callback *zkAddrChangeCallback) ChildDeleteCallBack(path string) {
 
+}
 func (callback *zkAddrChangeCallback) ChildrenChangedCallback(path string, node string, children []string) {
 
 }
 func (callback *zkAddrChangeCallback) Process(path string, node string) {
 
-}
 
-func (callback *zkAddrChangeCallback) DataChangedCallback(path string, node string, data []byte) {
-	newPath := string(data)
-	if strings.Compare(newPath, callback.path) == 0 {
-		return
-	}
 	fm := callback.fm
 	storageMgr, storageCfg, err := initStorageMgr(fm.config)
 	if err != nil {
 		logger.Info("zk信息出错，重新尝试")
 	} else {
+		go watchZkInfo(fm)
 		fm.storageMgr = storageMgr
 		fm.ConfigFinder.storageMgr = storageMgr
 		fm.ConfigFinder.rootPath = storageCfg.ConfigRootPath
@@ -55,17 +50,16 @@ func (callback *zkAddrChangeCallback) DataChangedCallback(path string, node stri
 		fm.ServiceFinder.storageMgr = storageMgr
 		fm.ServiceFinder.rootPath = storageCfg.ServiceRootPath
 		if len(fm.ServiceFinder.subscribedService) != 0 {
-			var subscribedService []common.ServiceSubscribeItem
-			for _, value := range fm.ServiceFinder.subscribedService {
-				var item = common.ServiceSubscribeItem{ServiceName: value.ServiceName, ApiVersion: value.ApiVersion}
-				subscribedService = append(subscribedService, item)
-			}
-			//prevSubscribedService :=fm.ServiceFinder.subscribedService
-			//TODO 延迟变化zk信息
-			fm.ServiceFinder.UseAndSubscribeService(subscribedService, fm.ServiceFinder.handler)
-
+			ReGetServiceInfo(fm)
+		}
+		if len(fm.ConfigFinder.fileSubscribe)!=0 {
+			ReGetConfigInfo(fm)
 		}
 	}
+}
+
+func (callback *zkAddrChangeCallback) DataChangedCallback(path string, node string, data []byte) {
+
 }
 
 func init() {
@@ -177,20 +171,19 @@ func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error)
 func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage.StorageConfig, error) {
 	storageConfig, err := getStorageConfig(config)
 	if err != nil {
-		logger.Error("getStorageConfig:", err)
+		logger.Error("[ initStorageMgr ] getStorageConfig:", err)
 		return nil, nil, err
 	}
-
 	storageMgr, err := storage.NewManager(storageConfig)
 	if err != nil {
+		logger.Error("[ initStorageMgr ] NewManager:", err)
 		return nil, storageConfig, err
 	}
 	err = storageMgr.Init()
 	if err != nil {
-		log.Println(err)
+		logger.Error("[ initStorageMgr ] Init err", err)
 		return nil, storageConfig, err
 	}
-
 	return storageMgr, storageConfig, nil
 }
 
@@ -249,7 +242,7 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	} else {
 		logger = logger
 	}
-
+	logger.Info("current version : " +VERSION)
 	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
 		err := errors.NewFinderError(errors.MissCompanionUrl)
 		return nil, err
@@ -280,9 +273,8 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	fm.InternalLogger = logger
 	fm.config = &config
 	// 初始化zk
-	var storageCfg * storage.StorageConfig
+	var storageCfg *storage.StorageConfig
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
-
 	if err != nil {
 		logger.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
 		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
@@ -299,11 +291,12 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 }
 
 func watchZkInfo(fm *FinderManager) {
+
 	zkNodePath, err := fm.storageMgr.GetZkNodePath()
 	if err != nil {
 		logger.Error("zk的节点信息为空")
 	}
-	fm.storageMgr.GetDataWithWatch(zkNodePath,&zkAddrChangeCallback{path:zkNodePath,fm:fm})
+	fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
 }
 
 func watchStorageInfo(fm *FinderManager) {
@@ -324,25 +317,121 @@ func watchStorageInfo(fm *FinderManager) {
 
 				fm.ServiceFinder.storageMgr = storageMgr
 				fm.ServiceFinder.rootPath = storageCfg.ServiceRootPath
-				//fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 			}
 		}
 		if fm.storageMgr != nil {
-			logger.Info("**********", fm.ServiceFinder.subscribedService)
-
+			go watchZkInfo(fm)
 			if len(fm.ServiceFinder.subscribedService) != 0 {
-				var subscribedService []common.ServiceSubscribeItem
-				for _, value := range fm.ServiceFinder.subscribedService {
-					var item = common.ServiceSubscribeItem{ServiceName: value.ServiceName, ApiVersion: value.ApiVersion}
-					subscribedService = append(subscribedService, item)
-				}
-				ser, _ := fm.ServiceFinder.UseAndSubscribeService(subscribedService, fm.ServiceFinder.handler)
-				logger.Info("**********", ser)
+				//重新拉取所有订阅服务的信息
+				ReGetServiceInfo(fm)
+			}
+			if len(fm.ConfigFinder.fileSubscribe) != 0 {
+				ReGetConfigInfo(fm)
 			}
 			break
 		}
 	}
 }
+func ReGetConfigInfo(fm *FinderManager) {
+	handler := fm.ConfigFinder.handler
+	fileMap, err := fm.ConfigFinder.UseAndSubscribeConfig(fm.ConfigFinder.fileSubscribe, handler)
+	if err != nil {
+		fm.InternalLogger.Info("获取信息失败", err)
+	}
+	for _,fileData :=range fileMap{
+		var config =common.Config{Name:fileData.Name,File:fileData.File,ConfigMap:fileData.ConfigMap}
+		handler.OnConfigFileChanged(&config)
+	}
+}
+
+func ReGetServiceInfo(fm *FinderManager) {
+	for _, value := range fm.ServiceFinder.subscribedService {
+		var item = common.ServiceSubscribeItem{ServiceName: value.ServiceName, ApiVersion: value.ApiVersion}
+		servicePath := fmt.Sprintf("%s/%s/%s", fm.ServiceFinder.rootPath, item.ServiceName, item.ApiVersion)
+		service, err := fm.ServiceFinder.getServiceWithWatcher(servicePath, item, fm.ServiceFinder.handler)
+		if err != nil {
+			fm.InternalLogger.Info("获取信息失败", err)
+			continue
+		}
+		if service == nil {
+			continue
+		}
+		cacheService, err := GetServiceFromCache(fm.config.CachePath, item)
+		ChangeEvent(cacheService, service, fm.ServiceFinder.handler)
+	}
+}
+
+func ChangeEvent(prevService *common.Service, currService *common.Service, handler common.ServiceChangedHandler) {
+	if prevService == nil {
+		handler.OnServiceConfigChanged(currService.ServiceName, currService.ApiVersion, &common.ServiceConfig{JsonConfig: currService.Config.JsonConfig})
+		eventList := providerChangeEvent(prevService.ProviderList, []*common.ServiceInstance{})
+		if len(eventList) == 0 {
+			return
+		}
+		handler.OnServiceInstanceChanged(currService.ServiceName, currService.ApiVersion, eventList)
+		return
+	}
+	prevConfig := prevService.Config
+	currConfig := currService.Config
+	if prevConfig.JsonConfig != currConfig.JsonConfig {
+		handler.OnServiceConfigChanged(currService.ServiceName, currService.ApiVersion, &common.ServiceConfig{JsonConfig: currConfig.JsonConfig})
+	}
+	eventList := providerChangeEvent(prevService.ProviderList, currService.ProviderList)
+	if len(eventList) == 0 {
+		return
+	}
+	handler.OnServiceInstanceChanged(currService.ServiceName, currService.ApiVersion, eventList)
+	return
+}
+
+func providerChangeEvent(prevProviderList, currProviderList []*common.ServiceInstance) []*common.ServiceInstanceChangedEvent {
+	var eventList []*common.ServiceInstanceChangedEvent
+	if len(prevProviderList) == 0 && len(currProviderList) == 0 {
+		return nil
+	}
+	if len(prevProviderList) == 0 {
+		var changeList []*common.ServiceInstance
+		for _, provider := range currProviderList {
+			changeList = append(changeList, provider.Dumplication())
+		}
+		event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: changeList}
+		eventList = append(eventList, &event)
+		return eventList
+	}
+	if len(currProviderList) == 0 {
+		var changeList []*common.ServiceInstance
+		for _, provider := range prevProviderList {
+			changeList = append(changeList, provider.Dumplication())
+		}
+		event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: changeList}
+		eventList = append(eventList, &event)
+		return eventList
+	}
+	var addServerList []*common.ServiceInstance
+	//TODO 后续优化
+	var providerMap = make(map[string]*common.ServiceInstance)
+	for _, prevProvider := range prevProviderList {
+		providerMap[prevProvider.Addr] = prevProvider
+	}
+	for _, currProvider := range currProviderList {
+		if _, ok := providerMap[currProvider.Addr]; !ok {
+			addServerList = append(addServerList, currProvider.Dumplication())
+		} else {
+			delete(providerMap, currProvider.Addr)
+		}
+	}
+	var removeServerList []*common.ServiceInstance
+	for _, provider := range providerMap {
+		removeServerList = append(removeServerList, provider.Dumplication())
+	}
+	removeEvent := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: removeServerList}
+	eventList = append(eventList, &removeEvent)
+	addEvent := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: addServerList}
+	eventList = append(eventList, &addEvent)
+	return eventList
+
+}
+
 func DestroyFinder(finder *FinderManager) {
 	finder.storageMgr.Destroy()
 	// todo

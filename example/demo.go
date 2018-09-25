@@ -122,6 +122,7 @@ func newServiceFinder(conf TestConfig) {
 	} else {
 		//订阅服务。和之前的区别是订阅服务的时候，除了指定服务名外，必须指定版本号
 		testUseServiceAsync(f, conf.SubribeServiceItem)
+		testUseServiceAsync(f, conf.SubribeServiceItem)
 
 	}
 }
@@ -377,7 +378,7 @@ func testUseService(f *finder.FinderManager) {
 			//f.ConfigFinder.UnSubscribeConfig("default.toml")
 		}
 		if count > 600 {
-			err = f.ServiceFinder.UnRegisterService()
+			//err = f.ServiceFinder.UnRegisterService()
 			if err != nil {
 				fmt.Println(err)
 			} else {

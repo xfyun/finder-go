@@ -12,6 +12,9 @@ import (
 	"github.com/cooleric/go-zookeeper/zk"
 )
 
+//zk超时时间设置
+const zk_connection_timeout = 5
+
 type ZkManager struct {
 	conn   *zk.Conn
 	params map[string]string
@@ -55,16 +58,15 @@ func (zm *ZkManager) Init() error {
 	if err != nil {
 		return err
 	}
-
 	//新建zookeeper连接
-	conn, _, err := zk.Connect(servers, time.Duration(sessionTimeout)*time.Millisecond, zk.WithEventCallback(zm.eventCallback))
+	conn, _, err := zk.Connect(servers, time.Duration(sessionTimeout)*time.Millisecond, zk.WithEventCallback(zm.eventCallback), zk.WithConnectionTimeout(zk_connection_timeout*time.Second))
 	if err != nil {
 		return err
 	}
-
 	zm.conn = conn
 	return nil
 }
+
 func (zm *ZkManager) eventCallback(e zk.Event) {
 	switch e.Type {
 	case zk.EventSession:
@@ -168,7 +170,10 @@ func watchEvent(zm *ZkManager, event <-chan zk.Event, callback common.ChangedCal
 			log.Println("<-event; !ok")
 			return
 		}
-		log.Println("---------------GetDataWithWatchV2: ", e)
+		if e.State != zk.StateConnected {
+			return
+		}
+
 		callback.Process(e.Path, getNodeFromPath(e.Path))
 		break
 	case exit, ok := <-zm.exit:
@@ -195,12 +200,17 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 			case e, ok := <-event:
 				if !ok {
 					log.Println("路径是: ", path, " 回调有误  ", e)
+					return
 				}
 				log.Println("收到通知，", e)
 				if e.Type == zk.EventNodeDeleted {
-					log.Println("节点删除事件，不再获取该节点的数据 ", e)
+					//callback.ChildDeleteCallBack(e.Path)
 					return
 				}
+				if e.State != zk.StateConnected {
+					return
+				}
+				log.Println("处理通知，", e)
 				var retryCount int32
 				for {
 					// 这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
@@ -244,7 +254,6 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
 	data, _, event, err := zm.conn.ChildrenW(path)
 	if err != nil {
-
 		return nil, err
 	}
 
@@ -254,7 +263,12 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 			case e, ok := <-event:
 				if !ok {
 					log.Println("[ GetChildrenWithWatch ]  <-event; !ok")
-					continue
+					return
+				}
+				log.Println("收到通知 ：[ GetChildrenWithWatch ]  ", event)
+				if e.State != zk.StateConnected {
+					log.Println("[ GetChildrenWithWatch ]  <-event; !ok")
+					return
 				}
 				for {
 					data, _, event, err = zm.conn.ChildrenW(path)
@@ -314,11 +328,9 @@ func (zm *ZkManager) SetPathWithData(path string, data []byte) error {
 
 func (zm *ZkManager) SetTempPath(path string) error {
 	err := zm.SetTempPathWithData(path, []byte{})
-
 	if err == nil {
 		zm.tempPaths.Store(path, nil)
 	}
-
 	return err
 }
 

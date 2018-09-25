@@ -4,8 +4,8 @@ import (
 	"time"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
-	"git.xfyun.cn/AIaaS/finder-go/route"
 	companion "git.xfyun.cn/AIaaS/finder-go/companion"
+	"git.xfyun.cn/AIaaS/finder-go/route"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
@@ -38,12 +38,10 @@ func NewServiceChangedCallback(serviceItem common.ServiceSubscribeItem, watchTyp
 	}
 }
 
-
-
 func (cb *ServiceChangedCallback) DataChangedCallback(path string, node string, data []byte) {
 	cb.serviceFinder.locker.Lock()
 	defer cb.serviceFinder.locker.Unlock()
-	log.Println("收到回调 ",path,"  type:",cb.eventType)
+	log.Println("收到回调 ", path, "  type:", cb.eventType)
 	if cb.eventType == SERVICE_CONFIG_CHANGED {
 		cb.OnServiceConfigChanged(cb.serviceItem, data)
 	} else if cb.eventType == SERVICE_INSTANCE_CONFIG_CHANGED {
@@ -58,11 +56,11 @@ func (cb *ServiceChangedCallback) DataChangedCallback(path string, node string, 
 func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceSubscribeItem, data []byte) {
 	pushID, routeData, err := common.DecodeValue(data)
 	f := &common.ServiceFeedback{
-		PushID:          pushID,
-		ServiceMete:     cb.serviceFinder.config.MeteData,
-		UpdateTime:      time.Now().Unix(),
-		UpdateStatus:    1,
-		Type:            1,
+		PushID:       pushID,
+		ServiceMete:  cb.serviceFinder.config.MeteData,
+		UpdateTime:   time.Now().Unix(),
+		UpdateStatus: 1,
+		Type:         1,
 	}
 	if err != nil {
 		f.LoadStatus = -1
@@ -94,7 +92,7 @@ func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceS
 	//根据之前的提供者，和目前合法的提供者，来产生相应的事件
 	eventList := serviceutil.CompareServiceInstanceList(prevProviderList, providerList)
 	if len(eventList) != 0 {
-		cb.uh.OnServiceInstanceChanged(service.ServiceName, service.ApiVersion, eventList);
+		cb.uh.OnServiceInstanceChanged(service.ServiceName, service.ApiVersion, eventList)
 	}
 
 }
@@ -102,7 +100,6 @@ func (cb *ServiceChangedCallback) onRouteChangedCallback(service common.ServiceS
 func (cb *ServiceChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
 	cb.serviceFinder.locker.Lock()
 	defer cb.serviceFinder.locker.Unlock()
-	log.Println("收到来自:", path, " 的回调 子节点列表为:", children)
 	if cb.eventType == SERVICE_INSTANCE_CHANGED {
 		cb.OnServiceInstanceChanged(cb.serviceItem, children)
 	}
@@ -131,7 +128,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	}
 
 	if err != nil {
-		log.Println("解码value出错 ",err)
+		log.Println("解码value出错 ", err)
 		f.LoadStatus = -1
 		go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
@@ -158,7 +155,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 				//之前在服务提供者中，现在不在了。。 服务从可用变为不可用了
 				cb.serviceFinder.subscribedService[serviceId].ProviderList = append(providerList[:index], providerList[index+1:]...) //调用
 				eventProvider := provider.Dumplication()
-				eventProvider.Config.UserConfig=serviceConf.UserConfig
+				eventProvider.Config.UserConfig = serviceConf.UserConfig
 				evetn := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: []*common.ServiceInstance{eventProvider}}
 				cb.uh.OnServiceInstanceChanged(service.ServiceName, service.ApiVersion, []*common.ServiceInstanceChangedEvent{&evetn})
 			}
@@ -192,7 +189,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	}
 
 	if strings.Compare(prevConfig.UserConfig, serviceConf.UserConfig) != 0 {
-		cb.uh.OnServiceInstanceConfigChanged(service.ServiceName, service.ApiVersion, addr, &common.ServiceInstanceConfig{IsValid:serviceConf.IsValid,UserConfig:serviceConf.UserConfig})
+		cb.uh.OnServiceInstanceConfigChanged(service.ServiceName, service.ApiVersion, addr, &common.ServiceInstanceConfig{IsValid: serviceConf.IsValid, UserConfig: serviceConf.UserConfig})
 	}
 
 }
@@ -201,11 +198,11 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceSubscribeItem, data []byte) {
 	pushID, configData, err := common.DecodeValue(data)
 	f := &common.ServiceFeedback{
-		PushID:          pushID,
-		ServiceMete:     cb.serviceFinder.config.MeteData,
-		UpdateTime:      time.Now().Unix(),
-		UpdateStatus:    1,
-		Type:            0,
+		PushID:       pushID,
+		ServiceMete:  cb.serviceFinder.config.MeteData,
+		UpdateTime:   time.Now().Unix(),
+		UpdateStatus: 1,
+		Type:         0,
 	}
 	//
 	if err != nil {
@@ -231,6 +228,17 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 }
 func (cb *ServiceChangedCallback) Process(path string, node string) {
 
+}
+func (cb *ServiceChangedCallback) ChildDeleteCallBack(path string) {
+	cb.serviceFinder.locker.Lock()
+	defer cb.serviceFinder.locker.Unlock()
+	providerPath := strings.Split(path,"/")
+	provider :=providerPath[len(providerPath)-1]
+	var eventList []*common.ServiceInstanceChangedEvent
+	var serviceInstance =common.ServiceInstance{Addr:provider,Config:&common.ServiceInstanceConfig{IsValid:false,UserConfig:""}}
+	var event =common.ServiceInstanceChangedEvent{common.INSTANCEREMOVE,[]*common.ServiceInstance{&serviceInstance}}
+	eventList=append(eventList,&event)
+	cb.uh.OnServiceInstanceChanged(cb.serviceItem.ServiceName,cb.serviceItem.ApiVersion,eventList)
 }
 func getAddProviderAddrList(prevProviderMap map[string]*common.ServiceInstance, currentProviderList []string) []string {
 	var addProviderAddrList = make([]string, 0)
@@ -261,7 +269,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 
 	serviceId := serviceItem.ServiceName + "_" + serviceItem.ApiVersion
 	providerMap := cb.serviceFinder.serviceZkData[serviceId].ProviderList
-
+	logger.Info("当前服务提供者列表：",addrList)
 	// 当一个节点的回话失效的时候，其所对应的全部节点都会失效。一下子会有多个节点改变
 	event := make([]*common.ServiceInstanceChangedEvent, 0)
 
@@ -277,7 +285,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 		var filterInstanceList = make([]*common.ServiceInstance, 0)
 		for _, instance := range serviceInstanceList {
 			providerMap[instance.Addr] = instance
-			if  instance.Config!=nil && !instance.Config.IsValid {
+			if instance.Config != nil && !instance.Config.IsValid {
 				continue
 			}
 			filterInstanceList = append(filterInstanceList, instance)
@@ -360,8 +368,10 @@ func NewConfigChangedCallback(serviceName string, watchType string, rootPath str
 	}
 }
 
+func (cb *ConfigChangedCallback) ChildDeleteCallBack(path string){
+
+}
 func (cb *ConfigChangedCallback) Process(path string, node string) {
-	log.Println("收到来自 ：", path, " 的回调")
 	if strings.HasSuffix(path, "/gray") {
 		//如果是gray节点数据改变
 		data, err := cb.sm.GetDataWithWatchV2(path, cb)
@@ -398,7 +408,6 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 	}
 
 	data, err := cb.sm.GetDataWithWatchV2(path, cb)
-	log.Println("再次对数据节点注册watch,获取数据")
 	if err != nil {
 		log.Println(" [ Process] 从 ", path, " 获取数据失败")
 		return
@@ -451,9 +460,9 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 				basePath := cb.root + "/gray/" + currentGrayGroupId + "/" + fileName
 				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
 				if err != nil {
-					if err.Error()==common.ZK_NODE_DOSE_NOT_EXIST {
+					if err.Error() == common.ZK_NODE_DOSE_NOT_EXIST {
 						log.Println(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
-						var errInfo =common.ConfigErrInfo{FileName:fileName,ErrCode:0,ErrMsg:"配置文件不存在"}
+						var errInfo = common.ConfigErrInfo{FileName: fileName, ErrCode: 0, ErrMsg: "配置文件不存在"}
 						cb.uh.OnError(errInfo)
 						return
 					}
@@ -474,8 +483,8 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 				basePath := cb.root + "/" + fileName
 				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
 				if err != nil {
-					if err.Error()==common.ZK_NODE_DOSE_NOT_EXIST {
-						var errInfo =common.ConfigErrInfo{FileName:fileName,ErrCode:0,ErrMsg:"配置文件不存在"}
+					if err.Error() == common.ZK_NODE_DOSE_NOT_EXIST {
+						var errInfo = common.ConfigErrInfo{FileName: fileName, ErrCode: 0, ErrMsg: "配置文件不存在"}
 						cb.uh.OnError(errInfo)
 						return
 					}
@@ -492,7 +501,6 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 }
 func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, path string) {
 
-	log.Println("[ OnConfigFileChanged ] name",name,"  数据: ",string(data)," path",path)
 	var currentGrayGroupId string
 	if groupId, ok := cb.configFinder.grayConfig.Load(cb.configFinder.config.MeteData.Address); ok {
 		currentGrayGroupId = groupId.(string)
@@ -501,8 +509,6 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 	}
 	pushID, file, err := common.DecodeValue(data)
 	if err != nil {
-		// todo
-	} else {
 		f := &common.ConfigFeedback{
 			PushID:       pushID,
 			ServiceMete:  cb.bootCfg.MeteData,
@@ -510,11 +516,22 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 			UpdateTime:   time.Now().Unix(),
 			UpdateStatus: 1,
 			GrayGroupId:  currentGrayGroupId,
-			LoadStatus :1,
-			LoadTime:time.Now().Unix(),
+			LoadStatus:   -1,
+			LoadTime:     time.Now().Unix(),
 		}
 
 		go pushConfigFeedback(cb.bootCfg.CompanionUrl, f)
+	} else {
+		f := &common.ConfigFeedback{
+			PushID:       pushID,
+			ServiceMete:  cb.bootCfg.MeteData,
+			Config:       name,
+			UpdateTime:   time.Now().Unix(),
+			UpdateStatus: 1,
+			LoadStatus:   1,
+			GrayGroupId:  currentGrayGroupId,
+			LoadTime:     time.Now().Unix(),
+		}
 
 		tomlConfig := make(map[string]interface{})
 		if fileutil.IsTomlFile(name) {
@@ -526,10 +543,12 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 			ConfigMap: tomlConfig,
 		}
 
-		cb.uh.OnConfigFileChanged(c)
-
+		res := cb.uh.OnConfigFileChanged(c)
+		if res == false {
+			f.LoadStatus = -1
+		}
+		go pushConfigFeedback(cb.bootCfg.CompanionUrl, f)
 		go CacheConfig(cb.bootCfg.CachePath, c)
-
 
 	}
 }
