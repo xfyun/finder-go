@@ -6,9 +6,9 @@ import (
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/log"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
-	"log"
 )
 
 var (
@@ -21,7 +21,7 @@ type ConfigFinder struct {
 	currentWatchPath string
 	config           *common.BootConfig
 	storageMgr       storage.StorageManager
-	handler 			common.ConfigChangedHandler
+	handler          common.ConfigChangedHandler
 	usedConfig       sync.Map
 	fileSubscribe    []string
 	grayConfig       sync.Map
@@ -51,7 +51,7 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 	defer f.locker.Unlock()
 	err := GetGrayConfigData(f, f.rootPath, nil)
 	if err != nil {
-		logger.Info("获取灰度配置信息出错", err)
+		log.Log.Info("获取灰度配置信息出错", err)
 		return nil, err
 	}
 	configFiles := make(map[string]*common.Config)
@@ -84,7 +84,7 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 					//存到缓存
 					err = CacheConfig(f.config.CachePath, config)
 					if err != nil {
-						logger.Error("CacheConfig:", err)
+						log.Log.Error("CacheConfig:", err)
 					}
 				}
 			}
@@ -112,37 +112,37 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	f.locker.Lock()
 	defer f.locker.Unlock()
 	configFiles := make(map[string]*common.Config)
-	if f.storageMgr==nil{
+	if f.storageMgr == nil {
 		if f.config.CacheConfig {
 			for _, n := range name {
 				configFiles[n] = getCachedConfig(n, f.config.CachePath)
 			}
 			return configFiles, nil
-		}else{
-			log.Println("连不上zk,不使用缓存，直接退出")
-			return nil,nil
+		} else {
+			log.Log.Info("连不上zk,不使用缓存，直接退出")
+			return nil, nil
 		}
-
 	}
-
+	log.Log.Debug("订阅的文件为：", name)
 	//先查看灰度组的设置
+	f.handler=handler
 	callback := NewConfigChangedCallback(f.config.MeteData.Address, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
+
 	err := GetGrayConfigData(f, f.rootPath, &callback)
 	if err != nil {
-		logger.Info("获取灰度配置信息出错", err)
+		log.Log.Info("获取灰度配置信息出错", err)
 		return nil, err
 	}
 
-
 	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
-		if ok:=f.checkFileExist(f.rootPath+"/gray/"+ groupId.(string),name);!ok {
-			log.Println("订阅的文件中，有不存在的，不进行订阅,path: ",f.rootPath+"/gray/"+ groupId.(string))
-			return nil,errors.NewFinderError(errors.ConfigFileNotExist)
+		if ok := f.checkFileExist(f.rootPath+"/gray/"+groupId.(string), name); !ok {
+			log.Log.Info("订阅的文件中，有不存在的，不进行订阅,path: ", f.rootPath+"/gray/"+groupId.(string))
+			return nil, errors.NewFinderError(errors.ConfigFileNotExist)
 		}
 	} else {
-		if ok:=f.checkFileExist(f.rootPath,name);!ok {
-			log.Println("订阅的文件中，有不存在的，不进行订阅,path : ",f.rootPath)
-			return nil,errors.NewFinderError(errors.ConfigFileNotExist)
+		if ok := f.checkFileExist(f.rootPath, name); !ok {
+			log.Log.Info("订阅的文件中，有不存在的，不进行订阅,path : ", f.rootPath)
+			return nil, errors.NewFinderError(errors.ConfigFileNotExist)
 		}
 	}
 
@@ -155,7 +155,6 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		consumerPath += "/normal/" + f.config.MeteData.Address
 		f.storageMgr.SetTempPath(consumerPath)
 	}
-
 
 	path := ""
 	for _, n := range name {
@@ -181,9 +180,9 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			path = basePath + "/" + n
 			data, err := f.storageMgr.GetDataWithWatchV2(path, &callback)
 			if err != nil {
-				if strings.Compare(err.Error(),common.ZK_NODE_DOSE_NOT_EXIST)==0{
-					log.Println("配置文件不存在，请先配置文件。文件:",name)
-					return nil,errors.NewFinderError(errors.ConfigFileNotExist)
+				if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
+					log.Log.Info("配置文件不存在，请先配置文件。文件:", name)
+					return nil, errors.NewFinderError(errors.ConfigFileNotExist)
 				}
 				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
 
@@ -203,7 +202,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 					//放到文件中
 					err = CacheConfig(f.config.CachePath, config)
 					if err != nil {
-						logger.Error("CacheConfig:", err)
+						log.Log.Error("CacheConfig:", err)
 					}
 				}
 			}
@@ -213,27 +212,27 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	return configFiles, nil
 }
 
-func (f* ConfigFinder) checkFileExist(basePath string,names []string) bool{
+func (f *ConfigFinder) checkFileExist(basePath string, names []string) bool {
 	//TODO 判断文件是否存在，不存在则直接报错，
-
-	files,err:=f.storageMgr.GetChildren(basePath)
+	log.Log.Debug("basePath", basePath)
+	files, err := f.storageMgr.GetChildren(basePath)
 	if err != nil {
-		log.Println("获取配置文件出错，直接返回",err)
+		log.Log.Error("获取配置文件出错，直接返回 :", err)
 		return false
 	}
-	if len(names) >len(files) {
-		log.Println("当前有的配置文件为：",files," 要订阅的配置文件为：",names,",两者不匹配！")
+	if len(names) > len(files) {
+		log.Log.Info("当前有的配置文件为：", files, " 要订阅的配置文件为：", names, ",两者不匹配！")
 		return false
 	}
-	for _,subFileName :=range names{
-		var isExist =false
-		for _,existFile :=range files{
-			if existFile==subFileName{
-				isExist=true
+	for _, subFileName := range names {
+		var isExist = false
+		for _, existFile := range files {
+			if existFile == subFileName {
+				isExist = true
 			}
 		}
 		if !isExist {
-			log.Println("当前有的配置文件为：",files," 要订阅的配置文件 ",subFileName," 不存在！")
+			log.Log.Info("当前有的配置文件为：", files, " 要订阅的配置文件 ", subFileName, " 不存在！")
 			return false
 		}
 	}
@@ -258,7 +257,7 @@ func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	return nil
 }
 
-func (f *ConfigFinder)removeConfigConsumer(){
+func (f *ConfigFinder) removeConfigConsumer() {
 	//如果订阅文件的个数为0，则取消注册者
 	consumerPath := f.rootPath + "/consumer"
 	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
@@ -270,12 +269,12 @@ func (f *ConfigFinder)removeConfigConsumer(){
 		f.storageMgr.Remove(consumerPath)
 	}
 }
-func (f *ConfigFinder) BatchUnSubscribeConfig (names []string)error{
-	if len(names)==0 {
+func (f *ConfigFinder) BatchUnSubscribeConfig(names []string) error {
+	if len(names) == 0 {
 		err := errors.NewFinderError(errors.ConfigMissName)
 		return err
 	}
-	for _,name :=range names{
+	for _, name := range names {
 		for index, value := range f.fileSubscribe {
 			if strings.Compare(name, value) == 0 {
 				f.fileSubscribe = append(f.fileSubscribe[:index], f.fileSubscribe[index+1:]...)
@@ -287,16 +286,17 @@ func (f *ConfigFinder) BatchUnSubscribeConfig (names []string)error{
 	}
 	return nil
 }
+
 // onUseConfigError with cache
 func onUseConfigErrorWithCache(configFiles map[string]*common.Config, name string, cachePath string, err error) {
-	logger.Error("onUseConfigError:", err)
+	log.Log.Error("onUseConfigError:", err)
 	configFiles[name] = getCachedConfig(name, cachePath)
 }
 
 func getCachedConfig(name string, cachePath string) *common.Config {
 	config, err := GetConfigFromCache(cachePath, name)
 	if err != nil {
-		logger.Error("GetConfigFromCache:", err)
+		log.Log.Error("GetConfigFromCache:", err)
 		return nil
 	}
 

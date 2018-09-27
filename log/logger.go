@@ -2,6 +2,7 @@ package log
 
 import "log"
 
+var Log Logger
 type Logger interface {
 	Info(v ...interface{})
 	Debug(v ...interface{})

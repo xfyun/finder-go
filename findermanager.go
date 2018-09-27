@@ -10,6 +10,7 @@ import (
 	"time"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
+	log"git.xfyun.cn/AIaaS/finder-go/log"
 	companion "git.xfyun.cn/AIaaS/finder-go/companion"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
@@ -21,9 +22,8 @@ import (
 
 var (
 	hc     *http.Client
-	logger common.Logger
 )
-const VERSION = "2.0.3"
+const VERSION = "2.0.4"
 type zkAddrChangeCallback struct {
 	path string
 	fm   *FinderManager
@@ -40,7 +40,7 @@ func (callback *zkAddrChangeCallback) Process(path string, node string) {
 	fm := callback.fm
 	storageMgr, storageCfg, err := initStorageMgr(fm.config)
 	if err != nil {
-		logger.Info("zk信息出错，重新尝试")
+		log.Log.Info("zk信息出错，重新尝试")
 	} else {
 		go watchZkInfo(fm)
 		fm.storageMgr = storageMgr
@@ -77,7 +77,7 @@ func init() {
 		},
 	}
 
-	logger = common.NewDefaultLogger()
+
 }
 
 // FinderManager for controll all
@@ -86,7 +86,6 @@ type FinderManager struct {
 	storageMgr     storage.StorageManager
 	ConfigFinder   *ConfigFinder
 	ServiceFinder  *ServiceFinder
-	InternalLogger common.Logger
 }
 
 func checkCachePath(path string) (string, error) {
@@ -171,17 +170,17 @@ func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error)
 func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage.StorageConfig, error) {
 	storageConfig, err := getStorageConfig(config)
 	if err != nil {
-		logger.Error("[ initStorageMgr ] getStorageConfig:", err)
+		log.Log.Error("[ initStorageMgr ] getStorageConfig:", err)
 		return nil, nil, err
 	}
 	storageMgr, err := storage.NewManager(storageConfig)
 	if err != nil {
-		logger.Error("[ initStorageMgr ] NewManager:", err)
+		log.Log.Error("[ initStorageMgr ] NewManager:", err)
 		return nil, storageConfig, err
 	}
 	err = storageMgr.Init()
 	if err != nil {
-		logger.Error("[ initStorageMgr ] Init err", err)
+		log.Log.Error("[ initStorageMgr ] Init err", err)
 		return nil, storageConfig, err
 	}
 	return storageMgr, storageConfig, nil
@@ -189,7 +188,7 @@ func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage
 
 // NewFinder for creating an instance
 func newFinder(config common.BootConfig) (*FinderManager, error) {
-	// logger := common.NewDefaultLogger()
+	log.Log = log.NewDefaultLogger()
 	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
 		err := errors.NewFinderError(errors.MissCompanionUrl)
 		return nil, err
@@ -198,7 +197,7 @@ func newFinder(config common.BootConfig) (*FinderManager, error) {
 	if stringutil.IsNullOrEmpty(config.MeteData.Address) {
 		localIP, err := netutil.GetLocalIP(config.CompanionUrl)
 		if err != nil {
-			logger.Error(err)
+			log.Log.Error(err)
 			return nil, err
 		}
 		config.MeteData.Address = localIP
@@ -218,13 +217,12 @@ func newFinder(config common.BootConfig) (*FinderManager, error) {
 	config.CachePath = p
 	// 初始化finder
 	fm := new(FinderManager)
-	fm.InternalLogger = logger
 	fm.config = &config
 	// 初始化zk
 	var storageCfg *storage.StorageConfig
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
 	if err != nil {
-		logger.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
+		log.Log.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
 		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
 		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
 		//return nil, err
@@ -236,13 +234,13 @@ func newFinder(config common.BootConfig) (*FinderManager, error) {
 	return fm, nil
 }
 
-func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*FinderManager, error) {
+func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderManager, error) {
 	if logger == nil {
-		logger = common.NewDefaultLogger()
+		log.Log = log.NewDefaultLogger()
 	} else {
-		logger = logger
+		log.Log = logger
 	}
-	logger.Info("current version : " +VERSION)
+	log.Log.Info("current version : "+VERSION)
 	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
 		err := errors.NewFinderError(errors.MissCompanionUrl)
 		return nil, err
@@ -251,7 +249,7 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	if stringutil.IsNullOrEmpty(config.MeteData.Address) {
 		localIP, err := netutil.GetLocalIP(config.CompanionUrl)
 		if err != nil {
-			logger.Error(err)
+			log.Log.Error(err)
 			return nil, err
 		}
 		config.MeteData.Address = localIP
@@ -270,13 +268,12 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 	config.CachePath = p
 	// 初始化finder
 	fm := new(FinderManager)
-	fm.InternalLogger = logger
 	fm.config = &config
 	// 初始化zk
 	var storageCfg *storage.StorageConfig
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
 	if err != nil {
-		logger.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
+		log.Log.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
 		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
 		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
 		go watchStorageInfo(fm)
@@ -286,7 +283,7 @@ func NewFinderWithLogger(config common.BootConfig, logger common.Logger) (*Finde
 		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 	}
 	//创建一个goroutine来执行监听zk地址的数据
-	go watchZkInfo(fm)
+//	go watchZkInfo(fm)
 	return fm, nil
 }
 
@@ -294,7 +291,7 @@ func watchZkInfo(fm *FinderManager) {
 
 	zkNodePath, err := fm.storageMgr.GetZkNodePath()
 	if err != nil {
-		logger.Error("zk的节点信息为空")
+		log.Log.Error("zk的节点信息为空")
 	}
 	fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
 }
@@ -308,7 +305,7 @@ func watchStorageInfo(fm *FinderManager) {
 			getStorageConfig(fm.config)
 			storageMgr, storageCfg, err := initStorageMgr(fm.config)
 			if err != nil {
-				logger.Info("初始化zk信息出错，重新尝试")
+				log.Log.Info("初始化zk信息出错，重新尝试")
 			} else {
 				fm.storageMgr = storageMgr
 				fm.ConfigFinder.storageMgr = storageMgr
@@ -336,10 +333,11 @@ func ReGetConfigInfo(fm *FinderManager) {
 	handler := fm.ConfigFinder.handler
 	fileMap, err := fm.ConfigFinder.UseAndSubscribeConfig(fm.ConfigFinder.fileSubscribe, handler)
 	if err != nil {
-		fm.InternalLogger.Info("获取信息失败", err)
+		log.Log.Error("获取信息失败", err)
 	}
 	for _,fileData :=range fileMap{
 		var config =common.Config{Name:fileData.Name,File:fileData.File,ConfigMap:fileData.ConfigMap}
+
 		handler.OnConfigFileChanged(&config)
 	}
 }
@@ -350,7 +348,7 @@ func ReGetServiceInfo(fm *FinderManager) {
 		servicePath := fmt.Sprintf("%s/%s/%s", fm.ServiceFinder.rootPath, item.ServiceName, item.ApiVersion)
 		service, err := fm.ServiceFinder.getServiceWithWatcher(servicePath, item, fm.ServiceFinder.handler)
 		if err != nil {
-			fm.InternalLogger.Info("获取信息失败", err)
+			log.Log.Error("获取信息失败", err)
 			continue
 		}
 		if service == nil {

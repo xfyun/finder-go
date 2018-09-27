@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -43,7 +42,7 @@ type TestConfig struct {
 func main() {
 	args := os.Args
 	if len(args) != 2 {
-		log.Println("参数错误")
+		fmt.Println("参数错误")
 		return
 	}
 	file, _ := os.Open(args[1])
@@ -72,7 +71,7 @@ func main() {
 		newConfigFinder(conf)
 
 	} else {
-		log.Println("输入的type有误，请重新输入")
+		fmt.Println("输入的type有误，请重新输入")
 		return
 	}
 	//newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
@@ -81,7 +80,7 @@ func main() {
 	//TODO  1. companion连不上怎么办，zk连不上怎么办
 	for {
 		time.Sleep(time.Minute * 20)
-		log.Println("I'm running.")
+		fmt.Println("I'm running.")
 	}
 
 }
@@ -250,14 +249,14 @@ func getLocalIP(url string) (string, error) {
 	for _, ip := range ips {
 		conn, err := net.Dial("tcp", ip+":"+port)
 		if err != nil {
-			log.Println("testRemote:", err)
+			fmt.Println("testRemote:", err)
 			continue
 		}
 		localIP = conn.LocalAddr().String()
-		log.Println("testRemote:ok")
+		fmt.Println("testRemote:ok")
 		err = conn.Close()
 		if err != nil {
-			log.Println("testRemote:", err)
+			fmt.Println("testRemote:", err)
 			break
 		}
 		break
@@ -435,14 +434,14 @@ func testUseConfigAsync(f *finder.FinderManager) {
 	handler := ConfigChangedHandle{}
 	count := 0
 
-	f.InternalLogger.Info("The ", count, "th show:")
+
 	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
 	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"2.yml"}, &handler)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 	}
 	for _, c := range configFiles {
-		log.Println(c.Name, ":\r\n", string(c.File))
+		fmt.Println(c.Name, ":\r\n", string(c.File))
 	}
 
 	for {
@@ -466,10 +465,10 @@ func testUseConfigAsync(f *finder.FinderManager) {
 func testUserConfig(f *finder.FinderManager, name []string) {
 	configFiles, err := f.ConfigFinder.UseConfig(name)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 	}
 	for _, c := range configFiles {
-		log.Println(c.Name, ":\r\n", string(c.File))
+		fmt.Println(c.Name, ":\r\n", string(c.File))
 	}
 
 }
@@ -481,9 +480,9 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 	//使用并订阅文件的变更。回调函数相比之前多了一个OnError .用于在运行过程中出现解析文件错误的时候进行通知，可以为空的实现
 	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig(name, &handler)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 	}
 	for _, c := range configFiles {
-		log.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
+		fmt.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
 	}
 }
