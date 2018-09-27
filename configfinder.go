@@ -111,7 +111,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	}
 	f.locker.Lock()
 	defer f.locker.Unlock()
-	f.handler=handler
+	f.handler = handler
 	configFiles := make(map[string]*common.Config)
 	if f.storageMgr == nil {
 		if f.config.CacheConfig {
@@ -162,55 +162,44 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	path := ""
 	for _, n := range name {
 		f.fileSubscribe = append(f.fileSubscribe, n)
-		if c, ok := f.usedConfig.Load(n); ok {
-			// todo
-			if config, ok := c.(common.Config); ok {
-				configFiles[n] = &config
-			} else {
-				// get config from cache
-				configFiles[n] = getCachedConfig(n, f.config.CachePath)
-			}
 
-			continue
-		} else {
-			basePath := f.rootPath
-			if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
-				basePath += "/gray/" + groupId.(string)
-			}
-			callback := NewConfigChangedCallback(n, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
-
-			//根据获取的灰度组设置的结果，来到特定的节点获取配置文件数据
-			path = basePath + "/" + n
-			data, err := f.storageMgr.GetDataWithWatchV2(path, &callback)
-			if err != nil {
-				if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
-					log.Log.Info("配置文件不存在，请先配置文件。文件:", name)
-					return nil, errors.NewFinderError(errors.ConfigFileNotExist)
-				}
-				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
-
-			} else {
-				_, fData, err := common.DecodeValue(data)
-				if err != nil {
-					onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
-				} else {
-					//
-					confMap := make(map[string]interface{})
-					if fileutil.IsTomlFile(n) {
-						confMap = fileutil.ParseTomlFile(fData)
-					}
-					config := &common.Config{Name: n, File: fData, ConfigMap: confMap}
-					configFiles[n] = config
-					f.usedConfig.Store(n, config)
-					//放到文件中
-					err = CacheConfig(f.config.CachePath, config)
-					if err != nil {
-						log.Log.Error("CacheConfig:", err)
-					}
-				}
-			}
-
+		basePath := f.rootPath
+		if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
+			basePath += "/gray/" + groupId.(string)
 		}
+		callback := NewConfigChangedCallback(n, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
+
+		//根据获取的灰度组设置的结果，来到特定的节点获取配置文件数据
+		path = basePath + "/" + n
+		data, err := f.storageMgr.GetDataWithWatchV2(path, &callback)
+		if err != nil {
+			if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
+				log.Log.Info("配置文件不存在，请先配置文件。文件:", name)
+				return nil, errors.NewFinderError(errors.ConfigFileNotExist)
+			}
+			onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
+
+		} else {
+			_, fData, err := common.DecodeValue(data)
+			if err != nil {
+				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
+			} else {
+				//
+				confMap := make(map[string]interface{})
+				if fileutil.IsTomlFile(n) {
+					confMap = fileutil.ParseTomlFile(fData)
+				}
+				config := &common.Config{Name: n, File: fData, ConfigMap: confMap}
+				configFiles[n] = config
+				f.usedConfig.Store(n, config)
+				//放到文件中
+				err = CacheConfig(f.config.CachePath, config)
+				if err != nil {
+					log.Log.Error("CacheConfig:", err)
+				}
+			}
+		}
+
 	}
 	return configFiles, nil
 }

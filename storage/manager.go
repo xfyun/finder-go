@@ -6,6 +6,7 @@ import (
 	"git.xfyun.cn/AIaaS/finder-go/storage/common"
 	"git.xfyun.cn/AIaaS/finder-go/storage/zookeeper"
 	"git.xfyun.cn/AIaaS/finder-go/log"
+	"sync"
 )
 
 type StorageManager interface {
@@ -26,6 +27,9 @@ type StorageManager interface {
 	RemoveInRecursive(path string) error
 	UnWatch(path string) error
 	CheckExists(path string) (bool, error)
+	RecoverTempPaths()
+	GetTempPaths()sync.Map
+	SetTempPaths(sync.Map)
 }
 
 func NewManager(config *StorageConfig) (StorageManager, error) {

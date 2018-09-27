@@ -34,6 +34,12 @@ func NewZkManager(params map[string]string) (*ZkManager, error) {
 	return zm, nil
 }
 
+func (zm *ZkManager) GetTempPaths() sync.Map {
+	return zm.tempPaths
+}
+func (zm *ZkManager) SetTempPaths( tempPath sync.Map)  {
+	zm.tempPaths =tempPath
+}
 func (zm *ZkManager) GetZkNodePath() (string, error) {
 	if path, ok := zm.params["zk_node_path"]; ok {
 		return path, nil
@@ -82,7 +88,7 @@ func (zm *ZkManager) eventCallback(e zk.Event) {
 		case zk.StateConnected:
 			return
 		case zk.StateHasSession:
-			go zm.recoverTempPaths()
+			go zm.RecoverTempPaths()
 			return
 		case zk.StateExpired:
 			return
@@ -102,7 +108,7 @@ func (zm *ZkManager) eventCallback(e zk.Event) {
 /**
  * 在恢复会话的时候进行调用，用来恢复临时路径
  */
-func (zm *ZkManager) recoverTempPaths() {
+func (zm *ZkManager) RecoverTempPaths() {
 	var err error
 	zm.tempPaths.Range(func(key, value interface{}) bool {
 		if value == nil {

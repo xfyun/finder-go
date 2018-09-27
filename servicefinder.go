@@ -50,17 +50,29 @@ func NewServiceFinder(root string, bc *common.BootConfig, sm storage.StorageMana
 }
 
 func (f *ServiceFinder) RegisterServiceWithAddr(addr string, version string) error {
+	if f.storageMgr==nil{
+		return errors.NewFinderError(errors.ZkConnectionLoss)
+	}
 	return f.registerService(addr, version)
 }
 func (f *ServiceFinder) RegisterService(version string) error {
+	if f.storageMgr==nil {
+		return errors.NewFinderError(errors.ZkConnectionLoss)
+	}
 	return f.registerService(f.config.MeteData.Address, version)
 }
 func (f *ServiceFinder) UnRegisterService(version string) error {
+	if f.storageMgr==nil{
+		return errors.NewFinderError(errors.ZkConnectionLoss)
+	}
 	servicePath := fmt.Sprintf("%s/%s/%s/provider/%s", f.rootPath, f.config.MeteData.Service, version, f.config.MeteData.Address)
 	return f.storageMgr.RemoveInRecursive(servicePath)
 }
 
 func (f *ServiceFinder) UnRegisterServiceWithAddr(version string, addr string) error {
+	if f.storageMgr==nil{
+		return errors.NewFinderError(errors.ZkConnectionLoss)
+	}
 	servicePath := fmt.Sprintf("%s/%s/%s/provider/%s", f.rootPath, f.config.MeteData.Service, version, addr)
 
 	return f.storageMgr.RemoveInRecursive(servicePath)
