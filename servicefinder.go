@@ -225,7 +225,7 @@ func (f *ServiceFinder) registerConsumer(service common.ServiceSubscribeItem, ad
 func (f *ServiceFinder) getServiceInstanceByAddrList(providerAddrList []string, rootPath string, handler *ServiceChangedCallback) []*common.ServiceInstance {
 	var serviceInstanceList = make([]*common.ServiceInstance, 0)
 	for _, providerAddr := range providerAddrList {
-		log.Log.Info(" [ getServiceInstanceByAddrList] providerAddr:", providerAddr, " rootPath :", rootPath)
+		log.Log.Debug(" [ getServiceInstanceByAddrList] providerAddr:", providerAddr, " rootPath :", rootPath)
 		service, err := getServiceInstance(f.storageMgr, rootPath, providerAddr, handler)
 		if err != nil || service == nil {
 			continue

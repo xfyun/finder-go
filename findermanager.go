@@ -36,7 +36,7 @@ func (callback *zkAddrChangeCallback) ChildrenChangedCallback(path string, node 
 }
 func (callback *zkAddrChangeCallback) Process(path string, node string) {
 
-
+	log.Log.Debug("zk_node_path节点事件处理",path)
 	fm := callback.fm
 	storageMgr, storageCfg, err := initStorageMgr(fm.config)
 	if err != nil {
@@ -173,6 +173,7 @@ func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage
 		log.Log.Error("[ initStorageMgr ] getStorageConfig:", err)
 		return nil, nil, err
 	}
+	log.Log.Debug("storageConfig信息：",storageConfig.Params)
 	storageMgr, err := storage.NewManager(storageConfig)
 	if err != nil {
 		log.Log.Error("[ initStorageMgr ] NewManager:", err)
@@ -183,6 +184,7 @@ func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage
 		log.Log.Error("[ initStorageMgr ] Init err", err)
 		return nil, storageConfig, err
 	}
+
 	return storageMgr, storageConfig, nil
 }
 
@@ -283,7 +285,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 	}
 	//创建一个goroutine来执行监听zk地址的数据
-//	go watchZkInfo(fm)
+	go watchZkInfo(fm)
 	return fm, nil
 }
 
@@ -293,11 +295,12 @@ func watchZkInfo(fm *FinderManager) {
 	if err != nil {
 		log.Log.Error("zk的节点信息为空")
 	}
+	log.Log.Debug("zk的节点信息为:",zkNodePath)
 	fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
 }
 
 func watchStorageInfo(fm *FinderManager) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
@@ -319,10 +322,12 @@ func watchStorageInfo(fm *FinderManager) {
 		if fm.storageMgr != nil {
 			go watchZkInfo(fm)
 			if len(fm.ServiceFinder.subscribedService) != 0 {
+				log.Log.Debug("重新拉取订阅的服务信息，",fm.ServiceFinder.subscribedService)
 				//重新拉取所有订阅服务的信息
 				ReGetServiceInfo(fm)
 			}
 			if len(fm.ConfigFinder.fileSubscribe) != 0 {
+				log.Log.Debug("重新拉取订阅的配置文件信息，",fm.ConfigFinder.fileSubscribe)
 				ReGetConfigInfo(fm)
 			}
 			break
@@ -337,8 +342,10 @@ func ReGetConfigInfo(fm *FinderManager) {
 	}
 	for _,fileData :=range fileMap{
 		var config =common.Config{Name:fileData.Name,File:fileData.File,ConfigMap:fileData.ConfigMap}
+		if handler!= nil{
+			handler.OnConfigFileChanged(&config)
 
-		handler.OnConfigFileChanged(&config)
+		}
 	}
 }
 

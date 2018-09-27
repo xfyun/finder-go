@@ -111,10 +111,13 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	}
 	f.locker.Lock()
 	defer f.locker.Unlock()
+	f.handler=handler
 	configFiles := make(map[string]*common.Config)
 	if f.storageMgr == nil {
 		if f.config.CacheConfig {
+			log.Log.Info("连不上zk,使用缓存")
 			for _, n := range name {
+				f.fileSubscribe = append(f.fileSubscribe, n)
 				configFiles[n] = getCachedConfig(n, f.config.CachePath)
 			}
 			return configFiles, nil
@@ -125,7 +128,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	}
 	log.Log.Debug("订阅的文件为：", name)
 	//先查看灰度组的设置
-	f.handler=handler
+
 	callback := NewConfigChangedCallback(f.config.MeteData.Address, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
 
 	err := GetGrayConfigData(f, f.rootPath, &callback)

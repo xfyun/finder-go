@@ -8,6 +8,7 @@ import (
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
+	"git.xfyun.cn/AIaaS/finder-go/log"
 )
 
 // GetStorageInfo for getting storage metadata
@@ -51,7 +52,15 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 		err = errors.NewFinderError(errors.ZkInfoMissServiceRootPath)
 		return nil, err
 	}
-
+	if _, ok := r.Data["zk_node_path"]; !ok {
+		err = errors.NewFinderError(errors.ZkInfoMissZkNodePath)
+		return nil, err
+	}
+	if r.Data["zk_node_path"]==nil {
+		err = errors.NewFinderError(errors.ZkInfoMissZkNodePath)
+		return nil, err
+	}
+	log.Log.Debug("zk_node_path ",r.Data["zk_node_path"])
 	var zkAddr []string
 	if _, ok = r.Data["zk_addr"]; !ok {
 		err = errors.NewFinderError(errors.ZkInfoMissAddr)

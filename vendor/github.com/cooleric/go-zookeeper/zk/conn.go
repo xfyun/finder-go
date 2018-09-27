@@ -220,7 +220,6 @@ func Connect(servers []string, sessionTimeout time.Duration, options ...connOpti
 	}
 
 	conn.setTimeouts(int32(sessionTimeout / time.Millisecond))
-
 	go func() {
 		conn.loop()
 		conn.flushRequests(ErrClosing)

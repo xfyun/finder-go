@@ -269,13 +269,15 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 
 	serviceId := serviceItem.ServiceName + "_" + serviceItem.ApiVersion
 	providerMap := cb.serviceFinder.serviceZkData[serviceId].ProviderList
-	log.Log.Info("当前服务提供者列表：",addrList)
+	log.Log.Debug("当前服务提供者列表：",addrList)
+	log.Log.Debug("当前缓存中的提供者列表为：",cb.serviceFinder.serviceZkData[serviceId].ProviderList)
+
 	// 当一个节点的回话失效的时候，其所对应的全部节点都会失效。一下子会有多个节点改变
 	event := make([]*common.ServiceInstanceChangedEvent, 0)
 
 	//获取多的提供者实例
 	addProviderList := getAddProviderAddrList(providerMap, addrList)
-	log.Log.Info(addProviderList)
+	log.Log.Debug("新增的节点为：",addProviderList)
 	if len(addProviderList) != 0 {
 		//有新增的服务提供者
 		rootPath := cb.serviceFinder.rootPath + "/" + serviceItem.ServiceName + "/" + serviceItem.ApiVersion + "/provider"
@@ -302,6 +304,8 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 	}
 	//看是否有服务提供者减小
 	removeProviderList := getRemoveProviderAddrList(providerMap, addrList)
+	log.Log.Debug("删除的节点为：",removeProviderList)
+
 	changeProviderList := make([]*common.ServiceInstance, 0)
 	if len(removeProviderList) != 0 {
 
@@ -325,6 +329,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 	}
 	if len(event) != 0 {
 		//通知
+		log.Log.Debug("进行事件通知",event)
 		cb.uh.OnServiceInstanceChanged(serviceItem.ServiceName, serviceItem.ApiVersion, event)
 	}
 	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[serviceId])
