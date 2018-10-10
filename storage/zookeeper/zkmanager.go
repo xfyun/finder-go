@@ -65,7 +65,7 @@ func (zm *ZkManager) Init() error {
 		return err
 	}
 	//新建zookeeper连接
-	conn, _, err := zk.Connect(servers, time.Duration(sessionTimeout)*time.Millisecond, zk.WithEventCallback(zm.eventCallback), zk.WithConnectionTimeout(zk_connection_timeout*time.Second))
+	conn, _, err := zk.Connect(servers, time.Duration(sessionTimeout)*time.Millisecond, zk.WithEventCallback(zm.eventCallback))
 	if err != nil {
 		return err
 	}

@@ -44,8 +44,8 @@ func WriteFile(path string, data []byte) error {
 }
 
 func IsTomlFile(name string) bool {
-	return false
-	//return strings.HasSuffix(name, ".toml")
+	//return false
+	return strings.HasSuffix(name, ".toml")
 }
 func ReadFile(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)

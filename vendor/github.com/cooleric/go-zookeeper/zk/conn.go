@@ -228,11 +228,7 @@ func Connect(servers []string, sessionTimeout time.Duration, options ...connOpti
 	}()
 	return conn, ec, nil
 }
-func WithConnectionTimeout(connectionTimeout time.Duration) connOption {
-	return func(c *Conn) {
-		c.connectTimeout = connectionTimeout
-	}
-}
+
 
 // WithDialer returns a connection option specifying a non-default Dialer.
 func WithDialer(dialer Dialer) connOption {
