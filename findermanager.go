@@ -25,7 +25,7 @@ var (
 	hc *http.Client
 )
 
-const VERSION = "2.0.6"
+const VERSION = "2.0.7"
 
 type zkAddrChangeCallback struct {
 	path string
