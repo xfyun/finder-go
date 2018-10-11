@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"fmt"
 )
 
 func ExistPath(path string) (bool, error) {
@@ -44,8 +45,8 @@ func WriteFile(path string, data []byte) error {
 }
 
 func IsTomlFile(name string) bool {
-	//return false
-	return strings.HasSuffix(name, ".toml")
+	return false
+	//return strings.HasSuffix(name, ".toml")
 }
 func ReadFile(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)
@@ -67,8 +68,13 @@ func ParseTomlFile(file []byte) map[string]interface{} {
 			continue
 		} else if strings.HasPrefix(line, "#") {
 			continue
-		} else if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+		} else if strings.HasPrefix(line, "[")  {
+			if strings.Contains(line,"#"){
+				line=strings.Split(line,"#")[0]
+			}
+			fmt.Println("line:",line)
 			currentGroup = strings.TrimSpace(line[1 : len(line)-1])
+			continue
 		} else if !strings.Contains(line, "=") {
 			continue
 		} else {

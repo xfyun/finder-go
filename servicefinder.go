@@ -7,12 +7,12 @@ import (
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/log"
 	"git.xfyun.cn/AIaaS/finder-go/route"
 	"git.xfyun.cn/AIaaS/finder-go/storage"
 	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
 	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
 	"strings"
-	"git.xfyun.cn/AIaaS/finder-go/log"
 )
 
 type ServiceFinder struct {
@@ -50,19 +50,21 @@ func NewServiceFinder(root string, bc *common.BootConfig, sm storage.StorageMana
 }
 
 func (f *ServiceFinder) RegisterServiceWithAddr(addr string, version string) error {
-	if f.storageMgr==nil{
+	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
 	}
+	log.Log.Debug("RegisterServiceWithAddr : addr-> ",addr," version->",version)
 	return f.registerService(addr, version)
 }
 func (f *ServiceFinder) RegisterService(version string) error {
-	if f.storageMgr==nil {
+	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
 	}
+	log.Log.Debug("RegisterServiceWithAddr : version->",version)
 	return f.registerService(f.config.MeteData.Address, version)
 }
 func (f *ServiceFinder) UnRegisterService(version string) error {
-	if f.storageMgr==nil{
+	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
 	}
 	servicePath := fmt.Sprintf("%s/%s/%s/provider/%s", f.rootPath, f.config.MeteData.Service, version, f.config.MeteData.Address)
@@ -70,7 +72,7 @@ func (f *ServiceFinder) UnRegisterService(version string) error {
 }
 
 func (f *ServiceFinder) UnRegisterServiceWithAddr(version string, addr string) error {
-	if f.storageMgr==nil{
+	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
 	}
 	servicePath := fmt.Sprintf("%s/%s/%s/provider/%s", f.rootPath, f.config.MeteData.Service, version, addr)
@@ -206,6 +208,7 @@ func (f *ServiceFinder) registerService(addr string, apiVersion string) error {
 	}
 	//目前不考虑目录不存在的情况
 	path := fmt.Sprintf("%s/%s/%s/provider/%s", f.rootPath, f.config.MeteData.Service, apiVersion, addr)
+	log.Log.Debug("registerService -> path -> ",path)
 	err := f.storageMgr.SetTempPath(path)
 	if err != nil {
 		log.Log.Info("服务注册失败", err)
