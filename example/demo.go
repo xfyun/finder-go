@@ -60,6 +60,7 @@ func main() {
 		newConfigFinder(conf)
 	} else if conf.Type == 2 {
 		//订阅服务。和之前的区别主要是增加了版本号的概念，用于指定服务的特定版本。。且回调函数的参数也增加了一个版本号的参数。。用于明确服务的版本信息
+
 		newServiceFinder(conf)
 	} else if conf.Type == 3 {
 		//注册服务.和之前的区别是注册服务的时候，必须制定版本号
@@ -407,14 +408,15 @@ func testServiceAsync(f *finder.FinderManager) {
 }
 
 func testUseServiceAsync(f *finder.FinderManager, items []ServiceItemTest) {
-	handler := new(ServiceChangedHandle)
+	//handler := new(ServiceChangedHandle)
 	subscri := make([]common.ServiceSubscribeItem, 0)
 	for _, item := range items {
 		subscri = append(subscri, common.ServiceSubscribeItem{ServiceName: item.ServiceName, ApiVersion: item.ApiVersion})
 	}
 
 	//订阅服务，订阅服务的还是，增加具体的版本号。。且必须制定订阅的是服务的那个版本。所有的回调函数增加服务版本号参数，用于说明具体的服务信息
-	serviceList, err := f.ServiceFinder.UseAndSubscribeService(subscri, handler)
+	//serviceList, err := f.ServiceFinder.UseAndSubscribeService(subscri, handler)
+	serviceList, err := f.ServiceFinder.UseService(subscri)
 	if err != nil {
 		fmt.Println(err)
 	} else {

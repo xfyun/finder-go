@@ -281,7 +281,7 @@ func (f *ConfigFinder) BatchUnSubscribeConfig(names []string) error {
 
 // onUseConfigError with cache
 func onUseConfigErrorWithCache(configFiles map[string]*common.Config, name string, cachePath string, err error) {
-	log.Log.Error("onUseConfigError:", err)
+	log.Log.Error("onUseConfigError:", err,"  name:",name)
 	configFiles[name] = getCachedConfig(name, cachePath)
 }
 
