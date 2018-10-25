@@ -100,10 +100,21 @@ func (f *ServiceFinder) UseService(serviceItems []common.ServiceSubscribeItem) (
 		log.Log.Info(" useservice:", servicePath)
 		serviceList[serviceId], err = f.getService(servicePath, item)
 		//存入缓存文件
-		if serviceList[serviceId] == nil {
+		if serviceList[serviceId] == nil || serviceList[serviceId].ProviderList==nil || len(serviceList[serviceId].ProviderList)==0{
 			log.Log.Debug("the service is null")
-			continue
+			service, err := GetServiceFromCache(f.config.CachePath, item)
+			if err != nil || service==nil{
+				log.Log.Info("从缓存中获取该服务失败，服务为：", serviceId)
+				f.subscribedService[serviceId] = &common.Service{ServiceName: item.ServiceName, ApiVersion: item.ApiVersion}
+				continue
+			} else {
+				var tempServer=service.Dumplication()
+				serviceList[serviceId] = &tempServer
+				f.subscribedService[serviceId] = service
+			}
 		}
+
+
 		err = CacheService(f.config.CachePath, serviceList[serviceId])
 		if err != nil {
 			log.Log.Error("CacheService failed")
@@ -124,7 +135,7 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 
 	f.locker.Lock()
 	defer f.locker.Unlock()
-	log.Log.Debug("call UseAndSubscribeService")
+	log.Log.Debug("call UseAndSubscribeService  ")
 	f.handler = handler
 	serviceList := make(map[string]common.Service)
 

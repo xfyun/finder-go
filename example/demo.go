@@ -117,6 +117,11 @@ func newServiceFinder(conf TestConfig) {
 	}
 
 	f, err := finder.NewFinderWithLogger(config, nil)
+
+
+	//init
+
+
 	if err != nil {
 		fmt.Println(err)
 	} else {
