@@ -1,18 +1,19 @@
 package route
 
 import (
-	"strings"
-
 	"encoding/json"
 	common "git.xfyun.cn/AIaaS/finder-go/common"
-
+	"strings"
 )
 
+func newEmptyServiceRoute() *common.ServiceRoute {
+	return &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
+}
 func ParseRouteData(data []byte) *common.ServiceRoute {
 	var serviceRoute common.ServiceRoute
 	err := json.Unmarshal([]byte(`{"RouteItem":`+string(data)+"}"), &serviceRoute)
 	if err != nil {
-		return nil
+		return newEmptyServiceRoute()
 	}
 	return &serviceRoute
 }
@@ -20,6 +21,9 @@ func ParseRouteData(data []byte) *common.ServiceRoute {
 func FilterServiceByRouteData(serviceRoute *common.ServiceRoute, consumerAddr string, providerList []*common.ServiceInstance) []*common.ServiceInstance {
 	var removeProviderList = make([]string, 0)
 	var resultProvider = make([]*common.ServiceInstance, 0)
+	if serviceRoute == nil {
+		return providerList
+	}
 	for _, item := range serviceRoute.RouteItem {
 		routeConsumer := item.Consumer
 		routeProvider := item.Provider

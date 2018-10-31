@@ -53,14 +53,14 @@ func (f *ServiceFinder) RegisterServiceWithAddr(addr string, version string) err
 	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
 	}
-	log.Log.Debug("RegisterServiceWithAddr : addr-> ",addr," version->",version)
+	log.Log.Debug("RegisterServiceWithAddr : addr-> ", addr, " version->", version)
 	return f.registerService(addr, version)
 }
 func (f *ServiceFinder) RegisterService(version string) error {
 	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
 	}
-	log.Log.Debug("RegisterServiceWithAddr : version->",version)
+	log.Log.Debug("RegisterServiceWithAddr : version->", version)
 	return f.registerService(f.config.MeteData.Address, version)
 }
 func (f *ServiceFinder) UnRegisterService(version string) error {
@@ -100,20 +100,19 @@ func (f *ServiceFinder) UseService(serviceItems []common.ServiceSubscribeItem) (
 		log.Log.Info(" useservice:", servicePath)
 		serviceList[serviceId], err = f.getService(servicePath, item)
 		//存入缓存文件
-		if serviceList[serviceId] == nil || serviceList[serviceId].ProviderList==nil || len(serviceList[serviceId].ProviderList)==0{
+		if serviceList[serviceId] == nil || serviceList[serviceId].ProviderList == nil || len(serviceList[serviceId].ProviderList) == 0 {
 			log.Log.Debug("the service is null")
 			service, err := GetServiceFromCache(f.config.CachePath, item)
-			if err != nil || service==nil{
+			if err != nil || service == nil {
 				log.Log.Info("从缓存中获取该服务失败，服务为：", serviceId)
 				f.subscribedService[serviceId] = &common.Service{ServiceName: item.ServiceName, ApiVersion: item.ApiVersion}
 				continue
 			} else {
-				var tempServer=service.Dumplication()
+				var tempServer = service.Dumplication()
 				serviceList[serviceId] = &tempServer
 				f.subscribedService[serviceId] = service
 			}
 		}
-
 
 		err = CacheService(f.config.CachePath, serviceList[serviceId])
 		if err != nil {
@@ -215,7 +214,7 @@ func (f *ServiceFinder) registerService(addr string, apiVersion string) error {
 	}
 	//目前不考虑目录不存在的情况
 	path := fmt.Sprintf("%s/%s/%s/provider/%s", f.rootPath, f.config.MeteData.Service, apiVersion, addr)
-	log.Log.Debug("registerService -> path -> ",path)
+	log.Log.Debug("registerService -> path -> ", path)
 	err := f.storageMgr.SetTempPath(path)
 	if err != nil {
 		log.Log.Info("服务注册失败", err)
@@ -411,7 +410,6 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 		serviceZkData.Config = &common.ServiceConfig{JsonConfig: string(fData)}
 	}
 
-
 	//获取route数据
 	routeData, err := f.storageMgr.GetData(routePath)
 	if err != nil {
@@ -429,8 +427,10 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 		_, fData, err := common.DecodeValue(routeData)
 		if err != nil {
 			log.Log.Info("解析路由数据出错", err)
+			serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
+		}else{
+			serviceZkData.Route = route.ParseRouteData(fData)
 		}
-		serviceZkData.Route = route.ParseRouteData(fData)
 		//使用route进行过滤数据
 		service.ProviderList = route.FilterServiceByRouteData(serviceZkData.Route, f.config.MeteData.Address, service.ProviderList)
 	}
@@ -525,10 +525,12 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 		_, fData, err := common.DecodeValue(routeData)
 		if err != nil {
 			log.Log.Info("解析路由数据出错", err)
+			serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
+		} else {
+			serviceZkData.Route = route.ParseRouteData(fData)
 		}
-		serviceZkData.Route = route.ParseRouteData(fData)
-		//使用route进行过滤数据
 		service.ProviderList = route.FilterServiceByRouteData(serviceZkData.Route, f.config.MeteData.Address, service.ProviderList)
+
 	}
 
 	return service, nil
