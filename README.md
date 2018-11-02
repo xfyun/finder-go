@@ -30,7 +30,7 @@ f, err := finder.NewFinderWithLogger(config, nil)
 3. 使用接口
 
 ```
-//实现handler接口 订阅服务 返回的map的key是ServiceName + "_" + ApiVersion
+//实现handler接口 订阅服务 返回的map的key是ServiceName + "_" + ApiVersion。 vlaue是Service实例，主要取ProviderList。代表当前服务的提供者列表
 serviceList, err := f.ServiceFinder.UseAndSubscribeServic(subscri, handler)
 
 ```
