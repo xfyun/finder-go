@@ -13,11 +13,11 @@ config := common.BootConfig{
 		CacheConfig:   true,
 		ExpireTimeout: 5 * time.Second,
 		MeteData: &common.ServiceMeteData{
-			Project: conf.Project,
-			Group:   conf.Group,
-			Service: conf.Service,
-			Version: conf.Version,
-			Address: conf.Address,
+			Project: "test",
+			Group:   "test",
+			Service: "test",
+			Version: "1.0.1",
+			Address: "127.0.0.1:1221",
 		},
 	}
 ```
