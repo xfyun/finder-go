@@ -1,5 +1,6 @@
 # finder-go 2.0.0
 1. 创建config
+
 ```
 config := common.BootConfig{
 		//companion地址
@@ -21,11 +22,13 @@ config := common.BootConfig{
 	}
 ```
 2. 创建finder
+
 ```
 f, err := finder.NewFinderWithLogger(config, nil)
 
 ```
 3. 使用接口
+
 ```
 //实现handler接口 订阅服务 返回的map的key是ServiceName + "_" + ApiVersion
 serviceList, err := f.ServiceFinder.UseAndSubscribeServic(subscri, handler)

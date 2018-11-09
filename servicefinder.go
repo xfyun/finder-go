@@ -134,7 +134,6 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 
 	f.locker.Lock()
 	defer f.locker.Unlock()
-	log.Log.Debug("call UseAndSubscribeService  ")
 	f.handler = handler
 	serviceList := make(map[string]common.Service)
 
