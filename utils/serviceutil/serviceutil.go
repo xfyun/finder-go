@@ -16,13 +16,16 @@ func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
 		return nil
 	}
 	log.Println("[ ParseServiceConfigData ] configJson: ",configJson,"  data: ",string(data))
-	sdkConfig := configJson["sdk"].(map[string]interface{})
 
-	if isValid, ok := sdkConfig["is_valid"].(bool); ok {
-		serviceInstanceConfig.IsValid = isValid
-	} else {
-		serviceInstanceConfig.IsValid = true
+	if sdkConfig ,ok:= configJson["sdk"].(map[string]interface{});ok {
+		if isValid, ok := sdkConfig["is_valid"].(bool); ok {
+			serviceInstanceConfig.IsValid = isValid
+		} else {
+			serviceInstanceConfig.IsValid = true
+		}
 	}
+
+
 	delete(configJson, "sdk")
 	userData, _ := json.Marshal(configJson)
 	serviceInstanceConfig.UserConfig = string(userData)

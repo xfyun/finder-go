@@ -7,9 +7,9 @@ import (
 	"time"
 
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/log"
 	"git.xfyun.cn/AIaaS/finder-go/storage/common"
 	"github.com/cooleric/go-zookeeper/zk"
-	"git.xfyun.cn/AIaaS/finder-go/log"
 )
 
 //zk超时时间设置
@@ -184,6 +184,7 @@ func watchEvent(zm *ZkManager, event <-chan zk.Event, callback common.ChangedCal
 			log.Log.Info("<-event; !ok")
 			return
 		}
+		defer recoverFunc()
 		log.Log.Debug("收到事件通知",e)
 		callback.Process(e.Path, getNodeFromPath(e.Path))
 		break
@@ -213,6 +214,7 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 					log.Log.Info("路径是: ", path, " 回调有误  ", e)
 					return
 				}
+				defer recoverFunc()
 				log.Log.Debug("收到通知，", e)
 				if e.Type == zk.EventNodeDeleted {
 					//callback.ChildDeleteCallBack(e.Path)
@@ -261,7 +263,11 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 	nodes, _, err := zm.conn.Children(path)
 	return nodes, err
 }
-
+func recoverFunc(){
+	if err:=recover();err!=nil{
+		log.Log.Debug("收到通知 ：[ GetChildrenWithWatch ]  ", err)
+	}
+}
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
 	data, _, event, err := zm.conn.ChildrenW(path)
 	if err != nil {
@@ -272,6 +278,7 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 		for {
 			select {
 			case e, ok := <-event:
+				defer recoverFunc()
 				if !ok {
 					log.Log.Info("[ GetChildrenWithWatch ]  <-event; !ok")
 					return

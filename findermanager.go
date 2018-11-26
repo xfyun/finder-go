@@ -25,7 +25,7 @@ var (
 	hc *http.Client
 )
 
-const VERSION = "2.0.11"
+const VERSION = "2.0.12"
 
 type zkAddrChangeCallback struct {
 	path string
@@ -310,6 +310,7 @@ func watchStorageInfo(fm *FinderManager) {
 	if fm.storageMgr != nil {
 		tempPathMap = fm.storageMgr.GetTempPaths()
 	}
+	var storageChange bool
 	for {
 		select {
 		case <-ticker.C:
@@ -317,9 +318,7 @@ func watchStorageInfo(fm *FinderManager) {
 			getStorageConfig(fm.config)
 			storageMgr, storageCfg, err := initStorageMgr(fm.config)
 			if err != nil {
-				fm.storageMgr = nil
-				fm.ConfigFinder.storageMgr = nil
-				fm.ServiceFinder.storageMgr = nil
+				storageChange = false
 				log.Log.Info("初始化zk信息出错，重新尝试  ", err)
 			} else {
 				fm.storageMgr = storageMgr
@@ -331,7 +330,7 @@ func watchStorageInfo(fm *FinderManager) {
 				fm.ServiceFinder.rootPath = storageCfg.ServiceRootPath
 			}
 		}
-		if fm.storageMgr != nil {
+		if storageChange {
 
 			go watchZkInfo(fm)
 			fm.storageMgr.SetTempPaths(tempPathMap)
@@ -354,17 +353,16 @@ func watchStorageInfo(fm *FinderManager) {
 func ReGetConfigInfo(fm *FinderManager) {
 	handler := fm.ConfigFinder.handler
 	var fileSubscribe []string
-	for _,file :=range fm.ConfigFinder.fileSubscribe{
-		fileSubscribe=append(fileSubscribe,file)
+	for _, file := range fm.ConfigFinder.fileSubscribe {
+		fileSubscribe = append(fileSubscribe, file)
 	}
-	fm.ConfigFinder.fileSubscribe=[]string{}
-	fm.ConfigFinder.grayConfig.Range( func(key, value interface{}) bool{
+	fm.ConfigFinder.fileSubscribe = []string{}
+	fm.ConfigFinder.grayConfig.Range(func(key, value interface{}) bool {
 		fm.ConfigFinder.grayConfig.Delete(key)
 		return true
 	})
 
-
-	fm.ConfigFinder.usedConfig.Range( func(key, value interface{}) bool{
+	fm.ConfigFinder.usedConfig.Range(func(key, value interface{}) bool {
 		fm.ConfigFinder.usedConfig.Delete(key)
 		return true
 	})

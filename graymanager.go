@@ -81,5 +81,5 @@ func GetGrayConfigData(f *ConfigFinder, path string, callback storageCommon.Chan
 		}
 		return nil
 	}
-	return nil
+	return err
 }
