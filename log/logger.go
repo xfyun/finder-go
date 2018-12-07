@@ -1,6 +1,9 @@
 package log
 
-import "log"
+import (
+	"log"
+	"os"
+)
 
 var Log Logger
 type Logger interface {
@@ -11,7 +14,15 @@ type Logger interface {
 	Debugf(fmt string, v ...interface{})
 	Errorf(fmt string, v ...interface{})
 }
+func init(){
+	logFile,err:=os.OpenFile("findergo.log",os.O_CREATE|os.O_WRONLY|os.O_APPEND,0666)
+	if err!=nil{
+		log.Fatalln("打开日志文件失败：",err)
+	}
+	log.SetPrefix("【findergo】")
+	log.SetOutput(logFile)
 
+}
 type DefaultLogger struct {
 }
 

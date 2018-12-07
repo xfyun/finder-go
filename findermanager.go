@@ -161,13 +161,11 @@ func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error)
 		Name:   "zookeeper",
 		Params: make(map[string]string),
 	}
-
 	storageConfig.Params["servers"] = strings.Join(info.Addr, ",")
 	storageConfig.Params["session_timeout"] = strconv.FormatInt(int64(config.ExpireTimeout/time.Millisecond), 10)
 	storageConfig.Params["zk_node_path"] = info.ZkNodePath
 	storageConfig.ConfigRootPath = info.ConfigRootPath
 	storageConfig.ServiceRootPath = info.ServiceRootPath
-
 	return storageConfig, nil
 }
 
@@ -321,6 +319,7 @@ func watchStorageInfo(fm *FinderManager) {
 				storageChange = false
 				log.Log.Info("初始化zk信息出错，重新尝试  ", err)
 			} else {
+				storageChange=true
 				fm.storageMgr = storageMgr
 				fm.ConfigFinder.storageMgr = storageMgr
 				fm.ConfigFinder.rootPath = storageCfg.ConfigRootPath
