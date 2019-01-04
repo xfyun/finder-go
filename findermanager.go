@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	companion "git.xfyun.cn/AIaaS/finder-go/companion"
@@ -201,7 +202,7 @@ func newFinder(config common.BootConfig) (*FinderManager, error) {
 	if stringutil.IsNullOrEmpty(config.MeteData.Address) {
 		localIP, err := netutil.GetLocalIP(config.CompanionUrl)
 		if err != nil {
-			log.Log.Errorf("%s",err)
+			log.Log.Errorf("%s", err)
 			return nil, err
 		}
 		config.MeteData.Address = localIP
@@ -239,7 +240,16 @@ func newFinder(config common.BootConfig) (*FinderManager, error) {
 }
 
 func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderManager, error) {
-	if logger == nil {
+	if func(obj interface{}) bool {
+		if obj == nil {
+			return true
+		}
+		type eface struct {
+			rtype unsafe.Pointer
+			data  unsafe.Pointer
+		}
+		return (*eface)(unsafe.Pointer(&obj)).data == nil
+	}(logger) {
 		log.Log = log.NewDefaultLogger()
 	} else {
 		log.Log = logger
@@ -253,7 +263,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	if stringutil.IsNullOrEmpty(config.MeteData.Address) {
 		localIP, err := netutil.GetLocalIP(config.CompanionUrl)
 		if err != nil {
-			log.Log.Errorf("%s",err)
+			log.Log.Errorf("%s", err)
 			return nil, err
 		}
 		config.MeteData.Address = localIP
@@ -299,7 +309,7 @@ func manitorStorage(fm *FinderManager) {
 	for {
 		select {
 		case <-ticker.C:
-			if fm.storageMgr==nil{
+			if fm.storageMgr == nil {
 				continue
 			}
 			storageConfig, err := getStorageConfig(fm.config)
@@ -307,10 +317,10 @@ func manitorStorage(fm *FinderManager) {
 				log.Log.Errorf("[ manitorStorage ] getStorageConfig: %s", err)
 				continue
 			}
-			if storageConfig.Params["servers"]==fm.storageMgr.GetServerAddr(){
+			if storageConfig.Params["servers"] == fm.storageMgr.GetServerAddr() {
 				continue
 			}
-			log.Log.Infof("zk addr is change %s,%s,%s", storageConfig.Params["servers"], " ----> ",fm.storageMgr.GetServerAddr())
+			log.Log.Infof("zk addr is change %s,%s,%s", storageConfig.Params["servers"], " ----> ", fm.storageMgr.GetServerAddr())
 			go watchStorageInfo(fm)
 		}
 	}
@@ -343,7 +353,7 @@ func watchStorageInfo(fm *FinderManager) {
 				log.Log.Infof("初始化zk信息出错，重新尝试 %s ", err)
 			} else {
 				storageChange = true
-				if fm.storageMgr !=nil {
+				if fm.storageMgr != nil {
 					fm.storageMgr.Destroy()
 				}
 
