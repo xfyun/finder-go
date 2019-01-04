@@ -56,7 +56,7 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 	}
 	configFiles := make(map[string]*common.Config)
 	for _, n := range name {
-		if c, ok := f.usedConfig.Load(name); !ok {
+		if c, ok := f.usedConfig.Load(n); !ok {
 			//先获取gray的数据，用于判断订阅的配置是否在灰度组中
 			basePath := f.rootPath
 			if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {

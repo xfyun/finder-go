@@ -492,4 +492,12 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 	for _, c := range configFiles {
 		fmt.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
 	}
+
+	configFiles, err = f.ConfigFinder.UseConfig(name)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, c := range configFiles {
+		fmt.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
+	}
 }

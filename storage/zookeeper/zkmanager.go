@@ -33,7 +33,9 @@ func NewZkManager(params map[string]string) (*ZkManager, error) {
 	}
 	return zm, nil
 }
-
+func (zm *ZkManager) GetServerAddr()string {
+	return zm.params["servers"]
+}
 func (zm *ZkManager) GetTempPaths() sync.Map {
 	return zm.tempPaths
 }

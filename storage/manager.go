@@ -30,6 +30,7 @@ type StorageManager interface {
 	RecoverTempPaths()
 	GetTempPaths()sync.Map
 	SetTempPaths(sync.Map)
+	GetServerAddr()string
 }
 
 func NewManager(config *StorageConfig) (StorageManager, error) {

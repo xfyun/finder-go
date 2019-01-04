@@ -280,6 +280,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 		log.Log.Info("初始化zk信息出错，开启新的goroutine 去不断尝试")
 		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
 		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
+		go manitorStorage(fm)
 		go watchStorageInfo(fm)
 		return fm, nil
 	} else {
@@ -287,10 +288,33 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 	}
 	//创建一个goroutine来执行监听zk地址的数据
+	go manitorStorage(fm)
 	go watchZkInfo(fm)
 	return fm, nil
 }
-
+func manitorStorage(fm *FinderManager) {
+	log.Log.Error("[ manitorStorage ] ")
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if fm.storageMgr==nil{
+				continue
+			}
+			storageConfig, err := getStorageConfig(fm.config)
+			if err != nil {
+				log.Log.Error("[ manitorStorage ] getStorageConfig:", err)
+				continue
+			}
+			if storageConfig.Params["servers"]==fm.storageMgr.GetServerAddr(){
+				continue
+			}
+			log.Log.Info("zk addr is change ", storageConfig.Params["servers"], " ----> ",fm.storageMgr.GetServerAddr())
+			go watchStorageInfo(fm)
+		}
+	}
+}
 func watchZkInfo(fm *FinderManager) {
 
 	zkNodePath, err := fm.storageMgr.GetZkNodePath()
@@ -313,13 +337,16 @@ func watchStorageInfo(fm *FinderManager) {
 		select {
 		case <-ticker.C:
 
-			getStorageConfig(fm.config)
 			storageMgr, storageCfg, err := initStorageMgr(fm.config)
 			if err != nil {
 				storageChange = false
 				log.Log.Info("初始化zk信息出错，重新尝试  ", err)
 			} else {
-				storageChange=true
+				storageChange = true
+				if fm.storageMgr !=nil {
+					fm.storageMgr.Destroy()
+				}
+
 				fm.storageMgr = storageMgr
 				fm.ConfigFinder.storageMgr = storageMgr
 				fm.ConfigFinder.rootPath = storageCfg.ConfigRootPath
