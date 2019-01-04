@@ -18,12 +18,12 @@ func ParseGrayConfigData(serverId string, data []byte) (map[string]string, bool)
 	_, fData, err := common.DecodeValue(data)
 
 	if err != nil {
-		log.Log.Info("  [getGrayData] DecodeValue 出错 ", err)
+		log.Log.Infof("  [getGrayData] DecodeValue 出错 %s", err)
 		return nil, false
 	}
 	var grayConfigMaps []map[string]interface{}
 	if err := json.Unmarshal(fData, &grayConfigMaps); err != nil {
-		log.Log.Info("  [getGrayData] 使用json反序列化数据 ", fData, " 出错 ", err)
+		log.Log.Infof("  [getGrayData] 使用json反序列化数据 %s %s %s", fData, " 出错 ", err)
 		return nil, false
 	}
 	//如何解析数据,会不会出现一个server在两个灰度组的情况
@@ -60,7 +60,7 @@ func GetGrayConfigData(f *ConfigFinder, path string, callback storageCommon.Chan
 			//创建节点
 			err:=f.storageMgr.SetPath(path)
 			if err != nil {
-				log.Log.Info(" [getGrayData] 根据 path:", path, "创建节点出错：", err)
+				log.Log.Infof(" [getGrayData] 根据 path: %s %s %s", path, "创建节点出错：", err)
 			}
 			if callback != nil {
 				//监听对应的节点

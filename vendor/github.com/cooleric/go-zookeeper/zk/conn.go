@@ -348,13 +348,13 @@ func (c *Conn) setTimeouts(sessionTimeoutMs int32) {
 }
 
 func (c *Conn) setState(state State) {
-	log.Println("setState:", state)
+	c.logger.Printf("setState:", state)
 	atomic.StoreInt32((*int32)(&c.state), int32(state))
 	c.sendEvent(Event{Type: EventSession, State: state, Server: c.Server()})
 }
 
 func (c *Conn) sendEvent(evt Event) {
-	log.Println("sendEvent:", evt)
+	c.logger.Printf("sendEvent:", evt)
 	if c.eventCallback != nil {
 		c.eventCallback(evt)
 	}
@@ -463,7 +463,7 @@ func (c *Conn) sendRequest(
 func (c *Conn) loop() {
 	for {
 		if err := c.connect(); err != nil {
-			log.Println("c.Close() was called")
+			c.logger.Printf("c.Close() was called")
 			// c.Close() was called
 			return
 		}
@@ -493,7 +493,7 @@ func (c *Conn) loop() {
 				if err != nil || c.logInfo {
 					c.logger.Printf("Send loop terminated: err=%v", err)
 				}
-				log.Println("causes recv loop to EOF/exit")
+				c.logger.Printf("causes recv loop to EOF/exit")
 				c.conn.Close() // causes recv loop to EOF/exit
 				wg.Done()
 			}()
@@ -522,7 +522,7 @@ func (c *Conn) loop() {
 		select {
 		case <-c.shouldQuit:
 			c.flushRequests(ErrClosing)
-			log.Println("c.shouldQuit:true")
+			c.logger.Printf("c.shouldQuit:true")
 			return
 		default:
 		}

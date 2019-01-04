@@ -36,7 +36,7 @@ type StorageManager interface {
 func NewManager(config *StorageConfig) (StorageManager, error) {
 	switch config.Name {
 	case "zookeeper":
-		log.Log.Debug("called NewZkManager")
+		log.Log.Debugf("called NewZkManager")
 		return zookeeper.NewZkManager(config.Params)
 	}
 	return nil, nil

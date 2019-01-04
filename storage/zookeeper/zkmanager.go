@@ -67,7 +67,7 @@ func (zm *ZkManager) Init() error {
 		return err
 	}
 	//新建zookeeper连接
-	conn, _, err := zk.Connect(servers, time.Duration(sessionTimeout)*time.Millisecond, zk.WithEventCallback(zm.eventCallback))
+	conn, _, err := zk.Connect(servers, time.Duration(sessionTimeout)*time.Millisecond, zk.WithEventCallback(zm.eventCallback),zk.WithLogger(log.Log))
 	if err != nil {
 		return err
 	}
@@ -116,11 +116,11 @@ func (zm *ZkManager) RecoverTempPaths() {
 		if value == nil {
 			//如果path上的数据为空。则直接设置path
 			for {
-				log.Log.Debug("恢复临时路径",key.(string))
+				log.Log.Debugf("恢复临时路径 %s ",key.(string))
 				err = zm.SetTempPath(key.(string))
 				//TODO 如果在恢复临时路径的时候，挂了
 				if err != nil {
-					log.Log.Error("caught an error:zm.SetTempPath in recoverTempPaths:", err)
+					log.Log.Errorf("caught an error:zm.SetTempPath in recoverTempPaths: %s ", err)
 					continue
 				}
 				break
@@ -128,11 +128,11 @@ func (zm *ZkManager) RecoverTempPaths() {
 		} else {
 			//如果path上的数据不为空。则直接设置path和对应的数据
 			for {
-				log.Log.Debug("恢复临时路径",key.(string))
+				log.Log.Debugf("恢复临时路径 %s ",key.(string))
 
 				err = zm.SetTempPathWithData(key.(string), value.([]byte))
 				if err != nil {
-					log.Log.Error("caught an error:zm.SetTempPathWithData in recoverTempPaths:", err)
+					log.Log.Errorf("caught an error:zm.SetTempPathWithData in recoverTempPaths: %s", err)
 					continue
 				}
 
@@ -145,17 +145,17 @@ func (zm *ZkManager) RecoverTempPaths() {
 }
 
 func (zm *ZkManager) Destroy() error {
-	log.Log.Debug("exit send.")
+	log.Log.Debugf("exit send.")
 	zm.params = nil
 
 	zm.conn.Close()
-	log.Log.Debug("close end.")
+	log.Log.Debugf ("close end.")
 	go func() {
-		log.Log.Debug("send exit sigterm.")
+		log.Log.Debugf("send exit sigterm.")
 		zm.exit <- true
 	}()
 
-	log.Log.Debug("destroied")
+	log.Log.Debugf("destroied")
 	return nil
 }
 
@@ -183,20 +183,20 @@ func watchEvent(zm *ZkManager, event <-chan zk.Event, callback common.ChangedCal
 	select {
 	case e, ok := <-event:
 		if !ok {
-			log.Log.Info("<-event; !ok")
+			log.Log.Infof("<-event; !ok")
 			return
 		}
 		defer recoverFunc()
-		log.Log.Debug("收到事件通知",e)
+		log.Log.Debugf("收到事件通知 %s",e)
 		callback.Process(e.Path, getNodeFromPath(e.Path))
 		break
 	case exit, ok := <-zm.exit:
 		if !ok {
-			log.Log.Info("<-exit; !ok")
+			log.Log.Infof("<-exit; !ok")
 			return
 		}
 		if exit {
-			log.Log.Info("received exit sigterm.")
+			log.Log.Infof("received exit sigterm.")
 			return
 		}
 	}
@@ -205,7 +205,7 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 
 	data, _, event, err := zm.conn.GetW(path)
 	if err != nil {
-		log.Log.Info("[ GetDataWithWatch ]获取数据出错", err)
+		log.Log.Infof("[ GetDataWithWatch ]获取数据出错  %s", err)
 	}
 	//返回的event
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
@@ -213,11 +213,11 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 			select {
 			case e, ok := <-event:
 				if !ok {
-					log.Log.Info("路径是: ", path, " 回调有误  ", e)
+					log.Log.Infof("路径是: %s %s %s", path, " 回调有误  ", e)
 					return
 				}
 				defer recoverFunc()
-				log.Log.Debug("收到通知，", e)
+				log.Log.Debugf("收到通知，%s", e)
 				if e.Type == zk.EventNodeDeleted {
 					//callback.ChildDeleteCallBack(e.Path)
 					return
@@ -225,14 +225,14 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 				if e.State != zk.StateConnected {
 					return
 				}
-				log.Log.Debug("处理通知，", e)
+				log.Log.Debugf("处理通知，%s", e)
 				var retryCount int32
 				for {
 					// 这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
 
 					data, _, event, err = zm.conn.GetW(path)
 					if err != nil {
-						log.Log.Debug("[ zkWatcher] 从", path, "获取数据失败 ", err)
+						log.Log.Debugf("[ zkWatcher] 从 %s %s %s", path, "获取数据失败 ", err)
 						retryCount++
 						if retryCount > 3 {
 							time.Sleep(1 * time.Second)
@@ -247,11 +247,11 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 				}
 			case exit, ok := <-zm.exit:
 				if !ok {
-					log.Log.Info("<-exit; !ok")
+					log.Log.Infof("<-exit; !ok")
 					return
 				}
 				if exit {
-					log.Log.Info("received exit sigterm.")
+					log.Log.Infof("received exit sigterm.")
 					return
 				}
 			}
@@ -267,7 +267,7 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 }
 func recoverFunc(){
 	if err:=recover();err!=nil{
-		log.Log.Debug("收到通知 ：[ GetChildrenWithWatch ]  ", err)
+		log.Log.Debugf("收到通知 ：[ GetChildrenWithWatch ]  %s", err)
 	}
 }
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
@@ -282,18 +282,18 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 			case e, ok := <-event:
 				defer recoverFunc()
 				if !ok {
-					log.Log.Info("[ GetChildrenWithWatch ]  <-event; !ok")
+					log.Log.Infof("[ GetChildrenWithWatch ]  <-event; !ok")
 					return
 				}
-				log.Log.Debug("收到通知 ：[ GetChildrenWithWatch ]  ", event)
+				log.Log.Debugf("收到通知 ：[ GetChildrenWithWatch ]  %s", event)
 				if e.State != zk.StateConnected {
-					log.Log.Debug("[ GetChildrenWithWatch ]  e.State != zk.StateConnected")
+					log.Log.Debugf("[ GetChildrenWithWatch ]  e.State != zk.StateConnected")
 					return
 				}
 				for {
 					data, _, event, err = zm.conn.ChildrenW(path)
 					if err != nil {
-						log.Log.Debug("[ GetChildrenWithWatch ] 再次获取字节点信息出错 ", err)
+						log.Log.Debugf("[ GetChildrenWithWatch ] 再次获取字节点信息出错 %s", err)
 						continue
 					} else {
 						callback.ChildrenChangedCallback(e.Path, getNodeFromPath(e.Path), data)
@@ -303,11 +303,11 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 				}
 			case exit, ok := <-zm.exit:
 				if !ok {
-					log.Log.Info("<-exit; !ok")
+					log.Log.Infof("<-exit; !ok")
 					return
 				}
 				if exit {
-					log.Log.Info("received exit sigterm.")
+					log.Log.Infof("received exit sigterm.")
 					return
 				}
 			}

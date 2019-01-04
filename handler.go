@@ -41,7 +41,7 @@ func NewServiceChangedCallback(serviceItem common.ServiceSubscribeItem, watchTyp
 func (cb *ServiceChangedCallback) DataChangedCallback(path string, node string, data []byte) {
 	cb.serviceFinder.locker.Lock()
 	defer cb.serviceFinder.locker.Unlock()
-	log.Log.Info("收到回调 ", path, "  type:", cb.eventType)
+	log.Log.Infof("收到回调 %s %s %s", path, "  type:", cb.eventType)
 	if cb.eventType == SERVICE_CONFIG_CHANGED {
 		cb.OnServiceConfigChanged(cb.serviceItem, data)
 	} else if cb.eventType == SERVICE_INSTANCE_CONFIG_CHANGED {
@@ -128,7 +128,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	}
 
 	if err != nil {
-		log.Log.Error("解码value出错 ", err)
+		log.Log.Errorf("解码value出错 %s", err)
 		f.LoadStatus = -1
 		go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 		return
@@ -140,7 +140,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 	prevConfig := cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config
 
 	if prevConfig.IsValid == serviceConf.IsValid && strings.Compare(prevConfig.UserConfig, serviceConf.UserConfig) == 0 {
-		log.Log.Info("服务实例配置信息没有变化")
+		log.Log.Infof("服务实例配置信息没有变化")
 		return
 	}
 	cb.serviceFinder.serviceZkData[serviceId].ProviderList[addr].Config = serviceConf
@@ -174,7 +174,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceConfigChanged(service common.
 				if strings.Compare(provider, addr) == 0 && strings.Compare(route.Only, "Y") == 0 {
 					shouldAdd = false
 					//在路由组中，且该路由组的only为 YES。。所以跳过该通知
-					log.Log.Info("该服务提供者在路由组中，且only为yes.所以跳过")
+					log.Log.Infof("该服务提供者在路由组中，且only为yes.所以跳过")
 				}
 			}
 		}
@@ -206,7 +206,7 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 	}
 	//
 	if err != nil {
-		log.Log.Error("pushID：", pushID, " 从data中反序列化数据出错 ", err)
+		log.Log.Errorf("pushID：%s %s %s", pushID, " 从data中反序列化数据出错 ", err)
 		f.LoadStatus = -1
 		go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 
@@ -217,7 +217,7 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 	go pushServiceFeedback(cb.serviceFinder.config.CompanionUrl, f)
 	prevConfig := cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config.JsonConfig
 	if strings.Compare(prevConfig, string(configData)) == 0 {
-		log.Log.Info("服务配置信息没有变化。")
+		log.Log.Infof("服务配置信息没有变化。")
 
 		return
 	}
@@ -269,15 +269,15 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 
 	serviceId := serviceItem.ServiceName + "_" + serviceItem.ApiVersion
 	providerMap := cb.serviceFinder.serviceZkData[serviceId].ProviderList
-	log.Log.Debug("当前服务提供者列表：",addrList)
-	log.Log.Debug("当前缓存中的提供者列表为：",cb.serviceFinder.serviceZkData[serviceId].ProviderList)
+	log.Log.Debugf("当前服务提供者列表：%s",addrList)
+	log.Log.Debugf("当前缓存中的提供者列表为：%s %s",cb.serviceFinder.serviceZkData[serviceId].ProviderList)
 
 	// 当一个节点的回话失效的时候，其所对应的全部节点都会失效。一下子会有多个节点改变
 	event := make([]*common.ServiceInstanceChangedEvent, 0)
 
 	//获取多的提供者实例
 	addProviderList := getAddProviderAddrList(providerMap, addrList)
-	log.Log.Debug("新增的节点为：",addProviderList)
+	log.Log.Debugf("新增的节点为：%s",addProviderList)
 	if len(addProviderList) != 0 {
 		//有新增的服务提供者
 		rootPath := cb.serviceFinder.rootPath + "/" + serviceItem.ServiceName + "/" + serviceItem.ApiVersion + "/provider"
@@ -294,7 +294,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 		}
 		resultList := route.FilterServiceByRouteData(cb.serviceFinder.serviceZkData[serviceId].Route, cb.serviceFinder.config.MeteData.Address, filterInstanceList)
 		if len(resultList) == 0 {
-			log.Log.Info("新增的实例，被路由给过滤了")
+			log.Log.Infof("新增的实例，被路由给过滤了")
 
 		} else {
 			cb.serviceFinder.subscribedService[serviceId].ProviderList = append(cb.serviceFinder.subscribedService[serviceId].ProviderList, resultList...)
@@ -304,7 +304,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 	}
 	//看是否有服务提供者减小
 	removeProviderList := getRemoveProviderAddrList(providerMap, addrList)
-	log.Log.Debug("删除的节点为：",removeProviderList)
+	log.Log.Debugf("删除的节点为：%s",removeProviderList)
 
 	changeProviderList := make([]*common.ServiceInstance, 0)
 	if len(removeProviderList) != 0 {
@@ -329,7 +329,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 	}
 	if len(event) != 0 {
 		//通知
-		log.Log.Debug("进行事件通知",event)
+		log.Log.Debugf("进行事件通知 %s",event)
 		cb.uh.OnServiceInstanceChanged(serviceItem.ServiceName, serviceItem.ApiVersion, event)
 	}
 	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[serviceId])
@@ -381,7 +381,7 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 		//如果是gray节点数据改变
 		data, err := cb.sm.GetDataWithWatchV2(path, cb)
 		if err != nil {
-			log.Log.Info(" [ Process] 从 ", path, " 获取数据失败")
+			log.Log.Infof(" [ Process] 从 %s  %s", path, " 获取数据失败")
 			return
 		}
 		cb.OnGrayConfigChanged(cb.name, data)
@@ -394,11 +394,11 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 	}
 
 	if len(currentGrayGroupId) == 0 && strings.Contains(path, "/gray/") {
-		log.Log.Info("当前不在灰度组，但是通知是属于灰度组的，不进行处理")
+		log.Log.Infof("当前不在灰度组，但是通知是属于灰度组的，不进行处理")
 		return
 	}
 	if len(currentGrayGroupId) != 0 && !strings.Contains(path, "/"+currentGrayGroupId) {
-		log.Log.Info("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
+		log.Log.Infof("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
 		return
 	}
 	var isSubscribeFile bool
@@ -408,13 +408,13 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 		}
 	}
 	if !isSubscribeFile {
-		log.Log.Info("不是订阅的文件，不进行推送")
+		log.Log.Infof("不是订阅的文件，不进行推送")
 		return
 	}
 
 	data, err := cb.sm.GetDataWithWatchV2(path, cb)
 	if err != nil {
-		log.Log.Info(" [ Process] 从 ", path, " 获取数据失败")
+		log.Log.Infof(" [ Process] 从 %s,%s", path, " 获取数据失败")
 		return
 	}
 	cb.OnConfigFileChanged(cb.name, data, path)
@@ -466,12 +466,12 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 				data, err := cb.sm.GetDataWithWatchV2(basePath, &callback)
 				if err != nil {
 					if err.Error() == common.ZK_NODE_DOSE_NOT_EXIST {
-						log.Log.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
+						log.Log.Infof(" [OnGrayConfigChanged] 重新从路径 %s ,%s ,%s", basePath, " 获取配置失败 ", err)
 						var errInfo = common.ConfigErrInfo{FileName: fileName, ErrCode: 0, ErrMsg: "配置文件不存在"}
 						cb.uh.OnError(errInfo)
 						return
 					}
-					log.Log.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
+					log.Log.Infof(" [OnGrayConfigChanged] 重新从路径 %s ,%s ,%s", basePath, " 获取配置失败 ", err)
 					return
 				}
 				cb.OnConfigFileChanged(fileName, data, basePath)
@@ -493,7 +493,7 @@ func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
 						cb.uh.OnError(errInfo)
 						return
 					}
-					log.Log.Info(" [OnGrayConfigChanged] 重新从路径 ", basePath, " 获取配置失败 ", err)
+					log.Log.Infof(" [OnGrayConfigChanged] 重新从路径 %s ,%s ,%s", basePath, " 获取配置失败 ", err)
 					return
 				}
 				cb.OnConfigFileChanged(fileName, data, basePath)

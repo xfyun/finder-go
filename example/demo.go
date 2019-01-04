@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"net"
 	"net/http"
 	"os"
@@ -116,7 +117,20 @@ func newServiceFinder(conf TestConfig) {
 		},
 	}
 
-	f, err := finder.NewFinderWithLogger(config, nil)
+	loggerConfig := zap.NewProductionConfig()
+	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
+	//TODO 日志目录
+	loggerConfig.OutputPaths = []string{"stdout"}
+	loggerConfig.EncoderConfig.TimeKey="time"
+
+	logger, _ := loggerConfig.Build()
+	Logger := logger.Sugar()
+	zkLog :=ZkLogger{
+		zap:Logger,
+	}
+	zkLog.Printf("dddd")
+	//创建finder。
+	f, err := finder.NewFinderWithLogger(config, &zkLog)
 
 
 	//init
@@ -156,7 +170,19 @@ func newProviderFinder(conf TestConfig) {
 		},
 	}
 
-	f, err := finder.NewFinderWithLogger(config, nil)
+	loggerConfig := zap.NewProductionConfig()
+	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
+	//TODO 日志目录
+	loggerConfig.OutputPaths = []string{"stdout"}
+	loggerConfig.EncoderConfig.TimeKey="time"
+
+	logger, _ := loggerConfig.Build()
+	Logger := logger.Sugar()
+	zkLog :=ZkLogger{
+		zap:Logger,
+	}
+	//创建finder。
+	f, err := finder.NewFinderWithLogger(config, &zkLog)
 
 	if err != nil {
 		fmt.Println(err)
@@ -172,7 +198,21 @@ func testRegisterService(f *finder.FinderManager, addr string, apiVersion string
 	f.ServiceFinder.RegisterServiceWithAddr(addr, apiVersion)
 
 }
-
+type ZkLogger struct {
+	zap *zap.SugaredLogger
+}
+func (l *ZkLogger)Infof(fmt string,v ...interface{}){
+	l.zap.Infof(fmt,v)
+}
+func (l *ZkLogger)Debugf(fmt string,v ...interface{}){
+	l.zap.Infof(fmt,v)
+}
+func (l *ZkLogger)Errorf(fmt string,v ...interface{}){
+	l.zap.Infof(fmt,v)
+}
+func (l *ZkLogger)Printf(fmt string,v ...interface{}){
+	l.zap.Infof(fmt,v)
+}
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
 	if err != nil {
@@ -202,9 +242,19 @@ func newConfigFinder(conf TestConfig) {
 			Address: conf.Address,
 		},
 	}
+	loggerConfig := zap.NewProductionConfig()
+	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
+	//TODO 日志目录
+	loggerConfig.OutputPaths = []string{"stdout"}
+	loggerConfig.EncoderConfig.TimeKey="time"
 
+	logger, _ := loggerConfig.Build()
+	Logger := logger.Sugar()
+	zkLog :=ZkLogger{
+		zap:Logger,
+	}
 	//创建finder。
-	f, err := finder.NewFinderWithLogger(config, nil)
+	f, err := finder.NewFinderWithLogger(config, &zkLog)
 	if err != nil {
 		fmt.Println(err)
 	} else {

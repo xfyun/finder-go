@@ -60,7 +60,7 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 		err = errors.NewFinderError(errors.ZkInfoMissZkNodePath)
 		return nil, err
 	}
-	log.Log.Debug("zk_node_path ",r.Data["zk_node_path"])
+	log.Log.Debugf("zk_node_path %s",r.Data["zk_node_path"])
 	var zkAddr []string
 	if _, ok = r.Data["zk_addr"]; !ok {
 		err = errors.NewFinderError(errors.ZkInfoMissAddr)

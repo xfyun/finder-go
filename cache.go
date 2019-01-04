@@ -14,12 +14,12 @@ func CacheStorageInfo(cachePath string, zkInfo *common.StorageInfo) error {
 	cachePath = fmt.Sprintf("%s/storage_%s.findercache", cachePath, "info")
 	data, err := json.Marshal(zkInfo)
 	if err != nil {
-		log.Log.Error("CacheStorageInfo err:",err)
+		log.Log.Errorf("CacheStorageInfo err: %s",err)
 		return err
 	}
 	err = fileutil.WriteFile(cachePath, data)
 	if err != nil {
-		log.Log.Error("CacheStorageInfo err:",err)
+		log.Log.Errorf("CacheStorageInfo err: %s",err)
 
 		return err
 	}
@@ -32,14 +32,14 @@ func GetStorageInfoFromCache(cachePath string) (*common.StorageInfo, error) {
 
 	data, err := fileutil.ReadFile(cachePath)
 	if err != nil {
-		log.Log.Error("GetStorageInfoFromCache err:",err)
+		log.Log.Errorf("GetStorageInfoFromCache err: %s",err)
 
 		return nil, err
 	}
 	zkInfo := &common.StorageInfo{}
 	err = json.Unmarshal(data, zkInfo)
 	if err != nil {
-		log.Log.Error("GetStorageInfoFromCache err:",err)
+		log.Log.Errorf("GetStorageInfoFromCache err: %s",err)
 		return nil, err
 	}
 
@@ -51,7 +51,7 @@ func CacheConfig(cachePath string, config *common.Config) error {
 	var err error
 	err = fileutil.WriteFile(cachePath, config.File)
 	if err != nil {
-		log.Log.Error("CacheConfig err:",err)
+		log.Log.Errorf("CacheConfig err: %s",err)
 		return err
 	}
 	return nil
@@ -62,11 +62,11 @@ func GetConfigFromCache(cachePath string, name string) (*common.Config, error) {
 
 	exist, err := fileutil.ExistPath(cachePath)
 	if err != nil {
-		log.Log.Error("GetConfigFromCache err:",err)
+		log.Log.Errorf("GetConfigFromCache err: %s",err)
 	}
 	if !exist {
 		err = errors.NewFinderError(errors.ConfigMissCacheFile)
-		log.Log.Error("GetConfigFromCache err:",err)
+		log.Log.Errorf("GetConfigFromCache err  %s:",err)
 		return nil, err
 	}
 	data, err := fileutil.ReadFile(cachePath)
@@ -83,12 +83,12 @@ func CacheService(cachePath string, service *common.Service) error {
 	cachePath = fmt.Sprintf("%s/service_%s_%s.findercache", cachePath, service.ServiceName, service.ApiVersion)
 	data, err := json.Marshal(service)
 	if err != nil {
-		log.Log.Error("CacheService err:",err)
+		log.Log.Errorf("CacheService err: %s",err)
 		return err
 	}
 	err = fileutil.WriteFile(cachePath, data)
 	if err != nil {
-		log.Log.Error("CacheService err:",err)
+		log.Log.Errorf("CacheService err: %s",err)
 		return err
 	}
 
@@ -99,13 +99,13 @@ func GetServiceFromCache(cachePath string, item common.ServiceSubscribeItem) (*c
 	cachePath = fmt.Sprintf("%s/service_%s_%s.findercache", cachePath, item.ServiceName, item.ApiVersion)
 	data, err := fileutil.ReadFile(cachePath)
 	if err != nil {
-		log.Log.Error("GetServiceFromCache err:",err)
+		log.Log.Errorf("GetServiceFromCache err: %s",err)
 		return nil, err
 	}
 	service := &common.Service{}
 	err = json.Unmarshal(data, service)
 	if err != nil {
-		log.Log.Error("GetServiceFromCache err:",err)
+		log.Log.Errorf("GetServiceFromCache err: %s",err)
 		return nil, err
 	}
 
