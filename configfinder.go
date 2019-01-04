@@ -49,6 +49,10 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 
 	f.locker.Lock()
 	defer f.locker.Unlock()
+	if f.storageMgr==nil{
+		log.Log.Infof("无法获取配置信息 zk连接失败")
+		return nil, errors.NewFinderError(errors.ZkGetInfoError)
+	}
 	err := GetGrayConfigData(f, f.rootPath, nil)
 	if err != nil {
 		log.Log.Infof("获取灰度配置信息出错 %s", err)
