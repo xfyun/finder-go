@@ -294,7 +294,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 }
 func manitorStorage(fm *FinderManager) {
 	log.Log.Error("[ manitorStorage ] ")
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	for {
 		select {
