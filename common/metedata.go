@@ -10,6 +10,13 @@ type ServiceMeteData struct {
 	Address string
 }
 
+func (meta *ServiceMeteData) Check() bool {
+	if len(meta.Group) == 0 || len(meta.Project) == 0 || len(meta.Version) == 0 || len(meta.Service) == 0 {
+		return false
+	}
+	return true
+}
+
 type BootConfig struct {
 	CompanionUrl  string
 	CachePath     string

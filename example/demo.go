@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"git.xfyun.cn/AIaaS/finder-go/log"
 	"go.uber.org/zap"
 	"net"
 	"net/http"
@@ -121,20 +122,18 @@ func newServiceFinder(conf TestConfig) {
 	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
 	//TODO 日志目录
 	loggerConfig.OutputPaths = []string{"stdout"}
-	loggerConfig.EncoderConfig.TimeKey="time"
+	loggerConfig.EncoderConfig.TimeKey = "time"
 
 	logger, _ := loggerConfig.Build()
 	Logger := logger.Sugar()
-	zkLog :=ZkLogger{
-		zap:Logger,
+	zkLog := ZkLogger{
+		zap: Logger,
 	}
 	zkLog.Printf("dddd")
 	//创建finder。
 	f, err := finder.NewFinderWithLogger(config, &zkLog)
 
-
 	//init
-
 
 	if err != nil {
 		fmt.Println(err)
@@ -174,12 +173,12 @@ func newProviderFinder(conf TestConfig) {
 	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
 	//TODO 日志目录
 	loggerConfig.OutputPaths = []string{"stdout"}
-	loggerConfig.EncoderConfig.TimeKey="time"
+	loggerConfig.EncoderConfig.TimeKey = "time"
 
 	logger, _ := loggerConfig.Build()
 	Logger := logger.Sugar()
-	zkLog :=ZkLogger{
-		zap:Logger,
+	zkLog := ZkLogger{
+		zap: Logger,
 	}
 	//创建finder。
 	f, err := finder.NewFinderWithLogger(config, &zkLog)
@@ -198,21 +197,28 @@ func testRegisterService(f *finder.FinderManager, addr string, apiVersion string
 	f.ServiceFinder.RegisterServiceWithAddr(addr, apiVersion)
 
 }
+
 type ZkLogger struct {
 	zap *zap.SugaredLogger
 }
-func (l *ZkLogger)Infof(fmt string,v ...interface{}){
-	l.zap.Infof(fmt,v)
+
+func (l *ZkLogger) Infof(fmt string, v ...interface{}) {
+	l.zap.Infof(fmt, v)
 }
-func (l *ZkLogger)Debugf(fmt string,v ...interface{}){
-	l.zap.Infof(fmt,v)
+func (l *ZkLogger) Debugf(fmt string, v ...interface{}) {
+	l.zap.Infof(fmt, v)
 }
-func (l *ZkLogger)Errorf(fmt string,v ...interface{}){
-	l.zap.Infof(fmt,v)
+func (l *ZkLogger) Errorf(fmt string, v ...interface{}) {
+	l.zap.Infof(fmt, v)
 }
-func (l *ZkLogger)Printf(fmt string,v ...interface{}){
-	l.zap.Infof(fmt,v)
+func (l *ZkLogger) Printf(fmt string, v ...interface{}) {
+	l.zap.Infof(fmt, v)
 }
+func logtest()log.Logger{
+	var p *ZkLogger=nil
+	return p
+}
+
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
 	if err != nil {
@@ -246,15 +252,17 @@ func newConfigFinder(conf TestConfig) {
 	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
 	//TODO 日志目录
 	loggerConfig.OutputPaths = []string{"stdout"}
-	loggerConfig.EncoderConfig.TimeKey="time"
+	loggerConfig.EncoderConfig.TimeKey = "time"
 
 	logger, _ := loggerConfig.Build()
 	Logger := logger.Sugar()
-	zkLog :=ZkLogger{
-		zap:Logger,
+	zkLog := ZkLogger{
+		zap: Logger,
 	}
+	zkLog.Infof("ddddd")
+	var te log.Logger = logtest()
 	//创建finder。
-	f, err := finder.NewFinderWithLogger(config, &zkLog)
+	f, err := finder.NewFinderWithLogger(config, te)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -490,7 +498,6 @@ func testUseConfigAsync(f *finder.FinderManager) {
 
 	handler := ConfigChangedHandle{}
 	count := 0
-
 
 	//f.ConfigFinder.UseAndSubscribeConfig([]string{"test2.toml", "xsfc.toml.cfg"}, handler)
 	configFiles, err := f.ConfigFinder.UseAndSubscribeConfig([]string{"2.yml"}, &handler)

@@ -26,7 +26,7 @@ var (
 	hc *http.Client
 )
 
-const VERSION = "2.0.13"
+const VERSION = "2.0.14"
 
 type zkAddrChangeCallback struct {
 	path string
@@ -259,7 +259,10 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 		err := errors.NewFinderError(errors.MissCompanionUrl)
 		return nil, err
 	}
-
+	if !config.MeteData.Check() {
+		err := errors.NewFinderError(errors.InvalidParam)
+		return nil, err
+	}
 	if stringutil.IsNullOrEmpty(config.MeteData.Address) {
 		localIP, err := netutil.GetLocalIP(config.CompanionUrl)
 		if err != nil {
