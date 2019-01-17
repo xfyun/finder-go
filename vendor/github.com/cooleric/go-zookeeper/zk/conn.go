@@ -312,7 +312,7 @@ func WithMaxConnBufferSize(maxBufferSize int) connOption {
 }
 
 func (c *Conn) Close() {
-	log.Printf("called Close from conn.go")
+	c.logger.Printf("called Close from conn.go")
 	//_, closed := <-c.shouldQuit
 	//if !closed {
 	close(c.shouldQuit)
@@ -792,12 +792,12 @@ func (c *Conn) sendLoop() error {
 			c.conn.SetWriteDeadline(time.Time{})
 			// log.Printf("sendLoop:case <-pingTicker.C")
 			if err != nil {
-				log.Printf("sendLoop:called close")
+				c.logger.Printf("sendLoop:called close")
 				c.conn.Close()
 				return err
 			}
 		case <-c.closeChan:
-			log.Printf("sendLoop:case <-c.closeChan")
+			c.logger.Printf("sendLoop:case <-c.closeChan")
 			return nil
 		}
 	}
