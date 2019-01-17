@@ -50,12 +50,12 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 	f.locker.Lock()
 	defer f.locker.Unlock()
 	if f.storageMgr==nil{
-		log.Log.Infof("无法获取配置信息 zk连接失败")
+		log.Log.Infof("zk init err")
 		return nil, errors.NewFinderError(errors.ZkGetInfoError)
 	}
 	err := GetGrayConfigData(f, f.rootPath, nil)
 	if err != nil {
-		log.Log.Infof("获取灰度配置信息出错 %s", err)
+		log.Log.Infof("query gray info err: %s", err)
 		return nil, err
 	}
 	configFiles := make(map[string]*common.Config)
@@ -119,36 +119,36 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	configFiles := make(map[string]*common.Config)
 	if f.storageMgr == nil {
 		if f.config.CacheConfig {
-			log.Log.Infof("连不上zk,使用缓存")
+			log.Log.Infof("init zk err,use cache")
 			for _, n := range name {
 				f.fileSubscribe = append(f.fileSubscribe, n)
 				configFiles[n] = getCachedConfig(n, f.config.CachePath)
 			}
 			return configFiles, nil
 		} else {
-			log.Log.Infof("连不上zk,不使用缓存，直接退出")
+			log.Log.Infof("init zk err ,not use cache ,exit")
 			return nil, nil
 		}
 	}
-	log.Log.Debugf("订阅的文件为：%s", name)
+	log.Log.Debugf("subscribe file ：%v", name)
 	//先查看灰度组的设置
 
 	callback := NewConfigChangedCallback(f.config.MeteData.Address, CONFIG_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
 
 	err := GetGrayConfigData(f, f.rootPath, &callback)
 	if err != nil {
-		log.Log.Infof("获取灰度配置信息出错 %s", err)
+		log.Log.Infof("get gray config err %v", err)
 		return nil, err
 	}
 
 	if groupId, ok := f.grayConfig.Load(f.config.MeteData.Address); ok {
 		if ok := f.checkFileExist(f.rootPath+"/gray/"+groupId.(string), name); !ok {
-			log.Log.Infof("订阅的文件中，有不存在的，不进行订阅,path: %s", f.rootPath+"/gray/"+groupId.(string))
+			log.Log.Infof("file not exist,path: %v", f.rootPath+"/gray/"+groupId.(string))
 			return nil, errors.NewFinderError(errors.ConfigFileNotExist)
 		}
 	} else {
 		if ok := f.checkFileExist(f.rootPath, name); !ok {
-			log.Log.Infof("订阅的文件中，有不存在的，不进行订阅,path : %s", f.rootPath)
+			log.Log.Infof("file not exist,path: %v", f.rootPath)
 			return nil, errors.NewFinderError(errors.ConfigFileNotExist)
 		}
 	}
@@ -178,7 +178,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 		data, err := f.storageMgr.GetDataWithWatchV2(path, &callback)
 		if err != nil {
 			if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
-				log.Log.Infof("配置文件不存在，请先配置文件。文件: %s", name)
+				log.Log.Infof("config file not exist。filename: %v", name)
 				return nil, errors.NewFinderError(errors.ConfigFileNotExist)
 			}
 			onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
@@ -213,11 +213,11 @@ func (f *ConfigFinder) checkFileExist(basePath string, names []string) bool {
 	log.Log.Debugf("basePath %s", basePath)
 	files, err := f.storageMgr.GetChildren(basePath)
 	if err != nil {
-		log.Log.Errorf("获取配置文件出错，直接返回 : %s", err)
+		log.Log.Errorf("query config file err : %v", err)
 		return false
 	}
 	if len(names) > len(files) {
-		log.Log.Infof("当前有的配置文件为：%s,%s,%s,%s", files, " 要订阅的配置文件为：", names, ",两者不匹配！")
+		log.Log.Infof("current file is %v, subscribe file is %v", files,  names)
 		return false
 	}
 	for _, subFileName := range names {
@@ -228,7 +228,7 @@ func (f *ConfigFinder) checkFileExist(basePath string, names []string) bool {
 			}
 		}
 		if !isExist {
-			log.Log.Infof("当前有的配置文件为：%s,%s,%s,%s", files, " 要订阅的配置文件 ", subFileName, " 不存在！")
+			log.Log.Infof("current file is %v, subscribe file is %v", files, subFileName)
 			return false
 		}
 	}
@@ -285,7 +285,7 @@ func (f *ConfigFinder) BatchUnSubscribeConfig(names []string) error {
 
 // onUseConfigError with cache
 func onUseConfigErrorWithCache(configFiles map[string]*common.Config, name string, cachePath string, err error) {
-	log.Log.Errorf("onUseConfigError: %s,%s,%s", err,"  name:",name)
+	log.Log.Errorf("onUseConfigError: %v, name: %v", err,name)
 	configFiles[name] = getCachedConfig(name, cachePath)
 }
 

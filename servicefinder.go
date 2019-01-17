@@ -104,7 +104,7 @@ func (f *ServiceFinder) UseService(serviceItems []common.ServiceSubscribeItem) (
 			log.Log.Debugf("the service is null ")
 			service, err := GetServiceFromCache(f.config.CachePath, item)
 			if err != nil || service == nil {
-				log.Log.Infof("从缓存中获取该服务失败，服务为：%s", serviceId)
+				log.Log.Infof("query service from cache err：%v", err)
 				f.subscribedService[serviceId] = &common.Service{ServiceName: item.ServiceName, ApiVersion: item.ApiVersion}
 				continue
 			} else {
@@ -139,17 +139,17 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 
 	if f.storageMgr == nil {
 		if !f.config.CacheService {
-			log.Log.Infof(" [ UseAndSubscribeService ] 不使用缓存，直接退出")
+			log.Log.Infof(" [ UseAndSubscribeService ] not use cache")
 			return nil, nil
 		}
-		log.Log.Infof(" [ UseAndSubscribeService ] 从缓存中获取数据")
+		log.Log.Infof(" [ UseAndSubscribeService ] get service from cache")
 
 		//说明zk信息目前有误，暂时使用缓存数据
 		for _, item := range serviceItems {
 			serviceId := item.ServiceName + "_" + item.ApiVersion
 			service, err := GetServiceFromCache(f.config.CachePath, item)
 			if err != nil {
-				log.Log.Infof("从缓存中获取该服务失败，服务为：", serviceId)
+				log.Log.Infof("query service from cache err：", err)
 				f.subscribedService[serviceId] = &common.Service{ServiceName: item.ServiceName, ApiVersion: item.ApiVersion}
 
 			} else {
@@ -169,7 +169,7 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 		servicePath := fmt.Sprintf("%s/%s/%s", f.rootPath, item.ServiceName, item.ApiVersion)
 		service, err := f.getServiceWithWatcher(servicePath, item, handler)
 		if err != nil {
-			log.Log.Infof(" [ UseAndSubscribeService ] 订阅【服务名: %s %s %s %s %s", item.ServiceName, ",版本号:", item.ApiVersion, "】 出错", err)
+			log.Log.Infof(" [ UseAndSubscribeService ] subscribe service %v, version %v , err :%v ", item.ServiceName,  item.ApiVersion, err)
 			continue
 		}
 		if service == nil {
@@ -208,7 +208,7 @@ func (f *ServiceFinder) registerService(addr string, apiVersion string) error {
 		return err
 	}
 	if stringutil.IsNullOrEmpty(apiVersion) {
-		log.Log.Infof("[registerService] 缺失apiVersion数据")
+		log.Log.Infof("[registerService] apiversion not exist")
 		return errors.NewFinderError(errors.ServiceMissApiVersion)
 	}
 	//目前不考虑目录不存在的情况
@@ -216,7 +216,7 @@ func (f *ServiceFinder) registerService(addr string, apiVersion string) error {
 	log.Log.Debugf("registerService -> path -> %s", path)
 	err := f.storageMgr.SetTempPath(path)
 	if err != nil {
-		log.Log.Infof("服务注册失败 %s", err)
+		log.Log.Infof("registerService err %v", err)
 		return err
 	}
 	go pushService(f.config.CompanionUrl, f.config.MeteData.Project, f.config.MeteData.Group, f.config.MeteData.Service, apiVersion)
@@ -312,7 +312,7 @@ func getServiceInstance(sm storage.StorageManager, path string, addr string, cal
 		data, err = sm.GetData(path + "/" + addr)
 	}
 	if err != nil {
-		log.Log.Infof("从 %s %s %s %s %s", path+"/"+addr, " 获取数据出错 ", err)
+		log.Log.Infof("get data from %v err %v:", path+"/"+addr, err)
 		//TODO 是否需要返回默认的
 		return nil, err
 	}
@@ -320,14 +320,14 @@ func getServiceInstance(sm storage.StorageManager, path string, addr string, cal
 	//解析数据
 	if data == nil || len(data) == 0 {
 		//获取数据为空
-		log.Log.Infof("从 %s %s %s %s %s", path+"/"+addr, " 获取数据为空")
+		log.Log.Infof("get data from %v is empty :", path+"/"+addr)
 		serviceInstance.Config = getDefaultServiceInstanceConfig()
 	} else {
 		//获取的提供者配置数据不为空
 		var item []byte
 		_, item, err = common.DecodeValue(data)
 		if err != nil {
-			log.Log.Infof("实例上的配置数据不符合规范，反序列化出错 %s", err)
+			log.Log.Infof("service instance data is %v,unmarsh err: %v", string(data),err)
 			//使用默认的配置
 			serviceInstance.Config = getDefaultServiceInstanceConfig()
 		} else {
@@ -359,21 +359,21 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 			//节点不存在，则新建之
 			err := f.storageMgr.SetPath(providerPath)
 			if err != nil {
-				log.Log.Infof("[ GetChildrenWithWatch ] 创建节点: %s", providerPath)
+				log.Log.Infof("[ GetChildrenWithWatch ] create node: %s", providerPath)
 			}
 			return nil, err
 		}
-		log.Log.Infof("从path: %s %s %s", providerPath, " 获取服务提供者出错", err)
+		log.Log.Infof("query service provider from %v, err: %v", providerPath, err)
 		return nil, err
 	}
 	if len(providerList) == 0 {
-		log.Log.Infof(" [ getServiceWithWatcher ]目前没有服务提供者存在")
+		log.Log.Infof("[ getServiceWithWatcher ] current not have service provider")
 	}
 	for _, providerAddr := range providerList {
 		serviceInstance, err := getServiceInstance(f.storageMgr, providerPath, providerAddr, nil)
 		if err != nil {
 			//TODO 当data为nil的时候，会返回错误。。这里要处理一下
-			log.Log.Infof("获取提供者实例信息出错，path=: %s %s %s", providerPath+"/"+providerAddr, " 错误为:", err)
+			log.Log.Infof("query instance info err，path=: %v , err: %v", providerPath+"/"+providerAddr, err)
 			// todo
 			continue
 		}
@@ -389,20 +389,20 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 	confData, err := f.storageMgr.GetData(confPath)
 	if err != nil {
 
-		log.Log.Infof("从path: %s %s %s ", confPath, " 获取配置数据出错", err)
+		log.Log.Infof("query config data err from %v , err %v ", confPath,  err)
 		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST, err.Error()) == 0 {
-			log.Log.Infof("新建节点: %s", confPath)
+			log.Log.Infof("create node: %v", confPath)
 			f.storageMgr.SetPath(confPath)
 		}
 		service.Config = &common.ServiceConfig{JsonConfig: ""}
 
 	} else if len(confData) == 0 {
 		service.Config = &common.ServiceConfig{JsonConfig: ""}
-		log.Log.Infof("从path: %s %s ", confPath, " 获取配置为空，没有对应的配置信息")
+		log.Log.Infof("query data from path: %v ,data is empty ", confPath)
 	} else {
 		_, fData, err := common.DecodeValue(confData)
 		if err != nil {
-			log.Log.Infof("解析配置数据出错  %s", err)
+			log.Log.Infof("parse data errr  %s", err)
 		}
 		service.Config = &common.ServiceConfig{JsonConfig: string(fData)}
 		serviceZkData.Config = &common.ServiceConfig{JsonConfig: string(fData)}
@@ -411,20 +411,19 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 	//获取route数据
 	routeData, err := f.storageMgr.GetData(routePath)
 	if err != nil {
-		log.Log.Infof("从path: %s %s %s", routePath, " 获取路由数据出错", err)
+		log.Log.Infof("get route data from path %v ,err %v", routePath,err)
 		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST, err.Error()) == 0 {
-			log.Log.Infof("新建节点: %s", routePath)
+			log.Log.Infof("create node: %s", routePath)
 			f.storageMgr.SetPath(routePath)
 		}
 		serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
-
 	} else if routeData != nil && len(routeData) == 0 {
-		log.Log.Infof("从path: %s %s", routePath, " 获取路由数据为空")
+		log.Log.Infof("get route data from path %v is empty", routePath)
 		serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
 	} else {
 		_, fData, err := common.DecodeValue(routeData)
 		if err != nil {
-			log.Log.Infof("解析路由数据出错 %s ", err)
+			log.Log.Infof("parse route data err %s ", err)
 			serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
 		}else{
 			serviceZkData.Route = route.ParseRouteData(fData)
@@ -440,7 +439,10 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 	var service = &common.Service{ServiceName: serviceItem.ServiceName, ApiVersion: serviceItem.ApiVersion, ProviderList: make([]*common.ServiceInstance, 0)}
 
 	var serviceZkData = &ServiceZkData{ServiceName: serviceItem.ServiceName, ApiVersion: serviceItem.ApiVersion, ProviderList: make(map[string]*common.ServiceInstance)}
+	log.Log.Infof("zk data %v ",f.serviceZkData[serviceItem.ServiceName+"_"+serviceItem.ApiVersion])
+	//if f.serviceZkData[serviceItem.ServiceName+"_"+serviceItem.ApiVersion] == nil {
 	f.serviceZkData[serviceItem.ServiceName+"_"+serviceItem.ApiVersion] = serviceZkData
+	//}
 	var providerPath = servicePath + "/provider"
 	var confPath = servicePath + "/conf"
 	var routePath = servicePath + "/route"
@@ -455,22 +457,22 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 			//节点不存在，则新建之
 			err := f.storageMgr.SetPath(providerPath)
 			if err != nil {
-				log.Log.Infof("[ GetChildrenWithWatch ] 创建节点: %s", providerPath)
+				log.Log.Infof("[ GetChildrenWithWatch ] creade node: %v", providerPath)
 			}
 			return nil, err
 		}
-		log.Log.Infof("从path: %s %s %s", providerPath, " 获取服务提供者出错", err)
+		log.Log.Infof("query service provider from %v, err: %v", providerPath, err)
 		return nil, err
 	}
 	if len(providerList) == 0 {
-		log.Log.Infof(" [ getServiceWithWatcher ]目前没有服务提供者存在")
+		log.Log.Infof(" [ getServiceWithWatcher ]current  service provider is emtpy %v","")
 	}
 	for _, providerAddr := range providerList {
 		proiderCallBack := NewServiceChangedCallback(serviceItem, SERVICE_INSTANCE_CONFIG_CHANGED, f, handler)
 		serviceInstance, err := getServiceInstance(f.storageMgr, providerPath, providerAddr, &proiderCallBack)
 		if err != nil {
 			//TODO 当data为nil的时候，会返回错误。。这里要处理一下
-			log.Log.Infof("获取提供者实例信息出错，path=: %s %s %s %s %s", providerPath+"/"+providerAddr, " 错误为:", err)
+			log.Log.Infof("query service instance err: %v, path: %v", err, providerPath+"/"+providerAddr)
 			// todo
 			continue
 		}
@@ -487,20 +489,20 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 	confData, err := f.storageMgr.GetDataWithWatch(confPath, &confCallBack)
 	if err != nil {
 
-		log.Log.Infof("从path: %s %s %s", confPath, " 获取配置数据出错", err)
+		log.Log.Infof("query config data err from %v, err: %v", confPath, err)
 		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST, err.Error()) == 0 {
-			log.Log.Infof("新建节点: %s", confPath)
+			log.Log.Infof("create node: %s", confPath)
 			f.storageMgr.SetPath(confPath)
 		}
 		service.Config = &common.ServiceConfig{JsonConfig: ""}
 
 	} else if len(confData) == 0 {
 		service.Config = &common.ServiceConfig{JsonConfig: ""}
-		log.Log.Infof("从path: %s %s", confPath, " 获取配置为空，没有对应的配置信息")
+		log.Log.Infof("get config data from path: %v is emtpy", confPath)
 	} else {
 		_, fData, err := common.DecodeValue(confData)
 		if err != nil {
-			log.Log.Infof("解析配置数据出错 %s", err)
+			log.Log.Infof("parse data err %v", err)
 		}
 		service.Config = &common.ServiceConfig{JsonConfig: string(fData)}
 		serviceZkData.Config = &common.ServiceConfig{JsonConfig: string(fData)}
@@ -509,20 +511,20 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 	routeCallBack := NewServiceChangedCallback(serviceItem, SERVICE_ROUTE_CHANGED, f, handler)
 	routeData, err := f.storageMgr.GetDataWithWatch(routePath, &routeCallBack)
 	if err != nil {
-		log.Log.Infof("从path: %s %s %s", routePath, " 获取路由数据出错", err)
+		log.Log.Infof("query route data from path: %v %v", routePath, err)
 		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST, err.Error()) == 0 {
-			log.Log.Infof("新建节点: %s", routePath)
+			log.Log.Infof("create node: %s", routePath)
 			f.storageMgr.SetPath(routePath)
 		}
 		serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
 
 	} else if routeData != nil && len(routeData) == 0 {
-		log.Log.Infof("从path: %s %s", routePath, " 获取路由数据为空")
+		log.Log.Infof("query route data from path: %v empty", routePath)
 		serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
 	} else {
 		_, fData, err := common.DecodeValue(routeData)
 		if err != nil {
-			log.Log.Infof("解析路由数据出错 %s", err)
+			log.Log.Infof("parse err %s", err)
 			serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
 		} else {
 			serviceZkData.Route = route.ParseRouteData(fData)

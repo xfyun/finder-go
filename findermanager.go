@@ -26,7 +26,7 @@ var (
 	hc *http.Client
 )
 
-const VERSION = "2.0.14"
+const VERSION = "2.0.15"
 
 type zkAddrChangeCallback struct {
 	path string
@@ -39,23 +39,38 @@ func (callback *zkAddrChangeCallback) ChildDeleteCallBack(path string) {
 func (callback *zkAddrChangeCallback) ChildrenChangedCallback(path string, node string, children []string) {
 
 }
+func recoverFunc() {
+	if err := recover(); err != nil {
+		log.Log.Debugf("recover  %v", err)
+	}
+}
 func (callback *zkAddrChangeCallback) Process(path string, node string) {
-
-	log.Log.Debugf("zk_node_path节点事件处理 %s", path)
+	defer recoverFunc()
+	callback.fm.ServiceFinder.mutex.Lock()
+	defer callback.fm.ServiceFinder.mutex.Unlock()
+	log.Log.Debugf("handler zk_node_path  change  %v ", path)
 	fm := callback.fm
+	var tempPath sync.Map //恢复临时路径
+	if fm.storageMgr != nil {
+		tempPath = fm.storageMgr.GetTempPaths()
+	}
 	storageMgr, storageCfg, err := initStorageMgr(fm.config)
 	if err != nil {
-		log.Log.Errorf("zk信息出错，重新尝试 %s", err)
+		log.Log.Errorf("init storage err , now retry :  %v", err)
 		go watchStorageInfo(fm)
 	} else {
 		go watchZkInfo(fm)
+		fm.storageMgr.Destroy()
 		fm.storageMgr = storageMgr
 		fm.ConfigFinder.storageMgr = storageMgr
 		fm.ConfigFinder.rootPath = storageCfg.ConfigRootPath
 		fm.ConfigFinder.config = fm.config
 		fm.ServiceFinder.storageMgr = storageMgr
 		fm.ServiceFinder.rootPath = storageCfg.ServiceRootPath
+		fm.storageMgr.SetTempPaths(tempPath)
+		fm.storageMgr.RecoverTempPaths() //恢复临时路径
 		if len(fm.ServiceFinder.subscribedService) != 0 {
+			//TODO ReGetServiceInfo会把之前的缓存数据给清了
 			ReGetServiceInfo(fm)
 		}
 		if len(fm.ConfigFinder.fileSubscribe) != 0 {
@@ -173,10 +188,10 @@ func getStorageConfig(config *common.BootConfig) (*storage.StorageConfig, error)
 func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage.StorageConfig, error) {
 	storageConfig, err := getStorageConfig(config)
 	if err != nil {
-		log.Log.Errorf("[ initStorageMgr ] getStorageConfig: %s", err)
+		log.Log.Errorf("get storage config err : %v", err)
 		return nil, nil, err
 	}
-	log.Log.Debugf("storageConfig信息： %s", storageConfig.Params)
+	log.Log.Debugf("storage info ： %v ", storageConfig.Params)
 	storageMgr, err := storage.NewManager(storageConfig)
 	if err != nil {
 		log.Log.Errorf("[ initStorageMgr ] NewManager: %s", err)
@@ -184,7 +199,7 @@ func initStorageMgr(config *common.BootConfig) (storage.StorageManager, *storage
 	}
 	err = storageMgr.Init()
 	if err != nil {
-		log.Log.Errorf("[ initStorageMgr ] Init err %s", err)
+		log.Log.Errorf(" storage init err %v", err)
 		return nil, storageConfig, err
 	}
 
@@ -254,7 +269,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	} else {
 		log.Log = logger
 	}
-	log.Log.Infof("current version : %s " + VERSION)
+	log.Log.Infof("current version : %v " + VERSION)
 	if stringutil.IsNullOrEmpty(config.CompanionUrl) {
 		err := errors.NewFinderError(errors.MissCompanionUrl)
 		return nil, err
@@ -290,7 +305,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	var storageCfg *storage.StorageConfig
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
 	if err != nil {
-		log.Log.Infof("初始化zk信息出错，开启新的goroutine 去不断尝试")
+		log.Log.Infof("init zk err retry")
 		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
 		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
 		go manitorStorage(fm)
@@ -306,7 +321,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	return fm, nil
 }
 func manitorStorage(fm *FinderManager) {
-	log.Log.Errorf("[ manitorStorage ] ")
+	log.Log.Infof("manitorStorage")
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	for {
@@ -332,13 +347,13 @@ func watchZkInfo(fm *FinderManager) {
 
 	zkNodePath, err := fm.storageMgr.GetZkNodePath()
 	if err != nil {
-		log.Log.Errorf("zk的节点信息为空")
+		log.Log.Errorf("zk node path is err,%v",err)
 	}
-	log.Log.Debugf("zk的节点信息为: %s", zkNodePath)
 	fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
 }
 
 func watchStorageInfo(fm *FinderManager) {
+	defer recoverFunc()
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	var tempPathMap sync.Map
@@ -349,42 +364,41 @@ func watchStorageInfo(fm *FinderManager) {
 	for {
 		select {
 		case <-ticker.C:
+			fm.ServiceFinder.mutex.Lock()
 
 			storageMgr, storageCfg, err := initStorageMgr(fm.config)
 			if err != nil {
 				storageChange = false
-				log.Log.Infof("初始化zk信息出错，重新尝试 %s ", err)
+				log.Log.Infof("init zk err %v ", err)
 			} else {
 				storageChange = true
 				if fm.storageMgr != nil {
 					fm.storageMgr.Destroy()
 				}
-
 				fm.storageMgr = storageMgr
 				fm.ConfigFinder.storageMgr = storageMgr
 				fm.ConfigFinder.rootPath = storageCfg.ConfigRootPath
 				fm.ConfigFinder.config = fm.config
-
 				fm.ServiceFinder.storageMgr = storageMgr
 				fm.ServiceFinder.rootPath = storageCfg.ServiceRootPath
 			}
+			fm.ServiceFinder.mutex.Unlock()
 		}
 		if storageChange {
-
+			fm.ServiceFinder.mutex.Lock()
 			go watchZkInfo(fm)
 			fm.storageMgr.SetTempPaths(tempPathMap)
 			fm.storageMgr.RecoverTempPaths()
-
 			if len(fm.ServiceFinder.subscribedService) != 0 {
-				log.Log.Debugf("重新拉取订阅的服务信息，%s", fm.ServiceFinder.subscribedService)
+				log.Log.Debugf("retry query service info，%v", fm.ServiceFinder.subscribedService)
 				//重新拉取所有订阅服务的信息
 				ReGetServiceInfo(fm)
 			}
 			if len(fm.ConfigFinder.fileSubscribe) != 0 {
-				log.Log.Debugf("重新拉取订阅的配置文件信息，%s", fm.ConfigFinder.fileSubscribe)
+				log.Log.Debugf("retry query config info，%v", fm.ConfigFinder.fileSubscribe)
 				ReGetConfigInfo(fm)
 			}
-
+			fm.ServiceFinder.mutex.Unlock()
 			break
 		}
 	}
@@ -407,7 +421,7 @@ func ReGetConfigInfo(fm *FinderManager) {
 	})
 	fileMap, err := fm.ConfigFinder.UseAndSubscribeConfig(fileSubscribe, handler)
 	if err != nil {
-		log.Log.Errorf("获取信息失败 %s", err)
+		log.Log.Errorf("query info err %v", err)
 	}
 	for _, fileData := range fileMap {
 		var config = common.Config{Name: fileData.Name, File: fileData.File, ConfigMap: fileData.ConfigMap}
@@ -419,18 +433,30 @@ func ReGetConfigInfo(fm *FinderManager) {
 }
 
 func ReGetServiceInfo(fm *FinderManager) {
+
+	for key,value:=range fm.ServiceFinder.serviceZkData{
+		log.Log.Infof("all zk data  %v ,%v",key,value.ProviderList)
+	}
+
 	for _, value := range fm.ServiceFinder.subscribedService {
 		var item = common.ServiceSubscribeItem{ServiceName: value.ServiceName, ApiVersion: value.ApiVersion}
 		servicePath := fmt.Sprintf("%s/%s/%s", fm.ServiceFinder.rootPath, item.ServiceName, item.ApiVersion)
+		prevService:=fm.ServiceFinder.subscribedService[value.ServiceName+"_"+value.ApiVersion]
 		service, err := fm.ServiceFinder.getServiceWithWatcher(servicePath, item, fm.ServiceFinder.handler)
 		if err != nil {
-			log.Log.Errorf("获取信息失败 %s", err)
+			log.Log.Errorf("query info err %s", err)
 		}
 		if service == nil {
-			log.Log.Debugf("获取不到service %s")
+			log.Log.Infof("query service is empty ")
 		}
-		cacheService, err := GetServiceFromCache(fm.config.CachePath, item)
-		ChangeEvent(cacheService, service, fm.ServiceFinder.handler)
+		if prevService==nil{
+			prevService, err = GetServiceFromCache(fm.config.CachePath, item)
+		}
+		ChangeEvent(prevService, service, fm.ServiceFinder.handler)
+		for key,value:=range fm.ServiceFinder.serviceZkData{
+			log.Log.Infof("all zk data event %v ,%v",key,value.ProviderList)
+		}
+		fm.ServiceFinder.subscribedService[value.ServiceName+"_"+value.ApiVersion] = service
 		if service != nil {
 			CacheService(fm.config.CachePath, service)
 		}
@@ -439,12 +465,17 @@ func ReGetServiceInfo(fm *FinderManager) {
 }
 
 func ChangeEvent(prevService *common.Service, currService *common.Service, handler common.ServiceChangedHandler) {
+	if handler == nil {
+		return
+	}
 	if prevService == nil {
 		handler.OnServiceConfigChanged(currService.ServiceName, currService.ApiVersion, &common.ServiceConfig{JsonConfig: currService.Config.JsonConfig})
 		eventList := providerChangeEvent([]*common.ServiceInstance{}, currService.ProviderList)
+		log.Log.Infof("prevService is nil : %v",eventList)
 		if len(eventList) == 0 {
 			return
 		}
+
 		handler.OnServiceInstanceChanged(currService.ServiceName, currService.ApiVersion, eventList)
 		return
 	}
@@ -454,7 +485,7 @@ func ChangeEvent(prevService *common.Service, currService *common.Service, handl
 		if len(eventList) == 0 {
 			return
 		}
-		handler.OnServiceInstanceChanged(currService.ServiceName, currService.ApiVersion, eventList)
+		handler.OnServiceInstanceChanged(prevService.ServiceName, prevService.ApiVersion, eventList)
 		return
 	}
 	prevConfig := prevService.Config

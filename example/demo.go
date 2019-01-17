@@ -47,6 +47,18 @@ func main() {
 		fmt.Println("参数错误")
 		return
 	}
+	loggerConfig := zap.NewProductionConfig()
+	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
+	//TODO 日志目录
+	loggerConfig.OutputPaths = []string{"stdout"}
+	loggerConfig.EncoderConfig.TimeKey = "time"
+
+	logger, _ := loggerConfig.Build()
+	Logger := logger.Sugar()
+	zkLog := ZkLogger{
+		zap: Logger,
+	}
+	zkLog.Printf("dddd")
 	file, _ := os.Open(args[1])
 	defer file.Close()
 	decoder := json.NewDecoder(file)
@@ -63,13 +75,13 @@ func main() {
 	} else if conf.Type == 2 {
 		//订阅服务。和之前的区别主要是增加了版本号的概念，用于指定服务的特定版本。。且回调函数的参数也增加了一个版本号的参数。。用于明确服务的版本信息
 
-		newServiceFinder(conf)
+		newServiceFinder(conf,nil)
 	} else if conf.Type == 3 {
 		//注册服务.和之前的区别是注册服务的时候，必须制定版本号
 		newProviderFinder(conf)
 	} else if conf.Type == 4 {
 		newConfigFinder(conf)
-		newServiceFinder(conf)
+		newServiceFinder(conf,nil)
 	} else if conf.Type == 5 {
 		newConfigFinder(conf)
 
@@ -91,7 +103,7 @@ func main() {
 func pressureTest(conf TestConfig) {
 
 }
-func newServiceFinder(conf TestConfig) {
+func newServiceFinder(conf TestConfig,lg log.Logger) {
 
 	cachePath, err := os.Getwd()
 	if err != nil {
@@ -118,23 +130,12 @@ func newServiceFinder(conf TestConfig) {
 		},
 	}
 
-	loggerConfig := zap.NewProductionConfig()
-	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
-	//TODO 日志目录
-	loggerConfig.OutputPaths = []string{"stdout"}
-	loggerConfig.EncoderConfig.TimeKey = "time"
 
-	logger, _ := loggerConfig.Build()
-	Logger := logger.Sugar()
-	zkLog := ZkLogger{
-		zap: Logger,
-	}
-	zkLog.Printf("dddd")
 	//创建finder。
-	f, err := finder.NewFinderWithLogger(config, &zkLog)
+	f, err := finder.NewFinderWithLogger(config, lg)
 
 	//init
-
+	log.Println("----------------------------------------------")
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -180,8 +181,9 @@ func newProviderFinder(conf TestConfig) {
 	zkLog := ZkLogger{
 		zap: Logger,
 	}
+	zkLog.Infof("ddd")
 	//创建finder。
-	f, err := finder.NewFinderWithLogger(config, &zkLog)
+	f, err := finder.NewFinderWithLogger(config, nil)
 
 	if err != nil {
 		fmt.Println(err)
@@ -214,10 +216,7 @@ func (l *ZkLogger) Errorf(fmt string, v ...interface{}) {
 func (l *ZkLogger) Printf(fmt string, v ...interface{}) {
 	l.zap.Infof(fmt, v)
 }
-func logtest()log.Logger{
-	var p *ZkLogger=nil
-	return p
-}
+
 
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
@@ -260,9 +259,7 @@ func newConfigFinder(conf TestConfig) {
 		zap: Logger,
 	}
 	zkLog.Infof("ddddd")
-	var te log.Logger = logtest()
-	//创建finder。
-	f, err := finder.NewFinderWithLogger(config, te)
+	f, err := finder.NewFinderWithLogger(config, nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {

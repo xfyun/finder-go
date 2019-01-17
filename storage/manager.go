@@ -1,11 +1,8 @@
 package storage
 
 import (
-
-
 	"git.xfyun.cn/AIaaS/finder-go/storage/common"
 	"git.xfyun.cn/AIaaS/finder-go/storage/zookeeper"
-	"git.xfyun.cn/AIaaS/finder-go/log"
 	"sync"
 )
 
@@ -36,7 +33,6 @@ type StorageManager interface {
 func NewManager(config *StorageConfig) (StorageManager, error) {
 	switch config.Name {
 	case "zookeeper":
-		log.Log.Debugf("called NewZkManager")
 		return zookeeper.NewZkManager(config.Params)
 	}
 	return nil, nil
