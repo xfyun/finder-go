@@ -74,7 +74,6 @@ func main() {
 		newConfigFinder(conf)
 	} else if conf.Type == 2 {
 		//订阅服务。和之前的区别主要是增加了版本号的概念，用于指定服务的特定版本。。且回调函数的参数也增加了一个版本号的参数。。用于明确服务的版本信息
-
 		newServiceFinder(conf,nil)
 	} else if conf.Type == 3 {
 		//注册服务.和之前的区别是注册服务的时候，必须制定版本号

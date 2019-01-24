@@ -365,11 +365,13 @@ func watchStorageInfo(fm *FinderManager) {
 		select {
 		case <-ticker.C:
 			fm.ServiceFinder.mutex.Lock()
-
 			storageMgr, storageCfg, err := initStorageMgr(fm.config)
 			if err != nil {
 				storageChange = false
 				log.Log.Infof("init zk err %v ", err)
+				//if fm.storageMgr != nil {
+				//	fm.storageMgr.Destroy()
+				//}
 			} else {
 				storageChange = true
 				if fm.storageMgr != nil {
