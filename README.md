@@ -48,3 +48,18 @@ type ServiceChangedHandler interface {
 	OnServiceInstanceChanged(name string, apiVersion string, eventList []*ServiceInstanceChangedEvent) bool
 }
 ```
+4.  查询所有服务
+```
+//使用示例
+f.ServiceFinder.QueryService("AIaaS", "dx")
+
+//返回值分析
+map[string][]common.ServiceInfo 
+key : serviceName
+value : 列表 common.ServiceInfo 
+
+type ServiceInfo struct {
+	ApiVersion   string   //版本号
+	ProviderList []string //所有地址，可能为空
+}
+```

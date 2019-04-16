@@ -74,18 +74,18 @@ func main() {
 		newConfigFinder(conf)
 	} else if conf.Type == 2 {
 		//订阅服务。和之前的区别主要是增加了版本号的概念，用于指定服务的特定版本。。且回调函数的参数也增加了一个版本号的参数。。用于明确服务的版本信息
-		newServiceFinder(conf,nil)
+		newServiceFinder(conf, nil)
 	} else if conf.Type == 3 {
 		//注册服务.和之前的区别是注册服务的时候，必须制定版本号
 		newProviderFinder(conf)
 	} else if conf.Type == 4 {
 		newConfigFinder(conf)
-		newServiceFinder(conf,nil)
+		newServiceFinder(conf, nil)
 	} else if conf.Type == 5 {
 		newConfigFinder(conf)
 
-	} else {
-		fmt.Println("输入的type有误，请重新输入")
+	} else if conf.Type == 6 {
+		newQueryServiceFinder(conf)
 		return
 	}
 	//newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
@@ -102,7 +102,7 @@ func main() {
 func pressureTest(conf TestConfig) {
 
 }
-func newServiceFinder(conf TestConfig,lg log.Logger) {
+func newServiceFinder(conf TestConfig, lg log.Logger) {
 
 	cachePath, err := os.Getwd()
 	if err != nil {
@@ -128,7 +128,6 @@ func newServiceFinder(conf TestConfig,lg log.Logger) {
 			Address: conf.Address,
 		},
 	}
-
 
 	//创建finder。
 	f, err := finder.NewFinderWithLogger(config, lg)
@@ -216,7 +215,56 @@ func (l *ZkLogger) Printf(fmt string, v ...interface{}) {
 	l.zap.Infof(fmt, v)
 }
 
+func newQueryServiceFinder(conf TestConfig) {
+	cachePath, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	cachePath += "/findercache"
 
+	//元数据信息
+
+	config := common.BootConfig{
+		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
+		//compaion地址
+		CompanionUrl: conf.CompanionUrl,
+		//缓存文件的地址
+		CachePath: cachePath,
+		//缓存服务提供者的信息，当为true的时候，和zk连接不上的话，使用缓存信息
+		CacheService: true,
+		//缓存配置文件信息。
+		CacheConfig: true,
+		//和zk之间的会话时间
+		ExpireTimeout: 5 * time.Second,
+		MeteData: &common.ServiceMeteData{
+			Project: conf.Project,
+			Group:   conf.Group,
+			Service: conf.Service,
+			Version: conf.Version,
+			Address: conf.Address,
+		},
+	}
+	loggerConfig := zap.NewProductionConfig()
+	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
+	//TODO 日志目录
+	loggerConfig.OutputPaths = []string{"stdout"}
+	loggerConfig.EncoderConfig.TimeKey = "time"
+
+	logger, _ := loggerConfig.Build()
+	Logger := logger.Sugar()
+	zkLog := ZkLogger{
+		zap: Logger,
+	}
+	zkLog.Infof("ddddd")
+	f, err := finder.NewFinderWithLogger(config, nil)
+	if err != nil {
+		panic(err)
+
+	}
+	dat,_:=f.ServiceFinder.QueryService("AIaaS", "dx")
+	dd,_:=json.Marshal(dat)
+	fmt.Println(string(dd))
+}
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
 	if err != nil {

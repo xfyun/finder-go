@@ -92,6 +92,11 @@ type Service struct {
 	Config       *ServiceConfig
 }
 
+type ServiceInfo struct {
+	ApiVersion   string
+	ProviderList []string
+}
+
 func (service *Service) Dumplication() Service {
 	var dump Service
 	dump.ApiVersion = service.ApiVersion

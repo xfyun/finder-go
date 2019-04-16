@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -26,6 +27,7 @@ type ServiceFinder struct {
 	serviceZkData     map[string]*ServiceZkData
 	mutex             sync.Mutex
 }
+
 type ServiceZkData struct {
 	ServiceName string
 	ApiVersion  string
@@ -169,7 +171,7 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 		servicePath := fmt.Sprintf("%s/%s/%s", f.rootPath, item.ServiceName, item.ApiVersion)
 		service, err := f.getServiceWithWatcher(servicePath, item, handler)
 		if err != nil {
-			log.Log.Infof(" [ UseAndSubscribeService ] subscribe service %v, version %v , err :%v ", item.ServiceName,  item.ApiVersion, err)
+			log.Log.Infof(" [ UseAndSubscribeService ] subscribe service %v, version %v , err :%v ", item.ServiceName, item.ApiVersion, err)
 			continue
 		}
 		if service == nil {
@@ -193,15 +195,36 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 		//	err = errors.NewFinderError(errors.ServiceMissName)
 		return err
 	}
-
 	f.locker.Lock()
 	defer f.locker.Unlock()
-
 	delete(f.subscribedService, name)
-
 	return nil
 }
 
+func (f *ServiceFinder) QueryService(project, group string) (map[string][]common.ServiceInfo, error) {
+	if len(project) == 0 || len(group) == 0 {
+		return nil, errors.NewFinderError(errors.InvalidParam)
+	}
+	rootPath := "/polaris/service/" + fmt.Sprintf("%x", md5.Sum([]byte(project+group)))
+	var serMap = make(map[string][]common.ServiceInfo)
+	if sers, err := f.storageMgr.GetChildren(rootPath); err != nil {
+		return nil, err
+	} else {
+		for _, ser := range sers {
+			if vers, err := f.storageMgr.GetChildren(rootPath + "/" + ser); err == nil {
+				for _, ver := range vers {
+					var item common.ServiceInfo
+					item.ApiVersion = ver
+					if providers, err := f.storageMgr.GetChildren(rootPath + "/" + ser + "/" + ver + "/provider"); err == nil {
+						item.ProviderList = providers
+					}
+					serMap[ser] = append(serMap[ser], item)
+				}
+			}
+		}
+	}
+	return serMap, nil
+}
 func (f *ServiceFinder) registerService(addr string, apiVersion string) error {
 	if stringutil.IsNullOrEmpty(addr) {
 		err := errors.NewFinderError(errors.ServiceMissAddr)
@@ -268,14 +291,14 @@ func getDefaultServiceItemConfig(addr string) ([]byte, error) {
 
 	data, err := json.Marshal(defaultServiceInstanceConfig)
 	if err != nil {
-		log.Log.Errorf("%s",err)
+		log.Log.Errorf("%s", err)
 		return nil, err
 	}
 
 	var encodedData []byte
 	encodedData, err = common.EncodeValue("", data)
 	if err != nil {
-		log.Log.Errorf("%s",err)
+		log.Log.Errorf("%s", err)
 		return nil, err
 	}
 
@@ -289,14 +312,14 @@ func getDefaultConsumerItemConfig(addr string) ([]byte, error) {
 
 	data, err := json.Marshal(defaultConsumeInstanceConfig)
 	if err != nil {
-		log.Log.Errorf("%s",err)
+		log.Log.Errorf("%s", err)
 		return nil, err
 	}
 
 	var encodedData []byte
 	encodedData, err = common.EncodeValue("", data)
 	if err != nil {
-		log.Log.Errorf("%s",err)
+		log.Log.Errorf("%s", err)
 		return nil, err
 	}
 
@@ -327,7 +350,7 @@ func getServiceInstance(sm storage.StorageManager, path string, addr string, cal
 		var item []byte
 		_, item, err = common.DecodeValue(data)
 		if err != nil {
-			log.Log.Infof("service instance data is %v,unmarsh err: %v", string(data),err)
+			log.Log.Infof("service instance data is %v,unmarsh err: %v", string(data), err)
 			//使用默认的配置
 			serviceInstance.Config = getDefaultServiceInstanceConfig()
 		} else {
@@ -353,6 +376,7 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 	var confPath = servicePath + "/conf"
 	var routePath = servicePath + "/route"
 	//先找provider路径下的数据
+
 	providerList, err := f.storageMgr.GetChildren(providerPath)
 	if err != nil {
 		if strings.Compare("zk: node does not exist", err.Error()) == 0 {
@@ -389,7 +413,7 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 	confData, err := f.storageMgr.GetData(confPath)
 	if err != nil {
 
-		log.Log.Infof("query config data err from %v , err %v ", confPath,  err)
+		log.Log.Infof("query config data err from %v , err %v ", confPath, err)
 		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST, err.Error()) == 0 {
 			log.Log.Infof("create node: %v", confPath)
 			f.storageMgr.SetPath(confPath)
@@ -411,7 +435,7 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 	//获取route数据
 	routeData, err := f.storageMgr.GetData(routePath)
 	if err != nil {
-		log.Log.Infof("get route data from path %v ,err %v", routePath,err)
+		log.Log.Infof("get route data from path %v ,err %v", routePath, err)
 		if strings.Compare(common.ZK_NODE_DOSE_NOT_EXIST, err.Error()) == 0 {
 			log.Log.Infof("create node: %s", routePath)
 			f.storageMgr.SetPath(routePath)
@@ -425,7 +449,7 @@ func (f *ServiceFinder) getService(servicePath string, serviceItem common.Servic
 		if err != nil {
 			log.Log.Infof("parse route data err %s ", err)
 			serviceZkData.Route = &common.ServiceRoute{RouteItem: []*common.RouteItem{}}
-		}else{
+		} else {
 			serviceZkData.Route = route.ParseRouteData(fData)
 		}
 		//使用route进行过滤数据
@@ -439,7 +463,7 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 	var service = &common.Service{ServiceName: serviceItem.ServiceName, ApiVersion: serviceItem.ApiVersion, ProviderList: make([]*common.ServiceInstance, 0)}
 
 	var serviceZkData = &ServiceZkData{ServiceName: serviceItem.ServiceName, ApiVersion: serviceItem.ApiVersion, ProviderList: make(map[string]*common.ServiceInstance)}
-	log.Log.Infof("zk data %v ",f.serviceZkData[serviceItem.ServiceName+"_"+serviceItem.ApiVersion])
+	log.Log.Infof("zk data %v ", f.serviceZkData[serviceItem.ServiceName+"_"+serviceItem.ApiVersion])
 	//if f.serviceZkData[serviceItem.ServiceName+"_"+serviceItem.ApiVersion] == nil {
 	f.serviceZkData[serviceItem.ServiceName+"_"+serviceItem.ApiVersion] = serviceZkData
 	//}
@@ -465,7 +489,7 @@ func (f *ServiceFinder) getServiceWithWatcher(servicePath string, serviceItem co
 		return nil, err
 	}
 	if len(providerList) == 0 {
-		log.Log.Infof(" [ getServiceWithWatcher ]current  service provider is emtpy %v","")
+		log.Log.Infof(" [ getServiceWithWatcher ]current  service provider is emtpy %v", "")
 	}
 	for _, providerAddr := range providerList {
 		proiderCallBack := NewServiceChangedCallback(serviceItem, SERVICE_INSTANCE_CONFIG_CHANGED, f, handler)
