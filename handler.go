@@ -3,13 +3,13 @@ package finder
 import (
 	"time"
 
-	common "git.xfyun.cn/AIaaS/finder-go/common"
-	companion "git.xfyun.cn/AIaaS/finder-go/companion"
-	"git.xfyun.cn/AIaaS/finder-go/log"
-	"git.xfyun.cn/AIaaS/finder-go/route"
-	"git.xfyun.cn/AIaaS/finder-go/storage"
-	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
-	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
+	common "git.iflytek.com/AIaaS/finder-go/common"
+	companion "git.iflytek.com/AIaaS/finder-go/companion"
+	"git.iflytek.com/AIaaS/finder-go/log"
+	"git.iflytek.com/AIaaS/finder-go/route"
+	"git.iflytek.com/AIaaS/finder-go/storage"
+	"git.iflytek.com/AIaaS/finder-go/utils/fileutil"
+	"git.iflytek.com/AIaaS/finder-go/utils/serviceutil"
 	"strings"
 )
 

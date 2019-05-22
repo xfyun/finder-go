@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	common "git.xfyun.cn/AIaaS/finder-go/common"
+	common "git.iflytek.com/AIaaS/finder-go/common"
 	"strings"
 	"log"
 )
