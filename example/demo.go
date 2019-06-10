@@ -261,9 +261,14 @@ func newQueryServiceFinder(conf TestConfig) {
 		panic(err)
 
 	}
-	dat,_:=f.ServiceFinder.QueryService("AIaaS", "dx")
+	handler := new(ServiceChangedHandle)
+	dat,_:=f.ServiceFinder.QueryServiceWatch("AIaaS", "dx",handler)
+	fmt.Println("---------------------------------------------------------------")
+	fmt.Println(dat)
+	fmt.Println("---------------------------------------------------------------")
 	dd,_:=json.Marshal(dat)
 	fmt.Println(string(dd))
+	time.Sleep(1*time.Hour)
 }
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()

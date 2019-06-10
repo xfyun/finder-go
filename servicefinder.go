@@ -201,6 +201,39 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 	return nil
 }
 
+func (f*ServiceFinder)QueryServiceWatch(project,group string,handler common.ServiceChangedHandler)(map[string][]common.ServiceInfo, error){
+	if len(project) == 0 || len(group) == 0 {
+		return nil, errors.NewFinderError(errors.InvalidParam)
+	}
+
+	rootPath := "/polaris/service/" + fmt.Sprintf("%x", md5.Sum([]byte(project+group)))
+	var serMap = make(map[string][]common.ServiceInfo)
+	pC:=NewQueryServiceCallback(handler,f)
+	//sC:=NewQueryServiceCallback(handler,WATCH_SERVICE,f)
+	//vC:=NewQueryServiceCallback(handler,WATCH_VERSION,f)
+
+	//watch所有的server
+	if sers, err := f.storageMgr.GetChildrenWithWatch(rootPath,&pC); err != nil {
+		return nil, err
+	} else {
+		for _, ser := range sers {
+			pC.serviceCache=append(pC.serviceCache,ser)
+			if vers, err := f.storageMgr.GetChildrenWithWatch(rootPath + "/" + ser,&pC); err == nil {
+				for _, ver := range vers {
+					pC.versionCache[ser]=append(pC.versionCache[ser],ver)
+					var item common.ServiceInfo
+					item.ApiVersion = ver
+					if providers, err := f.storageMgr.GetChildrenWithWatch(rootPath + "/" + ser + "/" + ver + "/provider",&pC); err == nil {
+						item.ProviderList = providers
+					}
+					serMap[ser] = append(serMap[ser], item)
+				}
+			}
+		}
+	}
+	pC.provciderCache=serMap
+	return serMap, nil
+}
 func (f *ServiceFinder) QueryService(project, group string) (map[string][]common.ServiceInfo, error) {
 	if len(project) == 0 || len(group) == 0 {
 		return nil, errors.NewFinderError(errors.InvalidParam)
@@ -217,6 +250,7 @@ func (f *ServiceFinder) QueryService(project, group string) (map[string][]common
 					item.ApiVersion = ver
 					if providers, err := f.storageMgr.GetChildren(rootPath + "/" + ser + "/" + ver + "/provider"); err == nil {
 						item.ProviderList = providers
+
 					}
 					serMap[ser] = append(serMap[ser], item)
 				}
