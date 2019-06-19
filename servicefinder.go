@@ -250,8 +250,15 @@ func (f *ServiceFinder) QueryService(project, group string) (map[string][]common
 					item.ApiVersion = ver
 					if providers, err := f.storageMgr.GetChildren(rootPath + "/" + ser + "/" + ver + "/provider"); err == nil {
 						item.ProviderList = providers
-
 					}
+					var finalprovider []string
+					for _,provider:=range item.ProviderList {
+						pc ,_:=getServiceInstance(f.storageMgr,rootPath + "/" + ser + "/" + ver + "/provider",provider,nil)
+						if  pc!=nil && pc.Config.IsValid{
+							finalprovider=append(finalprovider,provider)
+						}
+					}
+					item.ProviderList=finalprovider
 					serMap[ser] = append(serMap[ser], item)
 				}
 			}
