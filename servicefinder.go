@@ -201,37 +201,64 @@ func (f *ServiceFinder) UnSubscribeService(name string) error {
 	return nil
 }
 
-func (f*ServiceFinder)QueryServiceWatch(project,group string,handler common.ServiceChangedHandler)(map[string][]common.ServiceInfo, error){
+func (f *ServiceFinder) QueryServiceWatch(project, group string, handler common.ServiceChangedHandler) (map[string][]common.ServiceInfo, error) {
 	if len(project) == 0 || len(group) == 0 {
 		return nil, errors.NewFinderError(errors.InvalidParam)
 	}
 
 	rootPath := "/polaris/service/" + fmt.Sprintf("%x", md5.Sum([]byte(project+group)))
 	var serMap = make(map[string][]common.ServiceInfo)
-	pC:=NewQueryServiceCallback(handler,f)
+	pC := NewQueryServiceCallback(handler, f)
 	//sC:=NewQueryServiceCallback(handler,WATCH_SERVICE,f)
 	//vC:=NewQueryServiceCallback(handler,WATCH_VERSION,f)
 
 	//watch所有的server
-	if sers, err := f.storageMgr.GetChildrenWithWatch(rootPath,&pC); err != nil {
+	if sers, err := f.storageMgr.GetChildrenWithWatch(rootPath, &pC); err != nil {
 		return nil, err
 	} else {
 		for _, ser := range sers {
-			pC.serviceCache=append(pC.serviceCache,ser)
-			if vers, err := f.storageMgr.GetChildrenWithWatch(rootPath + "/" + ser,&pC); err == nil {
+			pC.serviceCache = append(pC.serviceCache, ser)
+			if vers, err := f.storageMgr.GetChildrenWithWatch(rootPath+"/"+ser, &pC); err == nil {
 				for _, ver := range vers {
-					pC.versionCache[ser]=append(pC.versionCache[ser],ver)
+					pC.versionCache[ser] = append(pC.versionCache[ser], ver)
 					var item common.ServiceInfo
 					item.ApiVersion = ver
-					if providers, err := f.storageMgr.GetChildrenWithWatch(rootPath + "/" + ser + "/" + ver + "/provider",&pC); err == nil {
+					if providers, err := f.storageMgr.GetChildrenWithWatch(rootPath+"/"+ser+"/"+ver+"/provider", &pC); err == nil {
 						item.ProviderList = providers
 					}
+					var finalprovider []string
+					for _, provider := range item.ProviderList {
+						data, err := f.storageMgr.GetDataWithWatch(rootPath+"/"+ser+"/"+ver+"/provider/"+provider, &pC)
+						serviceInstance := new(common.ServiceInstance)
+						//解析数据
+						if data == nil || len(data) == 0 || err != nil {
+							//获取数据为空
+							log.Log.Infof("get data from %v is empty :", rootPath+"/"+ser+"/"+ver+"/provider/"+provider)
+							serviceInstance.Config = getDefaultServiceInstanceConfig()
+						} else {
+							//获取的提供者配置数据不为空
+							var item []byte
+							_, item, err = common.DecodeValue(data)
+							if err != nil {
+								log.Log.Infof("service instance data is %v,unmarsh err: %v", string(data), err)
+								//使用默认的配置
+								serviceInstance.Config = getDefaultServiceInstanceConfig()
+							} else {
+								serviceInstance.Config = serviceutil.ParseServiceConfigData(item)
+							}
+
+						}
+						if serviceInstance != nil && serviceInstance.Config.IsValid {
+							finalprovider = append(finalprovider, provider)
+						}
+					}
+					item.ProviderList = finalprovider
 					serMap[ser] = append(serMap[ser], item)
 				}
 			}
 		}
 	}
-	pC.provciderCache=serMap
+	pC.provciderCache = serMap
 	return serMap, nil
 }
 func (f *ServiceFinder) QueryService(project, group string) (map[string][]common.ServiceInfo, error) {
@@ -252,13 +279,13 @@ func (f *ServiceFinder) QueryService(project, group string) (map[string][]common
 						item.ProviderList = providers
 					}
 					var finalprovider []string
-					for _,provider:=range item.ProviderList {
-						pc ,_:=getServiceInstance(f.storageMgr,rootPath + "/" + ser + "/" + ver + "/provider",provider,nil)
-						if  pc!=nil && pc.Config.IsValid{
-							finalprovider=append(finalprovider,provider)
+					for _, provider := range item.ProviderList {
+						pc, _ := getServiceInstance(f.storageMgr, rootPath+"/"+ser+"/"+ver+"/provider", provider, nil)
+						if pc != nil && pc.Config.IsValid {
+							finalprovider = append(finalprovider, provider)
 						}
 					}
-					item.ProviderList=finalprovider
+					item.ProviderList = finalprovider
 					serMap[ser] = append(serMap[ser], item)
 				}
 			}
