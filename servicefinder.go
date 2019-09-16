@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"sync"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/log"
-	"git.iflytek.com/AIaaS/finder-go/route"
-	"git.iflytek.com/AIaaS/finder-go/storage"
-	"git.iflytek.com/AIaaS/finder-go/utils/serviceutil"
-	"git.iflytek.com/AIaaS/finder-go/utils/stringutil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/log"
+	"git.xfyun.cn/AIaaS/finder-go/route"
+	"git.xfyun.cn/AIaaS/finder-go/storage"
+	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
+	"git.xfyun.cn/AIaaS/finder-go/utils/stringutil"
 	"strings"
 )
 
