@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"git.iflytek.com/AIaaS/finder-go/log"
+	"git.xfyun.cn/AIaaS/finder-go/log"
 	"go.uber.org/zap"
 	"net"
 	"net/http"
@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"git.iflytek.com/AIaaS/finder-go"
+	"git.xfyun.cn/AIaaS/finder-go"
 
 	"encoding/json"
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
+	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
 
 type ServiceItemTest struct {

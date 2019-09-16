@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"git.iflytek.com/AIaaS/finder-go/storage/common"
-	"git.iflytek.com/AIaaS/finder-go/storage/zookeeper"
+	"git.xfyun.cn/AIaaS/finder-go/storage/common"
+	"git.xfyun.cn/AIaaS/finder-go/storage/zookeeper"
 	"sync"
 )
 

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/log"
-	"git.iflytek.com/AIaaS/finder-go/storage/common"
+	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	"git.xfyun.cn/AIaaS/finder-go/log"
+	"git.xfyun.cn/AIaaS/finder-go/storage/common"
 	"github.com/cooleric/go-zookeeper/zk"
 )
 
