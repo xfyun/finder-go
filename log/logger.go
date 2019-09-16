@@ -3,8 +3,6 @@ package log
 import (
 	"log"
 	"os"
-	"strconv"
-	"time"
 )
 
 var Log Logger
@@ -22,7 +20,7 @@ type DefaultLogger struct {
 
 func NewDefaultLogger() Logger {
 
-	logFile, err := os.OpenFile("findergo"+strconv.FormatInt(time.Now().Unix(),10)+".log",os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	logFile, err := os.OpenFile("findergo.log",os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 
 	if err != nil {
 		log.Fatalln("create log err ：", err)

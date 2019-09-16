@@ -87,6 +87,9 @@ func main() {
 	} else if conf.Type == 6 {
 		newQueryServiceFinder(conf)
 		return
+	}else if conf.Type==7 {
+		newQueryServiceNoWatchFinder(conf)
+		return
 	}
 	//newConfigFinder("127.0.0.1:10010", []string{"xsfs.toml"})
 	//newProviderFinder("299.99.99.99:99")
@@ -214,7 +217,62 @@ func (l *ZkLogger) Errorf(fmt string, v ...interface{}) {
 func (l *ZkLogger) Printf(fmt string, v ...interface{}) {
 	l.zap.Infof(fmt, v)
 }
+func newQueryServiceNoWatchFinder(conf TestConfig) {
+	cachePath, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	cachePath += "/findercache"
 
+	//元数据信息
+
+	config := common.BootConfig{
+		//CompanionUrl:     "http://companion.xfyun.iflytek:6868",
+		//compaion地址
+		CompanionUrl: conf.CompanionUrl,
+		//缓存文件的地址
+		CachePath: cachePath,
+		//缓存服务提供者的信息，当为true的时候，和zk连接不上的话，使用缓存信息
+		CacheService: true,
+		//缓存配置文件信息。
+		CacheConfig: true,
+		//和zk之间的会话时间
+		ExpireTimeout: 5 * time.Second,
+		MeteData: &common.ServiceMeteData{
+			Project: conf.Project,
+			Group:   conf.Group,
+			Service: conf.Service,
+			Version: conf.Version,
+			Address: conf.Address,
+		},
+	}
+	loggerConfig := zap.NewProductionConfig()
+	//loggerConfig.EncoderConfig.EncodeTime = normalTimeEncoder
+	//TODO 日志目录
+	loggerConfig.OutputPaths = []string{"stdout"}
+	loggerConfig.EncoderConfig.TimeKey = "time"
+
+	logger, _ := loggerConfig.Build()
+	Logger := logger.Sugar()
+	zkLog := ZkLogger{
+		zap: Logger,
+	}
+	zkLog.Infof("ddddd")
+	f, err := finder.NewFinderWithLogger(config, nil)
+	if err != nil {
+		panic(err)
+
+	}
+	for {
+		dat,_:=f.ServiceFinder.QueryService(conf.Project, conf.Group)
+
+		fmt.Println(dat["db-proxy"])
+
+		time.Sleep(1*time.Second)
+	}
+	//handler := new(ServiceChangedHandle)
+
+}
 func newQueryServiceFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
 	if err != nil {
@@ -261,9 +319,14 @@ func newQueryServiceFinder(conf TestConfig) {
 		panic(err)
 
 	}
-	dat,_:=f.ServiceFinder.QueryService("AIaaS", "dx")
+	handler := new(ServiceChangedHandle)
+	dat,_:=f.ServiceFinder.QueryServiceWatch("AIaaS", "dx",handler)
+	fmt.Println("---------------------------------------------------------------")
+	fmt.Println(dat)
+	fmt.Println("---------------------------------------------------------------")
 	dd,_:=json.Marshal(dat)
 	fmt.Println(string(dd))
+	time.Sleep(1*time.Hour)
 }
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()

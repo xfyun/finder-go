@@ -20,7 +20,224 @@ const (
 	SERVICE_ROUTE_CHANGED           = "SERVICE_ROUTE"
 	CONFIG_CHANGED                  = "CONFIG"
 	GRAY_CONFIG_CHANGED             = "GRAY_CONFIG"
+
+	WATCH_SERVICE  = "WATCH_SERVICE"
+	WATCH_VERSION  = "WATCH_VERSION"
+	WATCH_PROVIDER = "WATCH_PROVIDER"
 )
+
+type QueryServcieChangedCallback struct {
+	provciderCache map[string][]common.ServiceInfo
+	versionCache   map[string][]string
+	serviceCache   []string
+	handler        common.ServiceChangedHandler
+	watchType      string
+	serverFinder   *ServiceFinder
+}
+
+func NewQueryServiceCallback(userHandle common.ServiceChangedHandler, serverFinder *ServiceFinder) QueryServcieChangedCallback {
+	return QueryServcieChangedCallback{
+		handler:        userHandle,
+		serverFinder:   serverFinder,
+		versionCache:   make(map[string][]string),
+		provciderCache: make(map[string][]common.ServiceInfo),
+	}
+}
+func (q *QueryServcieChangedCallback) DataChangedCallback(path string, node string, data []byte) {
+	pS := strings.Split(path, "/")
+	if len(pS) != 8 {
+		log.Log.Errorf("query service callback path %s,", path)
+		return
+	}
+	serverName := pS[4]
+	serverVersion := pS[5]
+	providerAddr :=pS[7]
+	serviceInstance := new(common.ServiceInstance)
+	//解析数据
+	if data == nil || len(data) == 0 {
+		//获取数据为空
+		log.Log.Infof("get data from %v is empty :", path)
+		return
+	} else {
+		//获取的提供者配置数据不为空
+		var item []byte
+		_, item, err := common.DecodeValue(data)
+		if err != nil {
+			log.Log.Infof("service instance data is %v,unmarsh err: %v", string(data), err)
+			//使用默认的配置
+			//	serviceInstance.Config = getDefaultServiceInstanceConfig()
+			return
+		} else {
+			serviceInstance.Config = serviceutil.ParseServiceConfigData(item)
+		}
+	}
+	var exist bool
+	var event []*common.ServiceInstanceChangedEvent
+	for verIdx, ver := range q.provciderCache[serverName] {
+		if ver.ApiVersion != serverVersion {
+			continue
+		}
+		for idx, provider := range ver.ProviderList {
+			if provider == providerAddr {
+				exist = true
+				if !serviceInstance.Config.IsValid{
+					de := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: make([]*common.ServiceInstance, 0)}
+					de.ServerList=append(de.ServerList,&common.ServiceInstance{Addr:providerAddr})
+					event=append(event,&de)
+					q.provciderCache[serverName][verIdx].ProviderList[idx]=q.provciderCache[serverName][verIdx].ProviderList[len(ver.ProviderList)-1]
+					q.provciderCache[serverName][verIdx].ProviderList=q.provciderCache[serverName][verIdx].ProviderList[0:len(ver.ProviderList)-1]
+				}
+			}
+		}
+		if !exist && serviceInstance.Config.IsValid {
+			ae := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: make([]*common.ServiceInstance, 0)}
+			ae.ServerList=append(ae.ServerList,&common.ServiceInstance{Addr:providerAddr})
+			event=append(event,&ae)
+			q.provciderCache[serverName][verIdx].ProviderList=append(q.provciderCache[serverName][verIdx].ProviderList,providerAddr)
+		}
+	}
+	if len(event)==0{
+		return
+	}
+	q.handler.OnServiceInstanceChanged(serverName, serverVersion, event)
+}
+func (q *QueryServcieChangedCallback) versionCallback(path string, children []string) {
+	pS := strings.Split(path, "/")
+	if len(pS) != 5 {
+		log.Log.Errorf("query service callback path %s,", path)
+		return
+	}
+	serName := pS[4]
+	if serVers, ok := q.versionCache[serName]; ok {
+		aV, _ := diffProvider(children, serVers)
+		if len(aV) != 0 {
+			for _, version := range aV {
+				providerList, _ := q.serverFinder.storageMgr.GetChildrenWithWatch(path+"/"+version+"/provider", q)
+				var event []*common.ServiceInstanceChangedEvent
+				if len(providerList) != 0 {
+					ae := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: make([]*common.ServiceInstance, 0)}
+					for _, p := range providerList {
+						q.serverFinder.storageMgr.GetDataWithWatch(path+"/"+version+"/provider/"+p, q)
+						ae.ServerList = append(ae.ServerList, &common.ServiceInstance{Addr: p})
+					}
+
+					event = append(event, &ae)
+				}
+				q.provciderCache[serName] = append(q.provciderCache[serName], common.ServiceInfo{ApiVersion: version, ProviderList: providerList})
+				q.handler.OnServiceInstanceChanged(serName, version, event)
+			}
+		}
+	}
+}
+func (q *QueryServcieChangedCallback) serviceCallback(path string, children []string) {
+	nS, _ := diffProvider(children, q.serviceCache)
+	if len(nS) != 0 {
+		for _, ser := range nS {
+			q.serviceCache = append(q.serviceCache, ser)
+			if vers, err := q.serverFinder.storageMgr.GetChildrenWithWatch(path+"/"+ser, q); err == nil {
+				for _, ver := range vers {
+					q.versionCache[ser] = append(q.versionCache[ser], ver)
+					var item common.ServiceInfo
+					item.ApiVersion = ver
+					if providers, err := q.serverFinder.storageMgr.GetChildrenWithWatch(path+"/"+ser+"/"+ver+"/provider", q); err == nil {
+						item.ProviderList = providers
+					}
+					var event []*common.ServiceInstanceChangedEvent
+					if len(item.ProviderList) != 0 {
+						ae := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: make([]*common.ServiceInstance, 0)}
+						for _, p := range item.ProviderList {
+							q.serverFinder.storageMgr.GetDataWithWatch(path+"/"+ser+"/"+ver+"/provider/"+p, q)
+							ae.ServerList = append(ae.ServerList, &common.ServiceInstance{Addr: p})
+						}
+						event = append(event, &ae)
+					}
+					q.provciderCache[ser] = append(q.provciderCache[ser], item)
+					q.handler.OnServiceInstanceChanged(ser, item.ApiVersion, event)
+				}
+			}
+		}
+	}
+}
+func (q *QueryServcieChangedCallback) providerCallback(path string, children []string) {
+	serInfo := strings.Split(path, "/")
+	if len(serInfo) != 7 {
+		log.Log.Errorf("query service callback path %s,", path)
+		return
+	}
+	serName := serInfo[4]
+	serVersion := serInfo[5]
+	if sers, ok := q.provciderCache[serName]; ok {
+		for idx, ser := range sers {
+			if ser.ApiVersion == serVersion {
+				prevProvider := ser.ProviderList
+				sers[idx] = common.ServiceInfo{ApiVersion: serVersion, ProviderList: children}
+				aP, dP := diffProvider(children, prevProvider)
+				var event []*common.ServiceInstanceChangedEvent
+				if len(aP) != 0 {
+					ae := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED}
+					for _, p := range aP {
+						q.serverFinder.storageMgr.GetDataWithWatch(path+"/"+p, q)
+						ae.ServerList = append(ae.ServerList, &common.ServiceInstance{Addr: p})
+					}
+					event = append(event, &ae)
+				}
+				if len(dP) != 0 {
+					de := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE}
+					for _, p := range dP {
+						de.ServerList = append(de.ServerList, &common.ServiceInstance{Addr: p})
+					}
+					event = append(event, &de)
+				}
+				q.handler.OnServiceInstanceChanged(serName, serVersion, event)
+				return
+			}
+		}
+	}
+}
+func (q *QueryServcieChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
+	pathLen := len(strings.Split(path, "/"))
+	if pathLen == 5 {
+		q.versionCallback(path, children)
+	} else if pathLen == 4 {
+		q.serviceCallback(path, children)
+	} else if pathLen == 7 {
+		q.providerCallback(path, children)
+	}
+}
+func diffProvider(new, old []string) (addProvider, deleteProvider []string) {
+	//直接暴力求解
+	for _, nP := range new {
+		var find = false
+		for _, oP := range old {
+			if nP == oP {
+				find = true
+				break
+			}
+		}
+		if !find {
+			addProvider = append(addProvider, nP)
+		}
+	}
+	for _, oP := range old {
+		var find = false
+		for _, nP := range new {
+			if nP == oP {
+				find = true
+				break
+			}
+		}
+		if !find {
+			deleteProvider = append(deleteProvider, oP)
+		}
+	}
+	return
+}
+func (q *QueryServcieChangedCallback) Process(path string, node string) {
+
+}
+func (q *QueryServcieChangedCallback) ChildDeleteCallBack(path string) {
+
+}
 
 type ServiceChangedCallback struct {
 	serviceItem   common.ServiceSubscribeItem

@@ -27,7 +27,9 @@ func (s *ServiceChangedHandle) OnServiceConfigChanged(name string, apiVersion st
 
 // OnServiceInstanceChanged OnServiceInstanceChanged
 func (s *ServiceChangedHandle) OnServiceInstanceChanged(name string, apiVersion string, eventList []*common.ServiceInstanceChangedEvent) bool {
+	fmt.Println("-------------------------------------------------------------------",len(eventList))
 	for eventIndex, e := range eventList {
+		fmt.Println("-----------------------服务提供者 地址: ", e.ServerList)
 		for index, inst := range e.ServerList {
 			if e.EventType == common.INSTANCEREMOVE {
 				fmt.Println("-----------------------减少的服务提供者 地址: ", inst.Addr)
