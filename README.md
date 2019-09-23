@@ -32,12 +32,23 @@ f, err := finder.NewFinderWithLogger(config, nil)
 ```
 //实现handler接口 订阅服务 返回的map的key是ServiceName + "_" + ApiVersion。 vlaue是Service实例，主要取ProviderList。代表当前服务的提供者列表
 serviceList, err := f.ServiceFinder.UseAndSubscribeServic(subscri, handler)
+//注册服务
+f.ServiceFinder.RegisterServiceWithAddr(addr, apiVersion)
+
+//获取配置文件
+configFiles, err := f.ConfigFinder.UseAndSubscribeConfig(name, &handler)
 
 ```
 
 * handler接口说明
 
 ```
+type ConfigChangedHandler interface {
+    //配置文件发生改变后的回调
+	OnConfigFileChanged(config *Config) bool
+	OnError(errInfo ConfigErrInfo)
+}
+
 type ServiceChangedHandler interface {
 
 	//服务实例上的配置信息发生变化 回调接口
@@ -47,6 +58,7 @@ type ServiceChangedHandler interface {
 	//服务实例发生变化回调接口，ServiceInstanceChangedEvent中的EventType代表增加提供者还是减少，ServerList代表增加的实例或者减少的实例
 	OnServiceInstanceChanged(name string, apiVersion string, eventList []*ServiceInstanceChangedEvent) bool
 }
+
 ```
 
 ###  查询所有服务
