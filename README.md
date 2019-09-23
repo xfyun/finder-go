@@ -1,4 +1,4 @@
-# finder-go 2.0.0
+# finder-go 使用说明
 1. 创建config
 
 ```
