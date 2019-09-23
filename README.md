@@ -77,3 +77,6 @@ type ServiceInfo struct {
 	ProviderList []string //所有地址，可能为空
 }
 ```
+
+### 流程
+* 参加流程图
