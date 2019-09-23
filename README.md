@@ -79,4 +79,4 @@ type ServiceInfo struct {
 ```
 
 ### 流程
-* 参加流程图
+* 参加[流程图](https://git.iflytek.com/AIaaS/finder-go/blob/master/%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%B5%81%E7%A8%8B.png)
