@@ -49,7 +49,7 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 
 	f.locker.Lock()
 	defer f.locker.Unlock()
-	if f.storageMgr==nil{
+	if f.storageMgr == nil {
 		log.Log.Infof("zk init err")
 		return nil, errors.NewFinderError(errors.ZkGetInfoError)
 	}
@@ -208,6 +208,93 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	return configFiles, nil
 }
 
+func (f *ConfigFinder) UseAndSubscribeWithPrefix(prefix string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
+	f.locker.Lock()
+	defer f.locker.Unlock()
+	f.handler = handler
+	configFiles := make(map[string]*common.Config)
+	if f.storageMgr == nil {
+		if f.config.CacheConfig {
+			log.Log.Infof("init zk err,use cache")
+			configFiles = getAllCachedConfig(f.config.CachePath, prefix)
+			if configFiles != nil {
+				for k, _ := range configFiles {
+					f.fileSubscribe = append(f.fileSubscribe, k)
+					// TODO: 去重？
+				}
+			}
+
+			return configFiles, nil
+		}
+
+		log.Log.Infof("init zk err ,not use cache ,exit")
+		return nil, nil
+	}
+	log.Log.Debugf("call UseAndSubscribeAll")
+
+	if ok := f.checkDirExist(f.rootPath); !ok {
+		log.Log.Infof("file not exist,path: %v", f.rootPath)
+		return nil, errors.NewFinderError(errors.ConfigFileNotExist)
+	}
+
+	consumerPath := f.rootPath + "/consumer"
+	consumerPath += "/normal/" + f.config.MeteData.Address
+	f.storageMgr.SetTempPath(consumerPath)
+
+	path := ""
+	// watch dir
+	dirCallback := NewConfigChangedCallback(prefix, CONFIG_DIR_CHANGED, f.rootPath, handler, f.config, f.storageMgr, f)
+	names, err := f.storageMgr.GetChildrenWithWatch(f.rootPath, &dirCallback)
+	if err != nil {
+		if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
+			log.Log.Infof("config dir not exist,path: %v", f.rootPath)
+			return nil, errors.NewFinderError(errors.ConfigDirNotExist)
+		}
+
+		return nil, err
+	}
+
+	for _, n := range names {
+		if !strings.HasPrefix(n, prefix) {
+			continue
+		}
+		f.fileSubscribe = append(f.fileSubscribe, n)
+		basePath := f.rootPath
+		path = basePath + "/" + n
+		callback := NewConfigChangedCallback(n, CONFIG_CHANGED, path, handler, f.config, f.storageMgr, f)
+		data, err := f.storageMgr.GetDataWithWatchV2(path, &callback)
+		if err != nil {
+			if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
+				log.Log.Infof("config file not exist。filename: %v", n)
+				return nil, errors.NewFinderError(errors.ConfigFileNotExist)
+			}
+			onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
+		} else {
+			_, fData, err := common.DecodeValue(data)
+			if err != nil {
+				onUseConfigErrorWithCache(configFiles, n, f.config.CachePath, err)
+			} else {
+				//
+				confMap := make(map[string]interface{})
+				if fileutil.IsTomlFile(n) {
+					confMap = fileutil.ParseTomlFile(fData)
+				}
+				config := &common.Config{Name: n, File: fData, ConfigMap: confMap}
+				configFiles[n] = config
+				f.usedConfig.Store(n, config)
+				//放到文件中
+				err = CacheConfig(f.config.CachePath, config)
+				if err != nil {
+					log.Log.Errorf("CacheConfig: %s", err)
+				}
+			}
+		}
+
+	}
+
+	return configFiles, nil
+}
+
 func (f *ConfigFinder) checkFileExist(basePath string, names []string) bool {
 	//TODO 判断文件是否存在，不存在则直接报错，
 	log.Log.Debugf("basePath %s", basePath)
@@ -217,7 +304,7 @@ func (f *ConfigFinder) checkFileExist(basePath string, names []string) bool {
 		return false
 	}
 	if len(names) > len(files) {
-		log.Log.Infof("current file is %v, subscribe file is %v", files,  names)
+		log.Log.Infof("current file is %v, subscribe file is %v", files, names)
 		return false
 	}
 	for _, subFileName := range names {
@@ -235,6 +322,23 @@ func (f *ConfigFinder) checkFileExist(basePath string, names []string) bool {
 	return true
 
 }
+
+func (f *ConfigFinder) checkDirExist(basePath string) bool {
+	//TODO 判断文件是否存在，不存在则直接报错，
+	log.Log.Debugf("basePath %s", basePath)
+	dirInfo, err := f.storageMgr.GetData(basePath)
+	if err != nil {
+		log.Log.Errorf("query config dir err : %v", err)
+		return false
+	}
+
+	if dirInfo == nil {
+		return false
+	}
+
+	return true
+}
+
 func (f *ConfigFinder) UnSubscribeConfig(name string) error {
 	var err error
 	if len(name) == 0 {
@@ -285,12 +389,22 @@ func (f *ConfigFinder) BatchUnSubscribeConfig(names []string) error {
 
 // onUseConfigError with cache
 func onUseConfigErrorWithCache(configFiles map[string]*common.Config, name string, cachePath string, err error) {
-	log.Log.Errorf("onUseConfigError: %v, name: %v", err,name)
+	log.Log.Errorf("onUseConfigError: %v, name: %v", err, name)
 	configFiles[name] = getCachedConfig(name, cachePath)
 }
 
 func getCachedConfig(name string, cachePath string) *common.Config {
 	config, err := GetConfigFromCache(cachePath, name)
+	if err != nil {
+		log.Log.Errorf("GetConfigFromCache: %s", err)
+		return nil
+	}
+
+	return config
+}
+
+func getAllCachedConfig(cachePath string, prefix string) map[string]*common.Config {
+	config, err := GetAllConfigFromCache(cachePath, prefix)
 	if err != nil {
 		log.Log.Errorf("GetConfigFromCache: %s", err)
 		return nil

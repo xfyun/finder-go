@@ -3,17 +3,19 @@ package main
 import (
 	"errors"
 	"fmt"
-	"git.xfyun.cn/AIaaS/finder-go/log"
-	"go.uber.org/zap"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"git.xfyun.cn/AIaaS/finder-go/log"
+	"go.uber.org/zap"
+
 	"git.xfyun.cn/AIaaS/finder-go"
 
 	"encoding/json"
+
 	common "git.xfyun.cn/AIaaS/finder-go/common"
 	"git.xfyun.cn/AIaaS/finder-go/utils/httputil"
 )
@@ -87,7 +89,7 @@ func main() {
 	} else if conf.Type == 6 {
 		newQueryServiceFinder(conf)
 		return
-	}else if conf.Type==7 {
+	} else if conf.Type == 7 {
 		newQueryServiceNoWatchFinder(conf)
 		return
 	}
@@ -264,11 +266,11 @@ func newQueryServiceNoWatchFinder(conf TestConfig) {
 
 	}
 	for {
-		dat,_:=f.ServiceFinder.QueryService(conf.Project, conf.Group)
+		dat, _ := f.ServiceFinder.QueryService(conf.Project, conf.Group)
 
 		fmt.Println(dat["db-proxy"])
 
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 	}
 	//handler := new(ServiceChangedHandle)
 
@@ -320,13 +322,13 @@ func newQueryServiceFinder(conf TestConfig) {
 
 	}
 	handler := new(ServiceChangedHandle)
-	dat,_:=f.ServiceFinder.QueryServiceWatch("AIaaS", "dx",handler)
+	dat, _ := f.ServiceFinder.QueryServiceWatch("AIaaS", "dx", handler)
 	fmt.Println("---------------------------------------------------------------")
 	fmt.Println(dat)
 	fmt.Println("---------------------------------------------------------------")
-	dd,_:=json.Marshal(dat)
+	dd, _ := json.Marshal(dat)
 	fmt.Println(string(dd))
-	time.Sleep(1*time.Hour)
+	time.Sleep(1 * time.Hour)
 }
 func newConfigFinder(conf TestConfig) {
 	cachePath, err := os.Getwd()
@@ -374,7 +376,8 @@ func newConfigFinder(conf TestConfig) {
 		fmt.Println(err)
 	} else {
 		//使用并订阅文件的变更。。
-		testUseConfigAsyncByName(f, conf.SubscribeFile)
+		//testUseConfigAsyncByName(f, conf.SubscribeFile)
+		testUseConfigAsyncByPrefix(f, "11")
 		if conf.Type == 5 {
 			ss := conf.UnSubscribeTime
 			tick := time.NewTicker(ss * time.Minute)
@@ -662,6 +665,22 @@ func testUseConfigAsyncByName(f *finder.FinderManager, name []string) {
 		fmt.Println(err)
 	}
 	for _, c := range configFiles {
+		fmt.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
+	}
+}
+
+func testUseConfigAsyncByPrefix(f *finder.FinderManager, prefix string) {
+
+	handler := ConfigChangedHandle{}
+
+	//使用并订阅文件的变更。回调函数相比之前多了一个OnError .用于在运行过程中出现解析文件错误的时候进行通知，可以为空的实现
+	configFiles, err := f.ConfigFinder.UseAndSubscribeWithPrefix("conf", &handler)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("begin config len:", len(configFiles))
+	for _, c := range configFiles {
+		fmt.Println("begin config name:", c.Name)
 		fmt.Println("首次获取配置文件名称：", c.Name, "  、\r\n内容为:\r\n", string(c.File))
 	}
 }
