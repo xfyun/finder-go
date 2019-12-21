@@ -4,6 +4,7 @@
 *.log
 *.jar
 *.DS_Store
+.vscode
 debug
 example
 findercache
