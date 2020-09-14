@@ -143,7 +143,18 @@ func checkConfig(c *common.BootConfig) {
 }
 
 func getStorageInfo(config *common.BootConfig) (*common.StorageInfo, error) {
-	url := config.CompanionUrl + fmt.Sprintf("/finder/query_zk_info?project=%s&group=%s&service=%s&version=%s", config.MeteData.Project, config.MeteData.Group, config.MeteData.Service, config.MeteData.Version)
+	srv:=config.MeteData.Service
+	ver:=config.MeteData.Version
+	if srv == ""{
+		srv = "def"
+	}
+
+	if ver == ""{
+		ver = "def"
+	}
+
+
+	url := config.CompanionUrl + fmt.Sprintf("/finder/query_zk_info?project=%s&group=%s&service=%s&version=%s", config.MeteData.Project, config.MeteData.Group,srv, ver)
 	info, err := companion.GetStorageInfo(hc, url)
 	if err != nil {
 		return nil, err
@@ -320,7 +331,9 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	go watchZkInfo(fm)
 	return fm, nil
 }
+// 监听zk 地址是否变化
 func manitorStorage(fm *FinderManager) {
+	return
 	log.Log.Infof("manitorStorage")
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -343,13 +356,15 @@ func manitorStorage(fm *FinderManager) {
 		}
 	}
 }
+// 监听zk 地址是否发生变化，如果变化需要重新连接zk
 func watchZkInfo(fm *FinderManager) {
-
-	zkNodePath, err := fm.storageMgr.GetZkNodePath()
-	if err != nil {
-		log.Log.Errorf("zk node path is err,%v",err)
-	}
-	fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
+	return
+	//zkNodePath, err := fm.storageMgr.GetZkNodePath()
+	//if err != nil {
+	//	log.Log.Errorf("zk node path is err,%v",err)
+	//}
+	////fmt.Println(zkNodePath)
+	//fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
 }
 
 func watchStorageInfo(fm *FinderManager) {

@@ -3,7 +3,6 @@ package serviceutil
 import (
 	"encoding/json"
 	"git.xfyun.cn/AIaaS/finder-go/common"
-	common "git.xfyun.cn/AIaaS/finder-go/common"
 	"log"
 )
 
@@ -41,8 +40,8 @@ func CompareServiceInstanceList(prevProviderList []*common.ServiceInstance, curr
 	var providerMap = make(map[string]*common.ServiceInstance)
 	var countMap = make(map[string]int8)
 	eventList := []*common.ServiceInstanceChangedEvent{}
-	addServiceInstance := common.ServiceInstanceChangedEvent{EventType: finder.INSTANCEADDED, ServerList: []*common.ServiceInstance{}}
-	removeServiceInstance := common.ServiceInstanceChangedEvent{EventType: finder.INSTANCEREMOVE, ServerList: []*common.ServiceInstance{}}
+	addServiceInstance := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: []*common.ServiceInstance{}}
+	removeServiceInstance := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: []*common.ServiceInstance{}}
 	for _, provider := range prevProviderList {
 		providerMap[provider.Addr] = provider
 		countMap[provider.Addr] += 1

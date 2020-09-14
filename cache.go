@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	common "git.xfyun.cn/AIaaS/finder-go/common"
+	"git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/log"
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
@@ -24,7 +23,6 @@ func CacheStorageInfo(cachePath string, zkInfo *common.StorageInfo) error {
 
 		return err
 	}
-
 	return nil
 }
 

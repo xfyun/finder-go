@@ -58,6 +58,7 @@ func (f *ServiceFinder) RegisterServiceWithAddr(addr string, version string) err
 	log.Log.Debugf("RegisterServiceWithAddr : addr-> %s %s %s", addr, " version->", version)
 	return f.registerService(addr, version)
 }
+
 func (f *ServiceFinder) RegisterService(version string) error {
 	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
@@ -65,6 +66,7 @@ func (f *ServiceFinder) RegisterService(version string) error {
 	log.Log.Debugf("RegisterServiceWithAddr : version-> %s %s %s", version)
 	return f.registerService(f.config.MeteData.Address, version)
 }
+
 func (f *ServiceFinder) UnRegisterService(version string) error {
 	if f.storageMgr == nil {
 		return errors.NewFinderError(errors.ZkConnectionLoss)
@@ -333,6 +335,7 @@ func (f *ServiceFinder) registerConsumer(service common.ServiceSubscribeItem, ad
 
 	return nil
 }
+
 func (f *ServiceFinder) getServiceInstanceByAddrList(providerAddrList []string, rootPath string, handler *ServiceChangedCallback) []*common.ServiceInstance {
 	var serviceInstanceList = make([]*common.ServiceInstance, 0)
 	for _, providerAddr := range providerAddrList {

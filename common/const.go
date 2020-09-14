@@ -1,4 +1,4 @@
-package finder
+package common
 
 const DefaultCacheDir = "findercache"
 

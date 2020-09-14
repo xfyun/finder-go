@@ -131,6 +131,7 @@ func (q *QueryServcieChangedCallback) versionCallback(path string, children []st
 		}
 	}
 }
+
 func (q *QueryServcieChangedCallback) serviceCallback(path string, children []string) {
 	nS, _ := diffProvider(children, q.serviceCache)
 	if len(nS) != 0 {
@@ -443,8 +444,8 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
 	cb.serviceFinder.serviceZkData[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
 	cb.uh.OnServiceConfigChanged(service.ServiceName, service.ApiVersion, &common.ServiceConfig{JsonConfig: string(configData)})
-
 }
+
 func (cb *ServiceChangedCallback) Process(path string, node string) {
 
 }
@@ -459,6 +460,7 @@ func (cb *ServiceChangedCallback) ChildDeleteCallBack(path string) {
 	eventList = append(eventList, &event)
 	cb.uh.OnServiceInstanceChanged(cb.serviceItem.ServiceName, cb.serviceItem.ApiVersion, eventList)
 }
+
 func getAddProviderAddrList(prevProviderMap map[string]*common.ServiceInstance, currentProviderList []string) []string {
 	var addProviderAddrList = make([]string, 0)
 	for _, providerAddr := range currentProviderList {
@@ -554,6 +556,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[serviceId])
 
 }
+
 func getRemoveInstnceEvent(insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
 	event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: make([]*common.ServiceInstance, 0)}
 	for _, inst := range insts {
@@ -561,6 +564,7 @@ func getRemoveInstnceEvent(insts []*common.ServiceInstance) *common.ServiceInsta
 	}
 	return &event
 }
+
 func getAddInstanceEvent(insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
 	event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: make([]*common.ServiceInstance, 0)}
 	for _, inst := range insts {
@@ -582,9 +586,9 @@ type ConfigChangedCallback struct {
 
 func NewConfigChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ConfigChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager, configFinder *ConfigFinder) ConfigChangedCallback {
 	return ConfigChangedCallback{
-		name:         serviceName,
+		name:         serviceName, // subscribe file name
 		eventType:    watchType,
-		root:         rootPath,
+		root:         rootPath, // empty
 		uh:           userHandle,
 		bootCfg:      bootConfig,
 		sm:           storageMgr,
@@ -595,6 +599,7 @@ func NewConfigChangedCallback(serviceName string, watchType string, rootPath str
 func (cb *ConfigChangedCallback) ChildDeleteCallBack(path string) {
 
 }
+
 func (cb *ConfigChangedCallback) Process(path string, node string) {
 	if strings.HasSuffix(path, "/gray") {
 		//如果是gray节点数据改变

@@ -127,7 +127,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 			return configFiles, nil
 		} else {
 			log.Log.Infof("init zk err ,not use cache ,exit")
-			return nil, nil
+			return nil, nil  // 此处应该返回error
 		}
 	}
 	log.Log.Debugf("subscribe file ：%v", name)

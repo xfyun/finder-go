@@ -24,7 +24,7 @@ func NewFinderError(ret ReturnCode) *FinderError {
 		Ret: ret,
 	}
 	fe.Desc = ret.String()
-	if _, file, line, ok := runtime.Caller(3); ok {
+	if _, file, line, ok := runtime.Caller(1); ok {
 		fe.File = file
 		fe.Line = line
 	}

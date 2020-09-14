@@ -261,6 +261,7 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 	nodes, _, err := zm.conn.Children(path)
 	return nodes, err
 }
+
 func recoverFunc() {
 	if err := recover(); err != nil {
 		log.Log.Debugf("recover ： %v", err)
@@ -284,7 +285,6 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 				log.Log.Debugf("recv event ：[ GetChildrenWithWatch ]  %v", event)
 				if e.State != zk.StateConnected {
 					log.Log.Debugf("[ GetChildrenWithWatch ]  e.State != zk.StateConnected %v","")
-
 				}
 				var retryCount int
 				for {
@@ -295,7 +295,7 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 						break
 					}
 					if err != nil {
-						log.Log.Debugf("[ GetChildrenWithWatch ] retry get childer err: %v, path: %v", err,path)
+						log.Log.Debugf("[ GetChildrenWithWatch ] retry get children err: %v, path: %v", err,path)
 						continue
 					} else {
 						callback.ChildrenChangedCallback(e.Path, getNodeFromPath(e.Path), data)
