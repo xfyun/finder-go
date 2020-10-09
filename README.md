@@ -80,3 +80,22 @@ type ServiceInfo struct {
 
 ### 流程
 * 参加[流程图](https://git.iflytek.com/AIaaS/finder-go/blob/master/%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%B5%81%E7%A8%8B.png)
+
+### 2.1.19 更新：
+
+1. 集成时需要新增configChangeHandler 的接口实现函数：
+````go
+func (s *ConfigChangedHandle) OnConfigFilesAdded(configs map[string]*common.Config) bool {
+
+
+	return true
+}
+
+func (s *ConfigChangedHandle) OnConfigFilesRemoved(configNames []string) bool {
+
+
+	return true
+}
+
+````
+2. git.xfyun.cn/AIaaS/finder-go/common 包名由原来错误的finder 修正为common。
