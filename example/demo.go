@@ -378,6 +378,7 @@ func newConfigFinder(conf TestConfig) {
 		//使用并订阅文件的变更。。
 		//testUseConfigAsyncByName(f, conf.SubscribeFile)
 		testUseConfigAsyncByPrefix(f, "11")
+		f.ConfigFinder.UseAndSubscribeWithPrefix()
 		if conf.Type == 5 {
 			ss := conf.UnSubscribeTime
 			tick := time.NewTicker(ss * time.Minute)

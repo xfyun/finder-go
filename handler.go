@@ -809,6 +809,7 @@ func (cb *ConfigChangedCallback) OnConfigDirChanged(prefix string, configNames [
 				if err != nil {
 					log.Log.Infof("decode config err。filename: %v,err:%v", n, err)
 				} else {
+
 					confMap := make(map[string]interface{})
 					if fileutil.IsTomlFile(n) {
 						confMap = fileutil.ParseTomlFile(fData)
