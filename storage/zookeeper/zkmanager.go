@@ -227,6 +227,10 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 				for {
 					// 这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
 					data, _, event, err = zm.conn.GetW(path)
+					if err == zk.ErrNoNode{
+						log.Log.Errorf("node deleted , stop watch: paths:%s,err:%v",path,err)
+						return
+					}
 					if err != nil {
 						log.Log.Debugf("get data with watch , path: %v ,err: %v", path, err)
 						retryCount++
@@ -295,6 +299,10 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 					//	break
 					//}
 					// 一直watch 重试不要退出，否则会出现订阅不上的情况
+					if err == zk.ErrNoNode{
+						log.Log.Errorf("node deleted , stop watch dir: paths:%s,err:%v",path,err)
+						return // 没有node，直接return
+					}
 					if err != nil {
 						time.Sleep(time.Duration(retryCount%30)*time.Second)
 						log.Log.Errorf("[ GetChildrenWithWatch ] retry get children err: %v, path: %v", err,path)

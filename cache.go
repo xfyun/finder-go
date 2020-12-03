@@ -3,11 +3,11 @@ package finder
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-	"git.xfyun.cn/AIaaS/finder-go/common"
+	common "git.xfyun.cn/AIaaS/finder-go/common"
 	errors "git.xfyun.cn/AIaaS/finder-go/errors"
 	"git.xfyun.cn/AIaaS/finder-go/log"
 	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
+	"strings"
 )
 
 func CacheStorageInfo(cachePath string, zkInfo *common.StorageInfo) error {

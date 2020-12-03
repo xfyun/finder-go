@@ -1,4 +1,4 @@
-package common
+package finder
 
 import (
 	"encoding/binary"
