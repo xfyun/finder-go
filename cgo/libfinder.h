@@ -23,7 +23,9 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 
 #include "config_center.h"
-#include "stdlib.h"
+#include <stdlib.h>
+
+
  
 #line 1 "cgo-generated-wrapper"
 
@@ -78,7 +80,17 @@ extern "C" {
 
 extern SubscribeServiceResult* SubscribeService(char* p0, char* p1, char* p2, char* p3, char* p4);
 
+extern CommonResult RegisterService(char* p0, char* p1, char* p2, char* p3);
+
+extern CommonResult UnRegisterService(char* p0, char* p1, char* p2, char* p3);
+
+extern SubscribeConfigResult GetFile(char* p0, char* p1, char* p2, char* p3, char* p4);
+
 extern void Init(char* p0, char* p1);
+
+extern SubscribeServiceResult* ListenService(char* p0, char* p1, char* p2, char* p3);
+
+extern SubscribeConfigResult ListenFile(char* p0, char* p1, char* p2, char* p3, char* p4);
 
 #ifdef __cplusplus
 }
