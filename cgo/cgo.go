@@ -36,6 +36,12 @@ func valueOfAddr(addrs []string)*C.SubscribeServiceResult{
 	return res
 }
 
+//export InitCenter
+func InitCenter(companion ,myAddr *C.char){
+	finderm.Init(C.GoString(companion),C.GoString(myAddr))
+}
+
+
 //export SubscribeService
 func SubscribeService(project,group,myservice,service ,apiVersion *C.char)*C.SubscribeServiceResult{
 	addrs,err:=finderm.SubscribeService(C.GoString(project),C.GoString(group),C.GoString(myservice),C.GoString(service),C.GoString(apiVersion))
@@ -97,10 +103,6 @@ func SubscribeFile(project,group,service ,version,file *C.char)C.SubscribeConfig
 }
 
 
-//export InitCenter
-func InitCenter(companion ,myAddr *C.char){
-	finderm.Init(C.GoString(companion),C.GoString(myAddr))
-}
 
 //export ListenService
 func ListenService(project,group,service ,apiVersion *C.char, queue C.int)*C.SubscribeServiceResult{

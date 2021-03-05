@@ -12,7 +12,8 @@ int main(){
     }
 
     Node* list = res->addrList;
-    for(int i=0;i<res->length;i++){
+    int i;
+    for( i=0;i<res->length;i++){
         printf("addr is:%s\n",list->addr);
         list = list->next;
     }
@@ -24,7 +25,7 @@ int main(){
            }
         printf("service address  changed:->");
         Node* list = res->addrList;
-            for(int i=0;i<res->length;i++){
+            for(i=0;i<res->length;i++){
                 printf("addr is:%s\n",list->addr);
                 list = list->next;
             }
