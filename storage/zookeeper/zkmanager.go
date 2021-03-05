@@ -268,7 +268,7 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 
 func recoverFunc() {
 	if err := recover(); err != nil {
-		log.Log.Debugf("recover ： %v", err)
+		log.Log.Errorf("recover ： %v", err)
 	}
 }
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
@@ -278,10 +278,10 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 	}
 
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
+		defer recoverFunc()
 		for {
 			select {
 			case e, ok := <-event:
-				defer recoverFunc()
 				if !ok {
 					log.Log.Infof("[ GetChildrenWithWatch ]  <-event; !ok")
 					return
@@ -310,7 +310,6 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 					} else {
 						callback.ChildrenChangedCallback(e.Path, getNodeFromPath(e.Path), data)
 					}
-
 					break
 				}
 			case exit, ok := <-zm.exit:
@@ -332,6 +331,8 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 func (zm *ZkManager) SetPath(path string) error {
 	return zm.SetPathWithData(path, []byte{})
 }
+
+
 func (zm *ZkManager) CheckExists(path string) (bool, error) {
 	exists, _, err := zm.conn.Exists(path)
 	if err != nil {
@@ -339,6 +340,8 @@ func (zm *ZkManager) CheckExists(path string) (bool, error) {
 	}
 	return exists, nil
 }
+
+
 func (zm *ZkManager) SetPathWithData(path string, data []byte) error {
 	if data == nil {
 		return errors.NewFinderError(errors.ZkDataCanotNil)

@@ -621,10 +621,12 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 		log.Log.Infof("当前不在灰度组，但是通知是属于灰度组的，不进行处理")
 		return
 	}
+
 	if len(currentGrayGroupId) != 0 && !strings.Contains(path, "/"+currentGrayGroupId) {
 		log.Log.Infof("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
 		return
 	}
+
 	var isSubscribeFile bool
 	for _, value := range cb.configFinder.fileSubscribe {
 		if strings.Compare(cb.name, value) == 0 {
@@ -879,6 +881,7 @@ func getRemoveConfigList(f *ConfigFinder, latestConfigList []string) []string {
 
 func pushConfigFeedback(companionUrl string, f *common.ConfigFeedback) error {
 	url := companionUrl + "/finder/push_config_feedback"
+
 	return companion.FeedbackForConfig(hc, url, f)
 }
 

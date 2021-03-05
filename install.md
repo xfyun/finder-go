@@ -14,6 +14,7 @@ mkdir -p /opt/finder
 ##### 配置type=3 ，然后修改address、service、providerApiVersion信息来注册多个服务，启动一个demo，代表一个服务提供者
 ##### 配置type=4,订阅subscribeFile中的文件，订阅subribeServiceItem服务。
 ##### 配置type=5,订阅subscribeFile中的文件，启动后按照unSubscribeTime（单位分钟）设定的时间取消unSubscribeFile指定的文件，
+
 /opt/finder/conf.json:
 ````
 {

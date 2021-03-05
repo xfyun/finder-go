@@ -8,3 +8,6 @@
 debug
 example
 findercache
+*.findercache
+libfinder.so
+*.out

@@ -1,4 +1,4 @@
-package cexport
+package finderm
 
 import (
 	"errors"
@@ -13,6 +13,10 @@ type configCenter struct {
 	configCache sync.Map
 	finder      *finder.FinderManager
 	callBacks   sync.Map
+	project string
+	group string
+	service string
+	version string
 }
 
 func newConfigCenter (project,group,service,version,companion string)(*configCenter,error){
@@ -37,6 +41,10 @@ func newConfigCenter (project,group,service,version,companion string)(*configCen
 	return &configCenter{
 		configCache: sync.Map{},
 		finder:      fd,
+		project: project,
+		group: group,
+		service: service,
+		version: version,
 	},nil
 }
 

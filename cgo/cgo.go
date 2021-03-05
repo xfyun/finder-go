@@ -59,6 +59,15 @@ func RegisterService(project,group,service ,version *C.char)C.CommonResult{
 	return C.CommonResult{}
 }
 
+//export RegisterServiceWithAddr
+func RegisterServiceWithAddr(project,group,service ,version,addr *C.char)C.CommonResult{
+	err:=finderm.RegisterServiceWithAddr(C.GoString(project),C.GoString(group),C.GoString(service),C.GoString(version),C.GoString(addr))
+	if err != nil{
+		return C.CommonResult{code:10002,info:C.CString(err.Error())}
+	}
+	return C.CommonResult{}
+}
+
 //export UnRegisterService
 func UnRegisterService(project,group,service ,version *C.char)C.CommonResult{
 	err:=finderm.UnRegisterService(C.GoString(project),C.GoString(group),C.GoString(service),C.GoString(version))
@@ -67,6 +76,16 @@ func UnRegisterService(project,group,service ,version *C.char)C.CommonResult{
 	}
 	return C.CommonResult{}
 }
+
+//export UnRegisterServiceWithAddr
+func UnRegisterServiceWithAddr(project,group,service ,version,addr *C.char)C.CommonResult{
+	err:=finderm.UnRegisterServiceWithAddr(C.GoString(project),C.GoString(group),C.GoString(service),C.GoString(version),C.GoString(addr))
+	if err != nil{
+		return C.CommonResult{code:10003,info:C.CString(err.Error())}
+	}
+	return C.CommonResult{}
+}
+
 
 //export SubscribeFile
 func SubscribeFile(project,group,service ,version,file *C.char)C.SubscribeConfigResult{
@@ -84,8 +103,8 @@ func InitCenter(companion ,myAddr *C.char){
 }
 
 //export ListenService
-func ListenService(project,group,service ,apiVersion *C.char)*C.SubscribeServiceResult{
-	addrs,err:=finderm.ListenService(C.GoString(project),C.GoString(group),C.GoString(service),C.GoString(apiVersion))
+func ListenService(project,group,service ,apiVersion *C.char, queue C.int)*C.SubscribeServiceResult{
+	addrs,err:=finderm.ListenService(C.GoString(project),C.GoString(group),C.GoString(service),C.GoString(apiVersion),int(queue))
 	if err != nil{
 		res:=newServiceResult()
 		res.code = 10000
@@ -96,13 +115,15 @@ func ListenService(project,group,service ,apiVersion *C.char)*C.SubscribeService
 }
 
 //export ListenFile
-func ListenFile(project,group,service ,version,file *C.char)C.SubscribeConfigResult{
-	data,err:=finderm.ListenFile(C.GoString(project),C.GoString(group),C.GoString(service),C.GoString(version),C.GoString(file))
+func ListenFile(project,group,service ,version,file *C.char, queue C.int)C.SubscribeConfigResult{
+	data,err:=finderm.ListenFile(C.GoString(project),C.GoString(group),C.GoString(service),C.GoString(version),C.GoString(file),int(queue))
 	if err != nil{
 		return C.SubscribeConfigResult{code:10000,info:C.CString(err.Error())}
 	}
 	return C.SubscribeConfigResult{data:C.CString(*(*string)(unsafe.Pointer(&data))),name:file}
 }
+
+
 
 func main()  {
 
