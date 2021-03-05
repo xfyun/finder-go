@@ -6,7 +6,6 @@
 *.DS_Store
 .vscode
 debug
-example
 findercache
 *.findercache
 libfinder.so
