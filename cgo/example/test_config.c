@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include "config_center.h"
-#include "libfinder.
+#include "libfinder.h"
 int main(){
     InitCenter("http://10.1.87.70:6868","10.1.87.43:33223");
     SubscribeConfigResult cfg = SubscribeFile("guiderAllService", "gas","xist-ed", "1.0.0","ist.toml");
