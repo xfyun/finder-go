@@ -100,3 +100,11 @@ func (s *ConfigChangedHandle) OnConfigFilesRemoved(configNames []string) bool {
 ````
 
 2. git.xfyun.cn/AIaaS/finder-go/common 包名由原来错误的finder 修正为common。
+
+
+###  c语言支持，执行该脚本：
+1. [create.sh](./cgo/create.sh) 生成libfinder.so  和libfinder.h 
+2. 使用时包含两个头文件 libfinder.h 和 [config_center.h](./cgo/config_center.h)
+3. 使用demo见[test_config.c](./cgo/example/test_config.c) 和 [test_service.c](./cgo/example/test_service.c) 
+
+
