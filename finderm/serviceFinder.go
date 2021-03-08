@@ -16,8 +16,6 @@ type serviceFinderCache struct {
 	service string
 }
 
-
-
 func newServiceFinderCache(project,group,service,companion,addr string)(*serviceFinderCache,error){
 	fd,err:=finder.NewFinderWithLogger(common.BootConfig{
 		CompanionUrl:  companion,

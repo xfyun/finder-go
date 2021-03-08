@@ -126,3 +126,4 @@ func newConfigCenterManager(companion string)*configCenterManager{
 		companion: companion,
 	}
 }
+

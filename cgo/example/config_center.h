@@ -58,6 +58,7 @@ extern SubscribeConfigResult SubscribeFile(char* project, char* group, char* ser
 
 // 监听服务,必须要先调用 SubscribeService 订阅要监听的服务,
 // 当服务实例变化时，会返回所有的最新实例地址，没有变化时则会阻塞
+// @ queue ：监听的队列，同一个线程监听的队列应该是一样的。
 extern SubscribeServiceResult* ListenService(char* project, char* group, char* service, char* apiVersion,int queue);
 
 // 监听配置 ，必须要先调用 SubscribeFile 订阅要监听的配置
