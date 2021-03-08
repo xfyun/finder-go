@@ -8,9 +8,26 @@ void printfList(SubscribeServiceResult* res ){
     Node* list = res->addrList;
     for( i=0;i<res->length;i++){
         printf(" %s ",list->addr);
+        Node* n = list;
         list = list->next;
+
     }
     printf("\n");
+}
+
+void freeRes(SubscribeServiceResult* res){
+    if (res->length==0){
+        return ;
+    }
+     int i;
+     Node* list = res->addrList;
+     for( i=0;i<res->length;i++){
+            Node* n = list;
+            list = list->next;
+            free(n);
+     }
+     free(list);
+     free(res);
 }
 
 int main(){
@@ -20,8 +37,8 @@ int main(){
         printf("subscribe service error :%s",res->info);
         return 0;
     }
-
     printfList(res);
+    freeRes(res);
 
 
     for (;;){
@@ -32,6 +49,7 @@ int main(){
         }
         printf("service address  changed:->");
         printfList(res);
+        freeRes(res);
     }
 
 }
