@@ -78,6 +78,8 @@ extern "C" {
 #endif
 
 
+extern void InitCenter(char* p0, char* p1);
+
 extern SubscribeServiceResult* SubscribeService(char* p0, char* p1, char* p2, char* p3, char* p4);
 
 extern CommonResult RegisterService(char* p0, char* p1, char* p2, char* p3);
@@ -89,8 +91,6 @@ extern CommonResult UnRegisterService(char* p0, char* p1, char* p2, char* p3);
 extern CommonResult UnRegisterServiceWithAddr(char* p0, char* p1, char* p2, char* p3, char* p4);
 
 extern SubscribeConfigResult SubscribeFile(char* p0, char* p1, char* p2, char* p3, char* p4);
-
-extern void InitCenter(char* p0, char* p1);
 
 extern SubscribeServiceResult* ListenService(char* p0, char* p1, char* p2, char* p3, int p4);
 

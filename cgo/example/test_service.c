@@ -29,7 +29,7 @@ void freeRes(SubscribeServiceResult* res){
 }
 
 int main(){
-    InitCenter("http://10.1.87.70:6868","10.1.87.43:33223");
+   InitCenter("http://10.1.87.70:6868","10.1.87.43:33223");
    CommonResult rss = RegisterServiceWithAddr("guiderAllService", "gas","webgate-ws", "1.0.0","10.1.87.43:33223");
    if (rss.code !=0){
         printf("register service error,%s",rss.info);
