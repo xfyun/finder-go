@@ -1,6 +1,6 @@
 #include<stdio.h>
-#include "config_center.h"
-#include "libfinder.h"
+
+#include "finder.h"
 
 int main(){
 
@@ -13,6 +13,7 @@ int main(){
     SubscribeConfigResult cfg = SubscribeFile(project,group,service,version,file);
     if (cfg.code != 0){
         printf("subscribe file error:%s",cfg.info);
+        free(cfg.info);
         return 1;
     }
     printf("cfg:%s\n",cfg.data);
@@ -20,6 +21,7 @@ int main(){
         cfg = ListenFile(project,group,service,version,file,1);
         if (cfg.code != 0){
             printf("listen file error:%d,%s",cfg.code,cfg.info);
+            free(cfg.info);
             break;
         }
         printf("cfg changed:->%s",cfg.data);
