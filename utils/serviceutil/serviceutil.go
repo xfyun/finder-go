@@ -2,7 +2,7 @@ package serviceutil
 
 import (
 	"encoding/json"
-	common "git.xfyun.cn/AIaaS/finder-go/common"
+	common "git.iflytek.com/AIaaS/finder-go/common"
 	"log"
 )
 

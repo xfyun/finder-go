@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	errors "git.xfyun.cn/AIaaS/finder-go/errors"
+	errors "git.iflytek.com/AIaaS/finder-go/errors"
 	"github.com/cooleric/go-zookeeper/zk"
 )
 

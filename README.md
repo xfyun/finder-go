@@ -99,7 +99,7 @@ func (s *ConfigChangedHandle) OnConfigFilesRemoved(configNames []string) bool {
 
 ````
 
-2. git.xfyun.cn/AIaaS/finder-go/common 包名由原来错误的finder 修正为common。
+2. git.iflytek.com/AIaaS/finder-go/common 包名由原来错误的finder 修正为common。
 
 
 ###  c语言支持，执行该脚本：

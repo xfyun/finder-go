@@ -6,7 +6,7 @@ mv finder-go src/git.xfyun.cn/AIaaS
 
 export GOPATH=$PWD
 
-cd src/git.xfyun.cn/AIaaS/finder-go/cgo
+cd src/git.iflytek.com/AIaaS/finder-go/cgo
 
 sh build.sh
 

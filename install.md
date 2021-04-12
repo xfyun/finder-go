@@ -37,7 +37,7 @@ mkdir -p /opt/finder
 ````
 #### 创建start.sh
 ````
- sudo docker run --name findergo-test -v /opt/finder:/root/go/src/git.xfyun.cn/AIaaS/finder-go/bin 172.16.59.153/aiaas/findergo-demo:2.0.0 ./demo /root/go/src/git.xfyun.cn/AIaaS/finder-go/bin/conf.json
+ sudo docker run --name findergo-test -v /opt/finder:/root/go/src/git.iflytek.com/AIaaS/finder-go/bin 172.16.59.153/aiaas/findergo-demo:2.0.0 ./demo /root/go/src/git.iflytek.com/AIaaS/finder-go/bin/conf.json
 
 ````
 
@@ -50,10 +50,10 @@ mkdir -p /opt/finder
 start1.sh:
 
 ````
-sudo docker run --name findergo-test -v /opt/finder:/root/go/src/git.xfyun.cn/AIaaS/finder-go/bin 172.16.59.153/aiaas/findergo-demo:2.0.0 ./demo /root/go/src/git.xfyun.cn/AIaaS/finder-go/bin/conf.json
+sudo docker run --name findergo-test -v /opt/finder:/root/go/src/git.iflytek.com/AIaaS/finder-go/bin 172.16.59.153/aiaas/findergo-demo:2.0.0 ./demo /root/go/src/git.iflytek.com/AIaaS/finder-go/bin/conf.json
 
 ````
 start2.sh
 ````
-sudo docker run --name findergo-test1 -v /opt/finder:/root/go/src/git.xfyun.cn/AIaaS/finder-go/bin 172.16.59.153/aiaas/findergo-demo:2.0.0 ./demo /root/go/src/git.xfyun.cn/AIaaS/finder-go/bin/conf1.json
+sudo docker run --name findergo-test1 -v /opt/finder:/root/go/src/git.iflytek.com/AIaaS/finder-go/bin 172.16.59.153/aiaas/findergo-demo:2.0.0 ./demo /root/go/src/git.iflytek.com/AIaaS/finder-go/bin/conf1.json
 ````

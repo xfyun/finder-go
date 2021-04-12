@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"git.xfyun.cn/AIaaS/finder-go/common"
+	"git.iflytek.com/AIaaS/finder-go/common"
 )
 
 // ConfigChangedHandle ConfigChangedHandle

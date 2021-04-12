@@ -1,6 +1,6 @@
 package zkmanager
 
-import "git.xfyun.cn/AIaaS/finder-go/rebuild/err"
+import "git.iflytek.com/AIaaS/finder-go/rebuild/err"
 
 type EventType int
 

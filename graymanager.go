@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	common "git.xfyun.cn/AIaaS/finder-go/common"
-	storageCommon "git.xfyun.cn/AIaaS/finder-go/storage/common"
-	"git.xfyun.cn/AIaaS/finder-go/log"
+	common "git.iflytek.com/AIaaS/finder-go/common"
+	storageCommon "git.iflytek.com/AIaaS/finder-go/storage/common"
+	"git.iflytek.com/AIaaS/finder-go/log"
 )
 
 const (

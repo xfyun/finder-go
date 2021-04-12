@@ -2,7 +2,7 @@ package zkmanager
 
 import (
 	"context"
-	"git.xfyun.cn/AIaaS/finder-go/rebuild/log"
+	"git.iflytek.com/AIaaS/finder-go/rebuild/log"
 	"github.com/cooleric/go-zookeeper/zk"
 	"time"
 )

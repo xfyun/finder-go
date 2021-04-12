@@ -2,8 +2,8 @@ package finderm
 
 import (
 	"fmt"
-	common "git.xfyun.cn/AIaaS/finder-go/common"
-	"git.xfyun.cn/AIaaS/finder-go/log"
+	common "git.iflytek.com/AIaaS/finder-go/common"
+	"git.iflytek.com/AIaaS/finder-go/log"
 )
 
 type serviceChangeHandler struct {
