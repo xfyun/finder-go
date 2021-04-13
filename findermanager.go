@@ -44,6 +44,7 @@ func recoverFunc() {
 		log.Log.Debugf("recover  %v", err)
 	}
 }
+
 func (callback *zkAddrChangeCallback) Process(path string, node string) {
 	defer recoverFunc()
 	callback.fm.ServiceFinder.mutex.Lock()
@@ -87,8 +88,8 @@ func init() {
 	hc = &http.Client{
 		Transport: &http.Transport{
 			Dial: func(nw, addr string) (net.Conn, error) {
-				deadline := time.Now().Add(1 * time.Second)
-				c, err := net.DialTimeout(nw, addr, time.Second*1)
+				deadline := time.Now().Add(2 * time.Second)
+				c, err := net.DialTimeout("tcp4", addr, time.Second*2)
 				if err != nil {
 					return nil, err
 				}
@@ -143,18 +144,17 @@ func checkConfig(c *common.BootConfig) {
 }
 
 func getStorageInfo(config *common.BootConfig) (*common.StorageInfo, error) {
-	srv:=config.MeteData.Service
-	ver:=config.MeteData.Version
-	if srv == ""{
+	srv := config.MeteData.Service
+	ver := config.MeteData.Version
+	if srv == "" {
 		srv = "def"
 	}
 
-	if ver == ""{
+	if ver == "" {
 		ver = "def"
 	}
 
-
-	url := config.CompanionUrl + fmt.Sprintf("/finder/query_zk_info?project=%s&group=%s&service=%s&version=%s", config.MeteData.Project, config.MeteData.Group,srv, ver)
+	url := config.CompanionUrl + fmt.Sprintf("/finder/query_zk_info?project=%s&group=%s&service=%s&version=%s", config.MeteData.Project, config.MeteData.Group, srv, ver)
 	info, err := companion.GetStorageInfo(hc, url)
 	if err != nil {
 		return nil, err
@@ -331,6 +331,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	go watchZkInfo(fm)
 	return fm, nil
 }
+
 // 监听zk 地址是否变化
 func manitorStorage(fm *FinderManager) {
 	return
@@ -356,6 +357,7 @@ func manitorStorage(fm *FinderManager) {
 		}
 	}
 }
+
 // 监听zk 地址是否发生变化，如果变化需要重新连接zk
 func watchZkInfo(fm *FinderManager) {
 	return
@@ -451,14 +453,14 @@ func ReGetConfigInfo(fm *FinderManager) {
 
 func ReGetServiceInfo(fm *FinderManager) {
 
-	for key,value:=range fm.ServiceFinder.serviceZkData{
-		log.Log.Infof("all zk data  %v ,%v",key,value.ProviderList)
+	for key, value := range fm.ServiceFinder.serviceZkData {
+		log.Log.Infof("all zk data  %v ,%v", key, value.ProviderList)
 	}
 
 	for _, value := range fm.ServiceFinder.subscribedService {
 		var item = common.ServiceSubscribeItem{ServiceName: value.ServiceName, ApiVersion: value.ApiVersion}
 		servicePath := fmt.Sprintf("%s/%s/%s", fm.ServiceFinder.rootPath, item.ServiceName, item.ApiVersion)
-		prevService:=fm.ServiceFinder.subscribedService[value.ServiceName+"_"+value.ApiVersion]
+		prevService := fm.ServiceFinder.subscribedService[value.ServiceName+"_"+value.ApiVersion]
 		service, err := fm.ServiceFinder.getServiceWithWatcher(servicePath, item, fm.ServiceFinder.handler)
 		if err != nil {
 			log.Log.Errorf("query info err %s", err)
@@ -466,12 +468,12 @@ func ReGetServiceInfo(fm *FinderManager) {
 		if service == nil {
 			log.Log.Infof("query service is empty ")
 		}
-		if prevService==nil{
+		if prevService == nil {
 			prevService, err = GetServiceFromCache(fm.config.CachePath, item)
 		}
 		ChangeEvent(prevService, service, fm.ServiceFinder.handler)
-		for key,value:=range fm.ServiceFinder.serviceZkData{
-			log.Log.Infof("all zk data event %v ,%v",key,value.ProviderList)
+		for key, value := range fm.ServiceFinder.serviceZkData {
+			log.Log.Infof("all zk data event %v ,%v", key, value.ProviderList)
 		}
 		fm.ServiceFinder.subscribedService[value.ServiceName+"_"+value.ApiVersion] = service
 		if service != nil {
@@ -488,7 +490,7 @@ func ChangeEvent(prevService *common.Service, currService *common.Service, handl
 	if prevService == nil {
 		handler.OnServiceConfigChanged(currService.ServiceName, currService.ApiVersion, &common.ServiceConfig{JsonConfig: currService.Config.JsonConfig})
 		eventList := providerChangeEvent([]*common.ServiceInstance{}, currService.ProviderList)
-		log.Log.Infof("prevService is nil : %v",eventList)
+		log.Log.Infof("prevService is nil : %v", eventList)
 		if len(eventList) == 0 {
 			return
 		}
