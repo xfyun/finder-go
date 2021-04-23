@@ -3,14 +3,15 @@ package finder
 import (
 	"time"
 
-	common "git.xfyun.cn/AIaaS/finder-go/common"
-	companion "git.xfyun.cn/AIaaS/finder-go/companion"
-	"git.xfyun.cn/AIaaS/finder-go/log"
-	"git.xfyun.cn/AIaaS/finder-go/route"
-	"git.xfyun.cn/AIaaS/finder-go/storage"
-	"git.xfyun.cn/AIaaS/finder-go/utils/fileutil"
-	"git.xfyun.cn/AIaaS/finder-go/utils/serviceutil"
 	"strings"
+
+	common "git.iflytek.com/AIaaS/finder-go/common"
+	companion "git.iflytek.com/AIaaS/finder-go/companion"
+	"git.iflytek.com/AIaaS/finder-go/log"
+	"git.iflytek.com/AIaaS/finder-go/route"
+	"git.iflytek.com/AIaaS/finder-go/storage"
+	"git.iflytek.com/AIaaS/finder-go/utils/fileutil"
+	"git.iflytek.com/AIaaS/finder-go/utils/serviceutil"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 	SERVICE_INSTANCE_CONFIG_CHANGED = "SERVICE_INSTANCE_CONFIG"
 	SERVICE_ROUTE_CHANGED           = "SERVICE_ROUTE"
 	CONFIG_CHANGED                  = "CONFIG"
+	CONFIG_DIR_CHANGED              = "CONFIG_DIR"
 	GRAY_CONFIG_CHANGED             = "GRAY_CONFIG"
 
 	WATCH_SERVICE  = "WATCH_SERVICE"
@@ -51,7 +53,7 @@ func (q *QueryServcieChangedCallback) DataChangedCallback(path string, node stri
 	}
 	serverName := pS[4]
 	serverVersion := pS[5]
-	providerAddr :=pS[7]
+	providerAddr := pS[7]
 	serviceInstance := new(common.ServiceInstance)
 	//解析数据
 	if data == nil || len(data) == 0 {
@@ -80,23 +82,23 @@ func (q *QueryServcieChangedCallback) DataChangedCallback(path string, node stri
 		for idx, provider := range ver.ProviderList {
 			if provider == providerAddr {
 				exist = true
-				if !serviceInstance.Config.IsValid{
+				if !serviceInstance.Config.IsValid {
 					de := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: make([]*common.ServiceInstance, 0)}
-					de.ServerList=append(de.ServerList,&common.ServiceInstance{Addr:providerAddr})
-					event=append(event,&de)
-					q.provciderCache[serverName][verIdx].ProviderList[idx]=q.provciderCache[serverName][verIdx].ProviderList[len(ver.ProviderList)-1]
-					q.provciderCache[serverName][verIdx].ProviderList=q.provciderCache[serverName][verIdx].ProviderList[0:len(ver.ProviderList)-1]
+					de.ServerList = append(de.ServerList, &common.ServiceInstance{Addr: providerAddr})
+					event = append(event, &de)
+					q.provciderCache[serverName][verIdx].ProviderList[idx] = q.provciderCache[serverName][verIdx].ProviderList[len(ver.ProviderList)-1]
+					q.provciderCache[serverName][verIdx].ProviderList = q.provciderCache[serverName][verIdx].ProviderList[0 : len(ver.ProviderList)-1]
 				}
 			}
 		}
 		if !exist && serviceInstance.Config.IsValid {
 			ae := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: make([]*common.ServiceInstance, 0)}
-			ae.ServerList=append(ae.ServerList,&common.ServiceInstance{Addr:providerAddr})
-			event=append(event,&ae)
-			q.provciderCache[serverName][verIdx].ProviderList=append(q.provciderCache[serverName][verIdx].ProviderList,providerAddr)
+			ae.ServerList = append(ae.ServerList, &common.ServiceInstance{Addr: providerAddr})
+			event = append(event, &ae)
+			q.provciderCache[serverName][verIdx].ProviderList = append(q.provciderCache[serverName][verIdx].ProviderList, providerAddr)
 		}
 	}
-	if len(event)==0{
+	if len(event) == 0 {
 		return
 	}
 	q.handler.OnServiceInstanceChanged(serverName, serverVersion, event)
@@ -129,6 +131,7 @@ func (q *QueryServcieChangedCallback) versionCallback(path string, children []st
 		}
 	}
 }
+
 func (q *QueryServcieChangedCallback) serviceCallback(path string, children []string) {
 	nS, _ := diffProvider(children, q.serviceCache)
 	if len(nS) != 0 {
@@ -441,8 +444,8 @@ func (cb *ServiceChangedCallback) OnServiceConfigChanged(service common.ServiceS
 	cb.serviceFinder.subscribedService[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
 	cb.serviceFinder.serviceZkData[service.ServiceName+"_"+service.ApiVersion].Config = &common.ServiceConfig{JsonConfig: string(configData)}
 	cb.uh.OnServiceConfigChanged(service.ServiceName, service.ApiVersion, &common.ServiceConfig{JsonConfig: string(configData)})
-
 }
+
 func (cb *ServiceChangedCallback) Process(path string, node string) {
 
 }
@@ -457,6 +460,7 @@ func (cb *ServiceChangedCallback) ChildDeleteCallBack(path string) {
 	eventList = append(eventList, &event)
 	cb.uh.OnServiceInstanceChanged(cb.serviceItem.ServiceName, cb.serviceItem.ApiVersion, eventList)
 }
+
 func getAddProviderAddrList(prevProviderMap map[string]*common.ServiceInstance, currentProviderList []string) []string {
 	var addProviderAddrList = make([]string, 0)
 	for _, providerAddr := range currentProviderList {
@@ -552,6 +556,7 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 	CacheService(cb.serviceFinder.config.CachePath, cb.serviceFinder.subscribedService[serviceId])
 
 }
+
 func getRemoveInstnceEvent(insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
 	event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEREMOVE, ServerList: make([]*common.ServiceInstance, 0)}
 	for _, inst := range insts {
@@ -559,6 +564,7 @@ func getRemoveInstnceEvent(insts []*common.ServiceInstance) *common.ServiceInsta
 	}
 	return &event
 }
+
 func getAddInstanceEvent(insts []*common.ServiceInstance) *common.ServiceInstanceChangedEvent {
 	event := common.ServiceInstanceChangedEvent{EventType: common.INSTANCEADDED, ServerList: make([]*common.ServiceInstance, 0)}
 	for _, inst := range insts {
@@ -580,9 +586,9 @@ type ConfigChangedCallback struct {
 
 func NewConfigChangedCallback(serviceName string, watchType string, rootPath string, userHandle common.ConfigChangedHandler, bootConfig *common.BootConfig, storageMgr storage.StorageManager, configFinder *ConfigFinder) ConfigChangedCallback {
 	return ConfigChangedCallback{
-		name:         serviceName,
+		name:         serviceName, // subscribe file name
 		eventType:    watchType,
-		root:         rootPath,
+		root:         rootPath, // empty
 		uh:           userHandle,
 		bootCfg:      bootConfig,
 		sm:           storageMgr,
@@ -593,6 +599,7 @@ func NewConfigChangedCallback(serviceName string, watchType string, rootPath str
 func (cb *ConfigChangedCallback) ChildDeleteCallBack(path string) {
 
 }
+
 func (cb *ConfigChangedCallback) Process(path string, node string) {
 	if strings.HasSuffix(path, "/gray") {
 		//如果是gray节点数据改变
@@ -614,10 +621,12 @@ func (cb *ConfigChangedCallback) Process(path string, node string) {
 		log.Log.Infof("当前不在灰度组，但是通知是属于灰度组的，不进行处理")
 		return
 	}
+
 	if len(currentGrayGroupId) != 0 && !strings.Contains(path, "/"+currentGrayGroupId) {
 		log.Log.Infof("当前在灰度组，但是通知是属于其他灰度组的，不进行处理")
 		return
 	}
+
 	var isSubscribeFile bool
 	for _, value := range cb.configFinder.fileSubscribe {
 		if strings.Compare(cb.name, value) == 0 {
@@ -645,7 +654,9 @@ func (cb *ConfigChangedCallback) DataChangedCallback(path string, node string, d
 }
 
 func (cb *ConfigChangedCallback) ChildrenChangedCallback(path string, node string, children []string) {
-
+	if cb.eventType == CONFIG_DIR_CHANGED {
+		cb.OnConfigDirChanged(cb.name, children, path)
+	}
 }
 
 func (cb *ConfigChangedCallback) OnGrayConfigChanged(name string, data []byte) {
@@ -775,8 +786,102 @@ func (cb *ConfigChangedCallback) OnConfigFileChanged(name string, data []byte, p
 	}
 }
 
+func (cb *ConfigChangedCallback) OnConfigDirChanged(prefix string, configNames []string, path string) {
+	log.Log.Debugf("OnConfigDirChanged called：%v", configNames)
+	//获取增量配置文件名
+	addConfigList := getAddConfigList(cb.configFinder.fileSubscribe, configNames)
+	log.Log.Debugf("new config list is ：%v", configNames)
+	//有新增的配置文件
+	configFiles := make(map[string]*common.Config)
+	if len(addConfigList) != 0 {
+		for _, n := range addConfigList {
+			if !strings.HasPrefix(n, prefix) {
+				continue
+			}
+			cb.configFinder.fileSubscribe = append(cb.configFinder.fileSubscribe, n)
+			path = cb.root + "/" + n
+			callback := NewConfigChangedCallback(n, CONFIG_CHANGED, path, cb.uh, cb.bootCfg, cb.sm, cb.configFinder)
+			data, err := cb.sm.GetDataWithWatchV2(path, &callback)
+			if err != nil {
+				if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
+					log.Log.Infof("config file not exist。filename: %v", n)
+				}
+			} else {
+				_, fData, err := common.DecodeValue(data)
+				if err != nil {
+					log.Log.Infof("decode config err。filename: %v,err:%v", n, err)
+				} else {
+
+					confMap := make(map[string]interface{})
+					if fileutil.IsTomlFile(n) {
+						confMap = fileutil.ParseTomlFile(fData)
+					}
+					config := &common.Config{Name: n, File: fData, ConfigMap: confMap}
+					configFiles[n] = config
+					cb.configFinder.usedConfig.Store(n, config)
+					//放到文件中
+					err = CacheConfig(cb.configFinder.config.CachePath, config)
+					if err != nil {
+						log.Log.Errorf("CacheConfig: %s", err)
+					}
+				}
+			}
+		}
+		if len(configFiles) > 0 {
+			cb.uh.OnConfigFilesAdded(configFiles)
+		}
+	}
+	//看是否有配置减少
+	removeConfigList := getRemoveConfigList(cb.configFinder, configNames)
+	log.Log.Debugf("remove config list：%v", removeConfigList)
+	if len(removeConfigList) > 0 {
+		cb.uh.OnConfigFilesRemoved(removeConfigList)
+		//TODO 配置删除逻辑待完善，是否需要取消注册、删除缓存等
+	}
+}
+
+func getAddConfigList(usedConfig []string, latestConfigList []string) []string {
+	var addConfigList = make([]string, 0)
+	for _, n := range latestConfigList {
+		exist := false
+		for _, u := range usedConfig {
+			if u == n {
+				exist = true
+				break
+			}
+		}
+
+		if !exist {
+			addConfigList = append(addConfigList, n)
+		}
+	}
+	return addConfigList
+}
+func getRemoveConfigList(f *ConfigFinder, latestConfigList []string) []string {
+	var removeConfigList = make([]string, 0)
+	tempMap := make(map[string]string)
+	for _, addr := range latestConfigList {
+		tempMap[addr] = addr
+	}
+
+	var latestUsedConfig = make([]string, 0)
+	//usedConfig
+	for _, n := range f.fileSubscribe {
+		if _, ok := tempMap[n]; !ok {
+			//在之前的提供者中，不在现在的
+			removeConfigList = append(removeConfigList, n)
+		} else {
+			latestUsedConfig = append(latestConfigList, n)
+		}
+	}
+	f.fileSubscribe = latestUsedConfig
+
+	return removeConfigList
+}
+
 func pushConfigFeedback(companionUrl string, f *common.ConfigFeedback) error {
 	url := companionUrl + "/finder/push_config_feedback"
+
 	return companion.FeedbackForConfig(hc, url, f)
 }
 

@@ -1,4 +1,4 @@
-package finder
+package common
 
 import "time"
 
@@ -11,7 +11,7 @@ type ServiceMeteData struct {
 }
 
 func (meta *ServiceMeteData) Check() bool {
-	if len(meta.Group) == 0 || len(meta.Project) == 0 || len(meta.Version) == 0 || len(meta.Service) == 0 {
+	if len(meta.Group) == 0 || len(meta.Project) == 0 /**|| len(meta.Version) == 0 || len(meta.Service) == 0 **/{
 		return false
 	}
 	return true

@@ -1,10 +1,10 @@
 package fileutil
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
-	"fmt"
 )
 
 func ExistPath(path string) (bool, error) {
@@ -52,6 +52,19 @@ func ReadFile(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)
 }
 
+func ReadFileNames(path string) ([]string, error) {
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	paths := make([]string, 0)
+	for _, f := range files {
+		paths = append(paths, f.Name())
+	}
+
+	return paths, nil
+}
+
 func ParseTomlFile(file []byte) map[string]interface{} {
 	tomlConfig := make(map[string]interface{})
 	content := string(file)
@@ -68,11 +81,11 @@ func ParseTomlFile(file []byte) map[string]interface{} {
 			continue
 		} else if strings.HasPrefix(line, "#") {
 			continue
-		} else if strings.HasPrefix(line, "[")  {
-			if strings.Contains(line,"#"){
-				line=strings.Split(line,"#")[0]
+		} else if strings.HasPrefix(line, "[") {
+			if strings.Contains(line, "#") {
+				line = strings.Split(line, "#")[0]
 			}
-			fmt.Println("line:",line)
+			fmt.Println("line:", line)
 			currentGroup = strings.TrimSpace(line[1 : len(line)-1])
 			continue
 		} else if !strings.Contains(line, "=") {

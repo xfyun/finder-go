@@ -98,3 +98,31 @@ type ServiceInfo struct {
 
 ### 流程
 * 参加[流程图](https://git.iflytek.com/AIaaS/finder-go/blob/master/%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%B5%81%E7%A8%8B.png)
+
+### 2.1.19 更新：
+
+1. 集成时需要新增configChangeHandler 的接口实现函数：
+````go
+func (s *ConfigChangedHandle) OnConfigFilesAdded(configs map[string]*common.Config) bool {
+
+
+	return true
+}
+
+func (s *ConfigChangedHandle) OnConfigFilesRemoved(configNames []string) bool {
+
+
+	return true
+}
+
+````
+
+2. git.iflytek.com/AIaaS/finder-go/common 包名由原来错误的finder 修正为common。
+
+
+###  c语言支持，执行该脚本：
+1. [create.sh](./cgo/create.sh) 生成libfinder.so  和libfinder.h 
+2. 使用时包含两个头文件 libfinder.h 和 [config_center.h](./cgo/config_center.h)
+3. 使用demo见[test_config.c](./cgo/example/test_config.c) 和 [test_service.c](./cgo/example/test_service.c) 
+
+

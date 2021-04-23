@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	errors "git.xfyun.cn/AIaaS/finder-go/errors"
-	"git.xfyun.cn/AIaaS/finder-go/log"
-	"git.xfyun.cn/AIaaS/finder-go/storage/common"
+	errors "git.iflytek.com/AIaaS/finder-go/errors"
+	"git.iflytek.com/AIaaS/finder-go/log"
+	"git.iflytek.com/AIaaS/finder-go/storage/common"
 	"github.com/cooleric/go-zookeeper/zk"
 )
 
@@ -227,11 +227,15 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 				for {
 					// 这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
 					data, _, event, err = zm.conn.GetW(path)
+					if err == zk.ErrNoNode{
+						log.Log.Errorf("node deleted , stop watch: paths:%s,err:%v",path,err)
+						return
+					}
 					if err != nil {
 						log.Log.Debugf("get data with watch , path: %v ,err: %v", path, err)
 						retryCount++
-						if retryCount > 3 {
-							time.Sleep(1 * time.Second)
+						if retryCount > 30 {
+							time.Sleep(time.Duration(retryCount) * time.Second)
 							break
 						}
 						continue
@@ -261,9 +265,10 @@ func (zm *ZkManager) GetChildren(path string) ([]string, error) {
 	nodes, _, err := zm.conn.Children(path)
 	return nodes, err
 }
+
 func recoverFunc() {
 	if err := recover(); err != nil {
-		log.Log.Debugf("recover ： %v", err)
+		log.Log.Errorf("recover ： %v", err)
 	}
 }
 func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCallback) ([]string, error) {
@@ -273,10 +278,10 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 	}
 
 	go func(zm *ZkManager, p string, event <-chan zk.Event) {
+		defer recoverFunc()
 		for {
 			select {
 			case e, ok := <-event:
-				defer recoverFunc()
 				if !ok {
 					log.Log.Infof("[ GetChildrenWithWatch ]  <-event; !ok")
 					return
@@ -284,23 +289,27 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 				log.Log.Debugf("recv event ：[ GetChildrenWithWatch ]  %v", event)
 				if e.State != zk.StateConnected {
 					log.Log.Debugf("[ GetChildrenWithWatch ]  e.State != zk.StateConnected %v","")
-
 				}
 				var retryCount int
 				for {
 					data, _, event, err = zm.conn.ChildrenW(path)
 					retryCount++
-					if retryCount > 5 {
-
-						break
+					//if retryCount > 5 {
+					//
+					//	break
+					//}
+					// 一直watch 重试不要退出，否则会出现订阅不上的情况
+					if err == zk.ErrNoNode{
+						log.Log.Errorf("node deleted , stop watch dir: paths:%s,err:%v",path,err)
+						return // 没有node，直接return
 					}
 					if err != nil {
-						log.Log.Debugf("[ GetChildrenWithWatch ] retry get childer err: %v, path: %v", err,path)
+						time.Sleep(time.Duration(retryCount%30)*time.Second)
+						log.Log.Errorf("[ GetChildrenWithWatch ] retry get children err: %v, path: %v", err,path)
 						continue
 					} else {
 						callback.ChildrenChangedCallback(e.Path, getNodeFromPath(e.Path), data)
 					}
-
 					break
 				}
 			case exit, ok := <-zm.exit:
@@ -322,6 +331,8 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 func (zm *ZkManager) SetPath(path string) error {
 	return zm.SetPathWithData(path, []byte{})
 }
+
+
 func (zm *ZkManager) CheckExists(path string) (bool, error) {
 	exists, _, err := zm.conn.Exists(path)
 	if err != nil {
@@ -329,6 +340,8 @@ func (zm *ZkManager) CheckExists(path string) (bool, error) {
 	}
 	return exists, nil
 }
+
+
 func (zm *ZkManager) SetPathWithData(path string, data []byte) error {
 	if data == nil {
 		return errors.NewFinderError(errors.ZkDataCanotNil)

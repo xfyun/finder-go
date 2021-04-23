@@ -47,6 +47,7 @@ var retCodeToString = map[ReturnCode]string{
 	ZkConnectionLoss:                 "zk连接不存在",
 	ZkInfoMissZkNodePath:             "zk的地址所在的节点信息不存在",
 	ConfigFileNotExist:               "配置文件不存在",
+	ConfigDirNotExist:                "配置目录不存在",
 }
 
 const (
@@ -66,6 +67,7 @@ const (
 	ConfigMissName ReturnCode = 10100 + iota
 	ConfigFileNotExist
 	ConfigMissCacheFile
+	ConfigDirNotExist
 )
 
 //zk相关错误
