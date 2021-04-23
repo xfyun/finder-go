@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
+	common "git.iflytek.com/AIaaS/finder-go/v3/common"
+	errors "git.iflytek.com/AIaaS/finder-go/v3/errors"
+	"git.iflytek.com/AIaaS/finder-go/v3/utils/httputil"
 
-	"git.iflytek.com/AIaaS/finder-go/log"
+	"git.iflytek.com/AIaaS/finder-go/v3/log"
 )
 
 func FeedbackForConfig(hc *http.Client, url string, f *common.ConfigFeedback) error {

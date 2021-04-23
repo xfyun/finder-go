@@ -9,7 +9,7 @@ package main
  */
 import "C"
 import (
-	"git.iflytek.com/AIaaS/finder-go/finderm"
+	"git.iflytek.com/AIaaS/finder-go/v3/finderm"
 	"unsafe"
 )
 

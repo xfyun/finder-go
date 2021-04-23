@@ -1,7 +1,7 @@
 package broadcaster
 
 import (
-	"git.iflytek.com/AIaaS/finder-go/rebuild/register_center"
+	"git.iflytek.com/AIaaS/finder-go/v3/rebuild/register_center"
 	"sync"
 )
 
