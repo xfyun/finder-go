@@ -1,8 +1,8 @@
 package listeners
 
 import (
-	"git.iflytek.com/AIaaS/finder-go/rebuild/common"
-	"git.iflytek.com/AIaaS/finder-go/rebuild/register_center"
+	"git.iflytek.com/AIaaS/finder-go/v3/rebuild/common"
+	"git.iflytek.com/AIaaS/finder-go/v3/rebuild/register_center"
 )
 
 type ConfigFileChangedListener struct {

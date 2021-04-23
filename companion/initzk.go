@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
+	common "git.iflytek.com/AIaaS/finder-go/v3/common"
+	errors "git.iflytek.com/AIaaS/finder-go/v3/errors"
+	"git.iflytek.com/AIaaS/finder-go/v3/utils/httputil"
 )
 
 // GetStorageInfo for getting storage metadata

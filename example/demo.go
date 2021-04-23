@@ -9,15 +9,15 @@ import (
 	"strings"
 	"time"
 
-	"git.iflytek.com/AIaaS/finder-go/log"
+	"git.iflytek.com/AIaaS/finder-go/v3/log"
 	"go.uber.org/zap"
 
-	"git.iflytek.com/AIaaS/finder-go"
+	"git.iflytek.com/AIaaS/finder-go/v3"
 
 	"encoding/json"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
+	common "git.iflytek.com/AIaaS/finder-go/v3/common"
+	"git.iflytek.com/AIaaS/finder-go/v3/utils/httputil"
 )
 
 type ServiceItemTest struct {

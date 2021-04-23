@@ -97,7 +97,7 @@ type ServiceInfo struct {
 ```
 
 ### 流程
-* 参加[流程图](https://git.iflytek.com/AIaaS/finder-go/blob/master/%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%B5%81%E7%A8%8B.png)
+* 参加[流程图](https://git.iflytek.com/AIaaS/finder-go/v3/blob/master/%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%B5%81%E7%A8%8B.png)
 
 ### 2.1.19 更新：
 
@@ -117,7 +117,7 @@ func (s *ConfigChangedHandle) OnConfigFilesRemoved(configNames []string) bool {
 
 ````
 
-2. git.iflytek.com/AIaaS/finder-go/common 包名由原来错误的finder 修正为common。
+2. git.iflytek.com/AIaaS/finder-go/v3/common 包名由原来错误的finder 修正为common。
 
 
 ###  c语言支持，执行该脚本：

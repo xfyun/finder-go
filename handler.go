@@ -5,13 +5,13 @@ import (
 
 	"strings"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	companion "git.iflytek.com/AIaaS/finder-go/companion"
-	"git.iflytek.com/AIaaS/finder-go/log"
-	"git.iflytek.com/AIaaS/finder-go/route"
-	"git.iflytek.com/AIaaS/finder-go/storage"
-	"git.iflytek.com/AIaaS/finder-go/utils/fileutil"
-	"git.iflytek.com/AIaaS/finder-go/utils/serviceutil"
+	common "git.iflytek.com/AIaaS/finder-go/v3/common"
+	companion "git.iflytek.com/AIaaS/finder-go/v3/companion"
+	"git.iflytek.com/AIaaS/finder-go/v3/log"
+	"git.iflytek.com/AIaaS/finder-go/v3/route"
+	"git.iflytek.com/AIaaS/finder-go/v3/storage"
+	"git.iflytek.com/AIaaS/finder-go/v3/utils/fileutil"
+	"git.iflytek.com/AIaaS/finder-go/v3/utils/serviceutil"
 )
 
 const (
