@@ -13,7 +13,6 @@ func TestInit(t *testing.T) {
 		//time.Sleep(2*time.Second)
 		fmt.Println(ListenService("guiderAllService","gas","webgate-ws","1.0.0",1))
 		fmt.Println("changed")
-
 	}()
 	time.Sleep(3*time.Second)
 	serviceManager.RegisterService("guiderAllService","gas","webgate-ws","1.0.0")
