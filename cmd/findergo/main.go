@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"git.iflytek.com/AIaaS/finder-go/v3/finderm"
-	"git.iflytek.com/AIaaS/finder-go/v3/log"
 	"io"
 	"os"
 )
@@ -20,6 +20,7 @@ var(
 
 func init(){
 	flag.StringVar(&project,"p",project,"project")
+	flag.StringVar(&companion,"url",project,"companion url")
 	flag.StringVar(&group,"g",group,"group")
 	flag.StringVar(&service,"s",service,"service")
 	flag.StringVar(&version,"v",version,"version")
@@ -30,7 +31,7 @@ func init(){
 
 func main(){
 	flag.Parse()
-	finderm.Init(companion,"")
+	finderm.Init(companion,"x")
 	data ,err := finderm.GetFile(project,group,service,version,filename)
 	if err != nil{
 		fatal("get file error:",err)
@@ -49,11 +50,12 @@ func main(){
 		fatal("create output file error:",err)
 	}
 	out.Write(data)
+
 }
 
 
 
 func fatal(args ...interface{}){
-	log.Println(args...)
+	fmt.Println(args...)
 	os.Exit(1)
 }
