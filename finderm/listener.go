@@ -81,11 +81,9 @@ func (l *listener) Send(key string, e interface{}) error {
 	l.lock.Lock()
 	lss:=l.listeners[key]
 	l.lock.Unlock()
-
 	if lss == nil{
 		return nil
 	}
-
 	lss.Send(e)
 	return nil
 	//return fmt.Errorf("%s,event chan is full",key)
