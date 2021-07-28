@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -40,8 +41,37 @@ func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManag
 	return finder
 }
 
+func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error){
+	cfg ,err :=  f.useConfig(name)
+	m := f.config.MeteData
+	if err != nil{
+		return nil, fmt.Errorf("subscribe config error companion:%s,  path:/%s/%s/%s/%s files:%v err:%w",f.config.CompanionUrl,m.Project,m.Group,m.Service,m.Version,name,err)
+	}
+	return cfg,nil
+}
+
+func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) (map[string]*common.Config, error){
+	cfg ,err :=  f.useAndSubscribeConfig(name,handler)
+	m := f.config.MeteData
+	if err != nil{
+		return nil, fmt.Errorf("subscribe config error companion:%s, path:/%s/%s/%s/%s files:%v err:%w",f.config.CompanionUrl,m.Project,m.Group,m.Service,m.Version,name,err)
+	}
+	return cfg,nil
+}
+
+func (f *ConfigFinder) UseAndSubscribeWithPrefix(prefix string, handler common.ConfigChangedHandler) (map[string]*common.Config, error){
+	cfg ,err := f.useAndSubscribeWithPrefix(prefix,handler)
+
+	m := f.config.MeteData
+	if err != nil{
+		return nil, fmt.Errorf("subscribe config error companion:%s, path: /%s/%s/%s/%s files:%v err:%w",f.config.CompanionUrl,m.Project,m.Group,m.Service,m.Version,prefix,err)
+	}
+	return cfg,nil
+}
+
+
 // UseConfig for 订阅相关配置文件
-func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error) {
+func (f *ConfigFinder) useConfig(name []string) (map[string]*common.Config, error) {
 	if len(name) == 0 {
 		err := errors.NewFinderError(errors.ConfigMissName)
 		return nil, err
@@ -108,7 +138,7 @@ func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, erro
 
 // UseAndSubscribeConfig for
 //新增监控灰度组的Watch
-func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
+func (f *ConfigFinder) useAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
 	if len(name) == 0 {
 		err := errors.NewFinderError(errors.ConfigMissName)
 		return nil, err
@@ -208,7 +238,7 @@ func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.Confi
 	return configFiles, nil
 }
 
-func (f *ConfigFinder) UseAndSubscribeWithPrefix(prefix string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
+func (f *ConfigFinder) useAndSubscribeWithPrefix(prefix string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
 	f.locker.Lock()
 	defer f.locker.Unlock()
 	f.handler = handler
