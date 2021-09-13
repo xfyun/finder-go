@@ -3,6 +3,7 @@ package finder
 import (
 	"crypto/md5"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"sync"
 
@@ -15,6 +16,21 @@ import (
 	"git.iflytek.com/AIaaS/finder-go/v3/utils/stringutil"
 	"strings"
 )
+
+
+var (
+	prefix = flag.String("polaris-prefix","","config center zookeeper path prefix")
+)
+
+func addPrefixToPath(pth string)string{
+	if !flag.Parsed(){
+		flag.Parse()
+	}
+	if *prefix== ""{
+		return pth
+	}
+	return *prefix + pth
+}
 
 type ServiceFinder struct {
 	locker            sync.Mutex
@@ -208,7 +224,7 @@ func (f *ServiceFinder) QueryServiceWatch(project, group string, handler common.
 		return nil, errors.NewFinderError(errors.InvalidParam)
 	}
 
-	rootPath := "/polaris/service/" + fmt.Sprintf("%x", md5.Sum([]byte(project+group)))
+	rootPath := addPrefixToPath("/polaris/service/") + fmt.Sprintf("%x", md5.Sum([]byte(project+group)))
 	var serMap = make(map[string][]common.ServiceInfo)
 	pC := NewQueryServiceCallback(handler, f)
 	//sC:=NewQueryServiceCallback(handler,WATCH_SERVICE,f)
@@ -267,7 +283,7 @@ func (f *ServiceFinder) QueryService(project, group string) (map[string][]common
 	if len(project) == 0 || len(group) == 0 {
 		return nil, errors.NewFinderError(errors.InvalidParam)
 	}
-	rootPath := "/polaris/service/" + fmt.Sprintf("%x", md5.Sum([]byte(project+group)))
+	rootPath := addPrefixToPath("/polaris/service/") + fmt.Sprintf("%x", md5.Sum([]byte(project+group)))
 	var serMap = make(map[string][]common.ServiceInfo)
 	if sers, err := f.storageMgr.GetChildren(rootPath); err != nil {
 		return nil, err
