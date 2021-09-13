@@ -317,11 +317,12 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
 	if err != nil {
 		log.Log.Infof("init zk err retry")
-		fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
-		fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
-		go manitorStorage(fm)
-		go watchStorageInfo(fm)
-		return fm, nil
+		return nil, fmt.Errorf("init storage manager error:%w",err)
+		//fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
+		//fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
+		//go manitorStorage(fm)
+		//go watchStorageInfo(fm)
+		//return fm, nil
 	} else {
 		fm.ConfigFinder = NewConfigFinder(storageCfg.ConfigRootPath, fm.config, fm.storageMgr)
 		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
