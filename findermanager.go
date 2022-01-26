@@ -362,14 +362,14 @@ func manitorStorage(fm *FinderManager) {
 // 监听zk 地址是否发生变化，如果变化需要重新连接zk
 func watchZkInfo(fm *FinderManager) {
 	return
-	//zkNodePath, err := fm.storageMgr.GetZkNodePath()
-	//if err != nil {
-	//	log.Log.Errorf("zk node path is err,%v",err)
-	//}
-	////fmt.Println(zkNodePath)
-	//fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
+	zkNodePath, err := fm.storageMgr.GetZkNodePath()
+	if err != nil {
+		log.Log.Errorf("zk node path is err,%v",err)
+	}
+	//fmt.Println(zkNodePath)
+	fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
 }
-
+// 重新连接zk
 func watchStorageInfo(fm *FinderManager) {
 	defer recoverFunc()
 	ticker := time.NewTicker(1 * time.Second)
@@ -419,7 +419,7 @@ func watchStorageInfo(fm *FinderManager) {
 				ReGetConfigInfo(fm)
 			}
 			fm.ServiceFinder.mutex.Unlock()
-			break
+			return // fix
 		}
 	}
 }

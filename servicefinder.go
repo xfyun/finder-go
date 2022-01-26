@@ -180,6 +180,7 @@ func (f *ServiceFinder) UseAndSubscribeService(serviceItems []common.ServiceSubs
 		}
 		return serviceList, nil
 	}
+
 	for _, item := range serviceItems {
 		serviceId := item.ServiceName + "_" + item.ApiVersion
 		if service, ok := f.subscribedService[serviceId]; ok {

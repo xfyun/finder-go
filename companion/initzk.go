@@ -65,6 +65,7 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 		return nil, err
 	}
 
+
 	var value []interface{}
 	if value, ok = r.Data["zk_addr"].([]interface{}); ok {
 		zkAddr = convert(value)

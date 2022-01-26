@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"git.iflytek.com/AIaaS/finder-go/v3"
 	common "git.iflytek.com/AIaaS/finder-go/v3/common"
@@ -8,6 +9,7 @@ import (
 )
 
 func main(){
+	flag.Parse()
 	fd,err:=finder.NewFinderWithLogger(common.BootConfig{
 		CompanionUrl:  "http://10.1.87.69:6868",
 		CachePath:     "./findercache",
@@ -26,15 +28,28 @@ func main(){
 		panic(err)
 	}
 
-	cfg,err:=fd.ConfigFinder.UseAndSubscribeWithPrefix("schema",&configChangeHandler{})
-	//fd.ConfigFinder.UseAndSubscribeConfig()
+	//cfg,err:=fd.ConfigFinder.UseAndSubscribeWithPrefix("schema",&configChangeHandler{})
+	////fd.ConfigFinder.UseAndSubscribeConfig()
+	//if err != nil{
+	//	panic(err)
+	//}
+	//
+	//fmt.Println(cfg)
+
+	sss ,err := fd.ServiceFinder.UseAndSubscribeService([]common.ServiceSubscribeItem{
+		{
+			ServiceName: "audio-moderation",
+			ApiVersion:  "1.0.0",
+		},
+	},&serviceHand{})
 	if err != nil{
 		panic(err)
 	}
 
-	fmt.Println(cfg)
+	fmt.Println(sss)
 	select {
 	}
+
 
 }
 
@@ -59,5 +74,22 @@ func (c configChangeHandler) OnConfigFilesRemoved(configNames []string) bool {
 }
 
 func (c configChangeHandler) OnError(errInfo common.ConfigErrInfo) {
+	panic("implement me")
+}
+
+
+type serviceHand struct {
+
+}
+
+func (s serviceHand) OnServiceInstanceConfigChanged(name string, apiVersion string, addr string, config *common.ServiceInstanceConfig) bool {
+	panic("implement me")
+}
+
+func (s serviceHand) OnServiceConfigChanged(name string, apiVersion string, config *common.ServiceConfig) bool {
+	panic("implement me")
+}
+
+func (s serviceHand) OnServiceInstanceChanged(name string, apiVersion string, eventList []*common.ServiceInstanceChangedEvent) bool {
 	panic("implement me")
 }

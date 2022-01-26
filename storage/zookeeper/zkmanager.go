@@ -33,9 +33,11 @@ func NewZkManager(params map[string]string) (*ZkManager, error) {
 	}
 	return zm, nil
 }
+
 func (zm *ZkManager) GetServerAddr() string {
 	return zm.params["servers"]
 }
+
 func (zm *ZkManager) GetTempPaths() sync.Map {
 	return zm.tempPaths
 }
@@ -49,6 +51,7 @@ func (zm *ZkManager) GetZkNodePath() (string, error) {
 		return "", errors.NewFinderError(errors.ZkInfoMissZkNodePath)
 	}
 }
+
 func (zm *ZkManager) Init() error {
 
 	//必要参数判断
@@ -177,6 +180,47 @@ func (zm *ZkManager) GetDataWithWatchV2(path string, callback common.ChangedCall
 	return data, err
 }
 
+func (zm *ZkManager) GetDataWithWatchV3(path string, callback common.ChangedCallback) ([]byte, error) {
+	data, _, event, err := zm.conn.GetW(path)
+	if err != nil {
+		log.Log.Infof("get data with watchV3 err  %v", err)
+		return data, err
+	}
+	go func() {
+		for {
+			select {
+			case e := <-event:
+				switch e.Type {
+				case zk.EventNodeDataChanged, zk.EventNodeCreated:
+					for {
+						data, _, event, err = zm.conn.GetW(path)
+						if err != nil {
+							log.Log.Errorf("get data error:%v", err)
+							time.Sleep(1 * time.Second)
+							continue
+						}
+						break
+					}
+					callback.DataChangedCallback(e.Path,getNodeFromPath(e.Path),data)
+				case zk.EventNodeDeleted:
+					log.Log.Errorf("node is deleted stop watch: path=%v",e.Path)
+					return
+				}
+			case exit ,ok := <- zm.exit :
+				if exit || !ok{
+					log.Log.Infof("zk exited")
+					return
+				}
+
+			}
+
+
+		}
+
+	}()
+	return nil,err
+}
+
 func watchEvent(zm *ZkManager, event <-chan zk.Event, callback common.ChangedCallback) {
 	select {
 	case e, ok := <-event:
@@ -214,7 +258,6 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 					log.Log.Errorf("handler event --> path: %v , err:  %v", path, e)
 					return
 				}
-				defer recoverFunc()
 				log.Log.Infof("recv event %v", e)
 				if e.Type == zk.EventNodeDeleted {
 					return
@@ -227,8 +270,8 @@ func (zm *ZkManager) GetDataWithWatch(path string, callback common.ChangedCallba
 				for {
 					// 这个地方有问题，如果节点被删除的话，会成为死循环，修改为尝试三次
 					data, _, event, err = zm.conn.GetW(path)
-					if err == zk.ErrNoNode{
-						log.Log.Errorf("node deleted , stop watch: paths:%s,err:%v",path,err)
+					if err == zk.ErrNoNode {
+						log.Log.Errorf("node deleted , stop watch: paths:%s,err:%v", path, err)
 						return
 					}
 					if err != nil {
@@ -288,7 +331,7 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 				}
 				log.Log.Debugf("recv event ：[ GetChildrenWithWatch ]  %v", event)
 				if e.State != zk.StateConnected {
-					log.Log.Debugf("[ GetChildrenWithWatch ]  e.State != zk.StateConnected %v","")
+					log.Log.Debugf("[ GetChildrenWithWatch ]  e.State != zk.StateConnected %v", "")
 				}
 				var retryCount int
 				for {
@@ -299,13 +342,13 @@ func (zm *ZkManager) GetChildrenWithWatch(path string, callback common.ChangedCa
 					//	break
 					//}
 					// 一直watch 重试不要退出，否则会出现订阅不上的情况
-					if err == zk.ErrNoNode{
-						log.Log.Errorf("node deleted , stop watch dir: paths:%s,err:%v",path,err)
+					if err == zk.ErrNoNode {
+						log.Log.Errorf("node deleted , stop watch dir: paths:%s,err:%v", path, err)
 						return // 没有node，直接return
 					}
 					if err != nil {
-						time.Sleep(time.Duration(retryCount%30)*time.Second)
-						log.Log.Errorf("[ GetChildrenWithWatch ] retry get children err: %v, path: %v", err,path)
+						time.Sleep(time.Duration(retryCount%30) * time.Second)
+						log.Log.Errorf("[ GetChildrenWithWatch ] retry get children err: %v, path: %v", err, path)
 						continue
 					} else {
 						callback.ChildrenChangedCallback(e.Path, getNodeFromPath(e.Path), data)
@@ -332,7 +375,6 @@ func (zm *ZkManager) SetPath(path string) error {
 	return zm.SetPathWithData(path, []byte{})
 }
 
-
 func (zm *ZkManager) CheckExists(path string) (bool, error) {
 	exists, _, err := zm.conn.Exists(path)
 	if err != nil {
@@ -340,7 +382,6 @@ func (zm *ZkManager) CheckExists(path string) (bool, error) {
 	}
 	return exists, nil
 }
-
 
 func (zm *ZkManager) SetPathWithData(path string, data []byte) error {
 	if data == nil {

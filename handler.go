@@ -103,6 +103,7 @@ func (q *QueryServcieChangedCallback) DataChangedCallback(path string, node stri
 	}
 	q.handler.OnServiceInstanceChanged(serverName, serverVersion, event)
 }
+
 func (q *QueryServcieChangedCallback) versionCallback(path string, children []string) {
 	pS := strings.Split(path, "/")
 	if len(pS) != 5 {
@@ -516,7 +517,6 @@ func (cb *ServiceChangedCallback) OnServiceInstanceChanged(serviceItem common.Se
 		resultList := route.FilterServiceByRouteData(cb.serviceFinder.serviceZkData[serviceId].Route, cb.serviceFinder.config.MeteData.Address, filterInstanceList)
 		if len(resultList) == 0 {
 			log.Log.Infof("new provider ,but route filter")
-
 		} else {
 			cb.serviceFinder.subscribedService[serviceId].ProviderList = append(cb.serviceFinder.subscribedService[serviceId].ProviderList, resultList...)
 			addEvent := getAddInstanceEvent(resultList)
