@@ -332,8 +332,8 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 		fm.ServiceFinder = NewServiceFinder(storageCfg.ServiceRootPath, fm.config, fm.storageMgr)
 	}
 	//创建一个goroutine来执行监听zk地址的数据
-	go manitorStorage(fm)
-	go watchZkInfo(fm)
+	//go manitorStorage(fm)
+	//go watchZkInfo(fm)
 	return fm, nil
 }
 
