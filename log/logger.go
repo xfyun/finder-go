@@ -20,16 +20,17 @@ type DefaultLogger struct {
 
 func NewDefaultLogger() Logger {
 
-	logFile, err := os.OpenFile("findergo.log",os.O_CREATE|os.O_WRONLY|os.O_TRUNC|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile("findergo.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC|os.O_APPEND, 0666)
 
 	if err != nil {
 		log.Fatalln("create log err ：", err)
 	}
 	SetPrefix("findergo  ---- ")
 	SetOutput(logFile)
-	SetFlags(Lshortfile|Lmicroseconds|Ldate)
+	SetFlags(Lshortfile | Lmicroseconds | Ldate)
 
-	return &DefaultLogger{defaultLog:defaultStd}
+	logger := &DefaultLogger{defaultLog: defaultStd}
+	return logger
 }
 
 func (l *DefaultLogger) Info(v ...interface{}) {

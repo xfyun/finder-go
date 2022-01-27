@@ -1,6 +1,6 @@
 package sproxy
 
-import "git.iflytek.com/AIaaS/finder-go/v3/rebuild/err"
+import "git.iflytek.com/AIaaS/finder-go/rebuild/err"
 
 type EventType int
 

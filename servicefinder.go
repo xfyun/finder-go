@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"sync"
 
-	common "git.iflytek.com/AIaaS/finder-go/v3/common"
-	errors "git.iflytek.com/AIaaS/finder-go/v3/errors"
-	"git.iflytek.com/AIaaS/finder-go/v3/log"
-	"git.iflytek.com/AIaaS/finder-go/v3/route"
-	"git.iflytek.com/AIaaS/finder-go/v3/storage"
-	"git.iflytek.com/AIaaS/finder-go/v3/utils/serviceutil"
-	"git.iflytek.com/AIaaS/finder-go/v3/utils/stringutil"
+	common "git.iflytek.com/AIaaS/finder-go/common"
+	errors "git.iflytek.com/AIaaS/finder-go/errors"
+	"git.iflytek.com/AIaaS/finder-go/log"
+	"git.iflytek.com/AIaaS/finder-go/route"
+	"git.iflytek.com/AIaaS/finder-go/storage"
+	"git.iflytek.com/AIaaS/finder-go/utils/serviceutil"
+	"git.iflytek.com/AIaaS/finder-go/utils/stringutil"
 	"strings"
 )
 

@@ -1,3 +1,3 @@
-module git.iflytek.com/AIaaS/finder-go/v3
+module git.iflytek.com/AIaaS/finder-go
 
 go 1.14

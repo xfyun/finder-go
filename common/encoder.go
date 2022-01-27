@@ -3,9 +3,9 @@ package common
 import (
 	"encoding/binary"
 
-	errors "git.iflytek.com/AIaaS/finder-go/v3/errors"
+	errors "git.iflytek.com/AIaaS/finder-go/errors"
 
-	"git.iflytek.com/AIaaS/finder-go/v3/utils/byteutil"
+	"git.iflytek.com/AIaaS/finder-go/utils/byteutil"
 )
 
 //pushIDLenByte+pushIDByte+data

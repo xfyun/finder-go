@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	errors "git.iflytek.com/AIaaS/finder-go/v3/errors"
-	"git.iflytek.com/AIaaS/finder-go/v3/utils/httputil"
+	errors "git.iflytek.com/AIaaS/finder-go/errors"
+	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
 )
 
 func RegisterService(hc *http.Client, url string, project string, group string, service string, apiVersion string) error {

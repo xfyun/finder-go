@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"git.iflytek.com/AIaaS/finder-go/v3"
-	common "git.iflytek.com/AIaaS/finder-go/v3/common"
+	"git.iflytek.com/AIaaS/finder-go"
+	common "git.iflytek.com/AIaaS/finder-go/common"
 	"time"
 )
 

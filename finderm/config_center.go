@@ -3,8 +3,8 @@ package finderm
 import (
 	"errors"
 	"fmt"
-	"git.iflytek.com/AIaaS/finder-go/v3"
-	common "git.iflytek.com/AIaaS/finder-go/v3/common"
+	"git.iflytek.com/AIaaS/finder-go"
+	common "git.iflytek.com/AIaaS/finder-go/common"
 	"sync"
 )
 

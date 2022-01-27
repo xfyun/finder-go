@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"git.iflytek.com/AIaaS/finder-go/v3/finderm"
+	"git.iflytek.com/AIaaS/finder-go/finderm"
 	"io"
 	"os"
 )
