@@ -2,42 +2,41 @@ package zkmanager
 
 import (
 	"context"
-	"git.iflytek.com/AIaaS/finder-go/rebuild/log"
+	"github.com/xfyun/finder-go/rebuild/log"
 	"github.com/cooleric/go-zookeeper/zk"
 	"time"
 )
 
 type watch struct {
-
 }
 
 type zkManager struct {
-	conn *zk.Conn
+	conn    *zk.Conn
 	watches map[string]*watch
-	logger log.Logger
+	logger  log.Logger
 }
 
 //func NewZkManager(conn *zk.Conn,)*zkManager{
 //
 //}
 
-func (m *zkManager)GetPath(path string)([]byte,error){
-	data,_,err:=m.conn.Get(path)
-	return data,err
+func (m *zkManager) GetPath(path string) ([]byte, error) {
+	data, _, err := m.conn.Get(path)
+	return data, err
 }
 
-func (m *zkManager)SetPath(path string,data []byte)error{
-	_,err:=m.conn.Set(path,data,0)
+func (m *zkManager) SetPath(path string, data []byte) error {
+	_, err := m.conn.Set(path, data, 0)
 	return err
 }
 
-func (m *zkManager)watchEvent(c chan <- *Event,event <-chan zk.Event,path string,ctx context.Context)bool{
+func (m *zkManager) watchEvent(c chan<- *Event, event <-chan zk.Event, path string, ctx context.Context) bool {
 	var re zk.Event
 	select {
 	case <-ctx.Done():
-		m.logger.Infof("watch event closed| context canceled,path:",path)
+		m.logger.Infof("watch event closed| context canceled,path:", path)
 		return false
-	case eve:=<-event:
+	case eve := <-event:
 		re = eve
 	}
 	//re := <-event
@@ -66,14 +65,14 @@ func (m *zkManager)watchEvent(c chan <- *Event,event <-chan zk.Event,path string
 			Type: NodeDeleted,
 			Datas: []Data{
 				{
-					Path:    re.Path,
+					Path: re.Path,
 				},
 			},
 		}
 	case zk.EventNodeChildrenChanged:
-		data,_,err:=m.conn.Get(re.Path)
-		if err != nil{
-			m.logger.Errorf("watchChildren| get children error:path:%s,err:%v",re.Path,err)
+		data, _, err := m.conn.Get(re.Path)
+		if err != nil {
+			m.logger.Errorf("watchChildren| get children error:path:%s,err:%v", re.Path, err)
 			return true
 		}
 		res = &Event{
@@ -81,14 +80,14 @@ func (m *zkManager)watchEvent(c chan <- *Event,event <-chan zk.Event,path string
 			Datas: []Data{
 				{
 					Path:    re.Path,
-					Content:data,
+					Content: data,
 				},
 			},
 		}
 	case zk.EventNodeCreated:
-		data,_,err:=m.conn.Get(re.Path)
-		if err != nil{
-			m.logger.Errorf("watchChildren| get node created error:path:%s,err:%v",re.Path,err)
+		data, _, err := m.conn.Get(re.Path)
+		if err != nil {
+			m.logger.Errorf("watchChildren| get node created error:path:%s,err:%v", re.Path, err)
 			return true
 		}
 		res = &Event{
@@ -96,72 +95,70 @@ func (m *zkManager)watchEvent(c chan <- *Event,event <-chan zk.Event,path string
 			Datas: []Data{
 				{
 					Path:    re.Path,
-					Content:data,
+					Content: data,
 				},
 			},
 		}
 	default:
-		m.logger.Warnf("handler unknow event:%v,path:",re.Type,re.Path)
+		m.logger.Warnf("handler unknow event:%v,path:", re.Type, re.Path)
 
 	}
 
-
-	c <-  res
-	return  true
+	c <- res
+	return true
 }
 
-func (m *zkManager)watchPath(path string,ctx context.Context)([]byte,chan <- *Event,er){
-	c:=make(chan *Event,5)
+func (m *zkManager) watchPath(path string, ctx context.Context) ([]byte, chan<- *Event, er) {
+	c := make(chan *Event, 5)
 
-	data,_,event,err:=m.conn.GetW(path)
-	if err != nil{
-		return nil,nil,newErr(err.Error())
+	data, _, event, err := m.conn.GetW(path)
+	if err != nil {
+		return nil, nil, newErr(err.Error())
 	}
 
 	go func() {
-		if !m.watchEvent(c,event,path,ctx){
+		if !m.watchEvent(c, event, path, ctx) {
 			return
 		}
 		for {
-			data,_,event,err =m.conn.GetW(path)
-			if err != nil{
+			data, _, event, err = m.conn.GetW(path)
+			if err != nil {
 				m.logger.Errorf("watchPath|getw  error,path:%s,err:%v", path, err)
-				time.Sleep(2*time.Second)
+				time.Sleep(2 * time.Second)
 				continue
 			}
-			if !m.watchEvent(c,event,path,ctx){
+			if !m.watchEvent(c, event, path, ctx) {
 				return
 			}
 		}
 	}()
-	return data,c,nil
+	return data, c, nil
 
 }
 
-func (m *zkManager)watchChildren(chiddir string,ctx context.Context)(chan <- *Event,er){
-	_,_,event,err:=m.conn.ChildrenW(chiddir)
-	if err != nil{
+func (m *zkManager) watchChildren(chiddir string, ctx context.Context) (chan<- *Event, er) {
+	_, _, event, err := m.conn.ChildrenW(chiddir)
+	if err != nil {
 		return nil, newErr(err.Error())
 	}
-	c:=make(chan *Event,5)
+	c := make(chan *Event, 5)
 
 	go func() {
-		if !m.watchEvent(c,event,chiddir,ctx){
+		if !m.watchEvent(c, event, chiddir, ctx) {
 			return
 		}
 		for {
-			_,_,event,err :=m.conn.ChildrenW(chiddir)
-			if err != nil{
+			_, _, event, err := m.conn.ChildrenW(chiddir)
+			if err != nil {
 				m.logger.Errorf("watchPath|getw  error,path:%s,err:%v", chiddir, err)
-				time.Sleep(2*time.Second)
+				time.Sleep(2 * time.Second)
 				continue
 			}
-			if !m.watchEvent(c,event,chiddir,ctx){
+			if !m.watchEvent(c, event, chiddir, ctx) {
 				return
 			}
 		}
 	}()
-	return c,nil
-
+	return c, nil
 
 }

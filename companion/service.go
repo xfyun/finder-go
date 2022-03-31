@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
+	errors "github.com/xfyun/finder-go/errors"
+	"github.com/xfyun/finder-go/utils/httputil"
 )
 
 func RegisterService(hc *http.Client, url string, project string, group string, service string, apiVersion string) error {
@@ -26,7 +26,7 @@ func RegisterService(hc *http.Client, url string, project string, group string, 
 		return err
 	}
 	if r.Ret != 0 {
-		log.Println("向companion注册服务失败：companion返回失败：",r.Msg," code:",r.Ret)
+		log.Println("向companion注册服务失败：companion返回失败：", r.Msg, " code:", r.Ret)
 		err = errors.NewFinderError(errors.CompanionRegisterServiceErr)
 		return err
 	}

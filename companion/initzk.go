@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
+	common "github.com/xfyun/finder-go/common"
+	errors "github.com/xfyun/finder-go/errors"
+	"github.com/xfyun/finder-go/utils/httputil"
 )
 
 // GetStorageInfo for getting storage metadata
@@ -55,7 +55,7 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 		err = errors.NewFinderError(errors.ZkInfoMissZkNodePath)
 		return nil, err
 	}
-	if r.Data["zk_node_path"]==nil {
+	if r.Data["zk_node_path"] == nil {
 		err = errors.NewFinderError(errors.ZkInfoMissZkNodePath)
 		return nil, err
 	}
@@ -64,7 +64,6 @@ func GetStorageInfo(hc *http.Client, url string) (*common.StorageInfo, error) {
 		err = errors.NewFinderError(errors.ZkInfoMissAddr)
 		return nil, err
 	}
-
 
 	var value []interface{}
 	if value, ok = r.Data["zk_addr"].([]interface{}); ok {

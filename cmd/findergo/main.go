@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"git.iflytek.com/AIaaS/finder-go/finderm"
+	"github.com/xfyun/finder-go/finderm"
 	"io"
 	"os"
 )
@@ -54,8 +54,7 @@ func fatal(args ...interface{}) {
 	os.Exit(1)
 }
 
-
-func getConfig(){
+func getConfig() {
 	data, err := finderm.GetFile(project, group, service, version, filename)
 	if err != nil {
 		fatal("get file error:", err)
@@ -76,41 +75,41 @@ func getConfig(){
 	out.Write(data)
 }
 
-func subscribeService(){
-	if version == ""{
+func subscribeService() {
+	if version == "" {
 		version = "1.0.0"
 	}
-	addrs,err := finderm.SubscribeService(project,group,"my",service,version)
-	if err != nil{
-		fatal("subscribe service error:",err)
+	addrs, err := finderm.SubscribeService(project, group, "my", service, version)
+	if err != nil {
+		fatal("subscribe service error:", err)
 	}
 	outputJson(map[string]interface{}{
-		"addresses":addrs,
+		"addresses": addrs,
 	})
 }
 
-func listenService(){
-	if version == ""{
+func listenService() {
+	if version == "" {
 		version = "1.0.0"
 	}
-	addrs,err := finderm.ListenService(project,group,service,version,0)
-	if err != nil{
-		fatal("subscribe service error",err)
+	addrs, err := finderm.ListenService(project, group, service, version, 0)
+	if err != nil {
+		fatal("subscribe service error", err)
 	}
 	outputJson(map[string]interface{}{
-		"addresses":addrs,
+		"addresses": addrs,
 	})
 
 }
 
-func outputJson(v interface{}){
-	bs ,_:= json.Marshal(v)
+func outputJson(v interface{}) {
+	bs, _ := json.Marshal(v)
 	fmt.Println(string(bs))
 }
 
-func listenConfig()  {
+func listenConfig() {
 
-	data ,err := finderm.ListenFile(project,group,service,version,filename,0)
+	data, err := finderm.ListenFile(project, group, service, version, filename, 0)
 	if err != nil {
 		fatal("get file error:", err)
 	}

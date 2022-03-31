@@ -10,15 +10,15 @@ import (
 	"time"
 	"unsafe"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	companion "git.iflytek.com/AIaaS/finder-go/companion"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	log "git.iflytek.com/AIaaS/finder-go/log"
-	"git.iflytek.com/AIaaS/finder-go/storage"
-	"git.iflytek.com/AIaaS/finder-go/utils/arrayutil"
-	"git.iflytek.com/AIaaS/finder-go/utils/fileutil"
-	"git.iflytek.com/AIaaS/finder-go/utils/netutil"
-	"git.iflytek.com/AIaaS/finder-go/utils/stringutil"
+	common "github.com/xfyun/finder-go/common"
+	companion "github.com/xfyun/finder-go/companion"
+	errors "github.com/xfyun/finder-go/errors"
+	log "github.com/xfyun/finder-go/log"
+	"github.com/xfyun/finder-go/storage"
+	"github.com/xfyun/finder-go/utils/arrayutil"
+	"github.com/xfyun/finder-go/utils/fileutil"
+	"github.com/xfyun/finder-go/utils/netutil"
+	"github.com/xfyun/finder-go/utils/stringutil"
 	"sync"
 )
 
@@ -79,10 +79,6 @@ func (callback *zkAddrChangeCallback) Process(path string, node string) {
 		}
 	}
 }
-
-
-
-
 
 func (callback *zkAddrChangeCallback) DataChangedCallback(path string, node string, data []byte) {
 
@@ -321,7 +317,7 @@ func NewFinderWithLogger(config common.BootConfig, logger log.Logger) (*FinderMa
 	fm.storageMgr, storageCfg, err = initStorageMgr(fm.config)
 	if err != nil {
 		log.Log.Infof("init zk err retry")
-		return nil, fmt.Errorf("init storage manager error:%w",err)
+		return nil, fmt.Errorf("init storage manager error:%w", err)
 		//fm.ConfigFinder = NewConfigFinder("", fm.config, nil)
 		//fm.ServiceFinder = NewServiceFinder("", fm.config, nil)
 		//go manitorStorage(fm)
@@ -368,11 +364,12 @@ func watchZkInfo(fm *FinderManager) {
 	return
 	zkNodePath, err := fm.storageMgr.GetZkNodePath()
 	if err != nil {
-		log.Log.Errorf("zk node path is err,%v",err)
+		log.Log.Errorf("zk node path is err,%v", err)
 	}
 	//fmt.Println(zkNodePath)
 	fm.storageMgr.GetDataWithWatchV2(zkNodePath, &zkAddrChangeCallback{path: zkNodePath, fm: fm})
 }
+
 // 重新连接zk
 func watchStorageInfo(fm *FinderManager) {
 	defer recoverFunc()

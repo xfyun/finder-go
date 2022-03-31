@@ -5,11 +5,11 @@ import (
 	"strings"
 	"sync"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/log"
-	"git.iflytek.com/AIaaS/finder-go/storage"
-	"git.iflytek.com/AIaaS/finder-go/utils/fileutil"
+	common "github.com/xfyun/finder-go/common"
+	errors "github.com/xfyun/finder-go/errors"
+	"github.com/xfyun/finder-go/log"
+	"github.com/xfyun/finder-go/storage"
+	"github.com/xfyun/finder-go/utils/fileutil"
 )
 
 var (
@@ -41,34 +41,33 @@ func NewConfigFinder(root string, bc *common.BootConfig, sm storage.StorageManag
 	return finder
 }
 
-func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error){
-	cfg ,err :=  f.useConfig(name)
+func (f *ConfigFinder) UseConfig(name []string) (map[string]*common.Config, error) {
+	cfg, err := f.useConfig(name)
 	m := f.config.MeteData
-	if err != nil{
-		return nil, fmt.Errorf("subscribe config error companion:%s,  path:/%s/%s/%s/%s files:%v err:%w",f.config.CompanionUrl,m.Project,m.Group,m.Service,m.Version,name,err)
+	if err != nil {
+		return nil, fmt.Errorf("subscribe config error companion:%s,  path:/%s/%s/%s/%s files:%v err:%w", f.config.CompanionUrl, m.Project, m.Group, m.Service, m.Version, name, err)
 	}
-	return cfg,nil
+	return cfg, nil
 }
 
-func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) (map[string]*common.Config, error){
-	cfg ,err :=  f.useAndSubscribeConfig(name,handler)
+func (f *ConfigFinder) UseAndSubscribeConfig(name []string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
+	cfg, err := f.useAndSubscribeConfig(name, handler)
 	m := f.config.MeteData
-	if err != nil{
-		return nil, fmt.Errorf("subscribe config error companion:%s, path:/%s/%s/%s/%s files:%v err:%w",f.config.CompanionUrl,m.Project,m.Group,m.Service,m.Version,name,err)
+	if err != nil {
+		return nil, fmt.Errorf("subscribe config error companion:%s, path:/%s/%s/%s/%s files:%v err:%w", f.config.CompanionUrl, m.Project, m.Group, m.Service, m.Version, name, err)
 	}
-	return cfg,nil
+	return cfg, nil
 }
 
-func (f *ConfigFinder) UseAndSubscribeWithPrefix(prefix string, handler common.ConfigChangedHandler) (map[string]*common.Config, error){
-	cfg ,err := f.useAndSubscribeWithPrefix(prefix,handler)
+func (f *ConfigFinder) UseAndSubscribeWithPrefix(prefix string, handler common.ConfigChangedHandler) (map[string]*common.Config, error) {
+	cfg, err := f.useAndSubscribeWithPrefix(prefix, handler)
 
 	m := f.config.MeteData
-	if err != nil{
-		return nil, fmt.Errorf("subscribe config error companion:%s, path: /%s/%s/%s/%s files:%v err:%w",f.config.CompanionUrl,m.Project,m.Group,m.Service,m.Version,prefix,err)
+	if err != nil {
+		return nil, fmt.Errorf("subscribe config error companion:%s, path: /%s/%s/%s/%s files:%v err:%w", f.config.CompanionUrl, m.Project, m.Group, m.Service, m.Version, prefix, err)
 	}
-	return cfg,nil
+	return cfg, nil
 }
-
 
 // UseConfig for 订阅相关配置文件
 func (f *ConfigFinder) useConfig(name []string) (map[string]*common.Config, error) {
@@ -157,7 +156,7 @@ func (f *ConfigFinder) useAndSubscribeConfig(name []string, handler common.Confi
 			return configFiles, nil
 		} else {
 			log.Log.Infof("init zk err ,not use cache ,exit")
-			return nil, fmt.Errorf("finder is nil")  // 此处应该返回error
+			return nil, fmt.Errorf("finder is nil") // 此处应该返回error
 		}
 	}
 	log.Log.Debugf("subscribe file ：%v", name)

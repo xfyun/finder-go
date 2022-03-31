@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/utils/httputil"
+	common "github.com/xfyun/finder-go/common"
+	errors "github.com/xfyun/finder-go/errors"
+	"github.com/xfyun/finder-go/utils/httputil"
 
-	"git.iflytek.com/AIaaS/finder-go/log"
+	"github.com/xfyun/finder-go/log"
 )
 
 func FeedbackForConfig(hc *http.Client, url string, f *common.ConfigFeedback) error {
@@ -50,10 +50,10 @@ func FeedbackForService(hc *http.Client, url string, f *common.ServiceFeedback) 
 		f.Provider, f.ProviderVersion, f.UpdateTime, f.UpdateStatus, f.LoadTime, f.LoadStatus, f.ProviderVersion, f.Type))
 	result, err := httputil.DoPost(hc, contentType, url, params)
 	if err != nil {
-		log.Log.Errorf("%s",err)
+		log.Log.Errorf("%s", err)
 		err = errors.NewFinderError(errors.FeedbackPostErr)
 		return err
-	}else {
+	} else {
 		log.Log.Infof("FeedbackForService result: %s", string(result))
 	}
 

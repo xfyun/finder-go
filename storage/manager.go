@@ -1,13 +1,13 @@
 package storage
 
 import (
-	"git.iflytek.com/AIaaS/finder-go/storage/common"
-	"git.iflytek.com/AIaaS/finder-go/storage/zookeeper"
+	"github.com/xfyun/finder-go/storage/common"
+	"github.com/xfyun/finder-go/storage/zookeeper"
 	"sync"
 )
 
 type StorageManager interface {
-	GetZkNodePath()(string ,error)
+	GetZkNodePath() (string, error)
 	Init() error
 	Destroy() error
 	GetData(path string) ([]byte, error)
@@ -25,9 +25,9 @@ type StorageManager interface {
 	UnWatch(path string) error
 	CheckExists(path string) (bool, error)
 	RecoverTempPaths()
-	GetTempPaths()sync.Map
+	GetTempPaths() sync.Map
 	SetTempPaths(sync.Map)
-	GetServerAddr()string
+	GetServerAddr() string
 }
 
 func NewManager(config *StorageConfig) (StorageManager, error) {

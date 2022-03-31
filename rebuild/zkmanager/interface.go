@@ -1,10 +1,10 @@
 package zkmanager
 
-import "git.iflytek.com/AIaaS/finder-go/rebuild/err"
+import "github.com/xfyun/finder-go/rebuild/err"
 
 type EventType int
 
-const(
+const (
 	NodeChanged EventType = iota
 	NodeDeleted
 	NodeCreated
@@ -13,23 +13,25 @@ const(
 )
 
 type er = err.Error
-var(
+
+var (
 	newErr = err.NewCommonError
 )
+
 type Data struct {
-	Path string
+	Path    string
 	Content []byte
 }
 
 type Event struct {
-	Type EventType
+	Type  EventType
 	Datas []Data
 }
 
 type SProxy interface {
-	GetPath(path string)([]byte,er)
-	WatchPath(path string)(<-chan *Event,er)
-	GetChildren(pathdir string)([]Data,er)
-	WatchChildren(pathdir string)(<-chan *Event,er)
+	GetPath(path string) ([]byte, er)
+	WatchPath(path string) (<-chan *Event, er)
+	GetChildren(pathdir string) ([]Data, er)
+	WatchChildren(pathdir string) (<-chan *Event, er)
 }
 

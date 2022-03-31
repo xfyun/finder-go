@@ -2,7 +2,7 @@ package route
 
 import (
 	"encoding/json"
-	common "git.iflytek.com/AIaaS/finder-go/common"
+	common "github.com/xfyun/finder-go/common"
 	"strings"
 )
 

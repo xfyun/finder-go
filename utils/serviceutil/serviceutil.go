@@ -2,7 +2,7 @@ package serviceutil
 
 import (
 	"encoding/json"
-	common "git.iflytek.com/AIaaS/finder-go/common"
+	common "github.com/xfyun/finder-go/common"
 	"log"
 )
 
@@ -11,12 +11,12 @@ func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
 	serviceInstanceConfig := &common.ServiceInstanceConfig{}
 	err := json.Unmarshal(data, &configJson)
 	if err != nil {
-		log.Println("【ParseServiceConfigData】出错 ", err,"   ",string(data)  )
+		log.Println("【ParseServiceConfigData】出错 ", err, "   ", string(data))
 		return nil
 	}
-	log.Println("[ ParseServiceConfigData ] configJson: ",configJson,"  data: ",string(data))
+	log.Println("[ ParseServiceConfigData ] configJson: ", configJson, "  data: ", string(data))
 
-	if sdkConfig ,ok:= configJson["sdk"].(map[string]interface{});ok {
+	if sdkConfig, ok := configJson["sdk"].(map[string]interface{}); ok {
 		if isValid, ok := sdkConfig["is_valid"].(bool); ok {
 			serviceInstanceConfig.IsValid = isValid
 		} else {
@@ -24,15 +24,12 @@ func ParseServiceConfigData(data []byte) *common.ServiceInstanceConfig {
 		}
 	}
 
-
 	delete(configJson, "sdk")
 	userData, _ := json.Marshal(configJson)
 	serviceInstanceConfig.UserConfig = string(userData)
 
 	return serviceInstanceConfig
 }
-
-
 
 //采用内存换时间的策略
 func CompareServiceInstanceList(prevProviderList []*common.ServiceInstance, currentProviderList []*common.ServiceInstance) []*common.ServiceInstanceChangedEvent {
@@ -61,7 +58,7 @@ func CompareServiceInstanceList(prevProviderList []*common.ServiceInstance, curr
 			countMap[provider.Addr] += 1
 		}
 	}
-	log.Println(" countMap:",countMap)
+	log.Println(" countMap:", countMap)
 	if incrFlag {
 		eventList = append(eventList, &addServiceInstance)
 	}

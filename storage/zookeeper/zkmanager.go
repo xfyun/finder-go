@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/log"
-	"git.iflytek.com/AIaaS/finder-go/storage/common"
+	errors "github.com/xfyun/finder-go/errors"
+	"github.com/xfyun/finder-go/log"
+	"github.com/xfyun/finder-go/storage/common"
 	"github.com/cooleric/go-zookeeper/zk"
 )
 
@@ -201,24 +201,23 @@ func (zm *ZkManager) GetDataWithWatchV3(path string, callback common.ChangedCall
 						}
 						break
 					}
-					callback.DataChangedCallback(e.Path,getNodeFromPath(e.Path),data)
+					callback.DataChangedCallback(e.Path, getNodeFromPath(e.Path), data)
 				case zk.EventNodeDeleted:
-					log.Log.Errorf("node is deleted stop watch: path=%v",e.Path)
+					log.Log.Errorf("node is deleted stop watch: path=%v", e.Path)
 					return
 				}
-			case exit ,ok := <- zm.exit :
-				if exit || !ok{
+			case exit, ok := <-zm.exit:
+				if exit || !ok {
 					log.Log.Infof("zk exited")
 					return
 				}
 
 			}
 
-
 		}
 
 	}()
-	return nil,err
+	return nil, err
 }
 
 func watchEvent(zm *ZkManager, event <-chan zk.Event, callback common.ChangedCallback) {

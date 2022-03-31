@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	storageCommon "git.iflytek.com/AIaaS/finder-go/storage/common"
-	"git.iflytek.com/AIaaS/finder-go/log"
+	common "github.com/xfyun/finder-go/common"
+	storageCommon "github.com/xfyun/finder-go/storage/common"
+	"github.com/xfyun/finder-go/log"
 )
 
 const (
@@ -56,9 +56,9 @@ func GetGrayConfigData(f *ConfigFinder, path string, callback storageCommon.Chan
 
 	}
 	if err != nil {
-		if strings.Compare(err.Error(),common.ZK_NODE_DOSE_NOT_EXIST)==0{
+		if strings.Compare(err.Error(), common.ZK_NODE_DOSE_NOT_EXIST) == 0 {
 			//创建节点
-			err:=f.storageMgr.SetPath(path)
+			err := f.storageMgr.SetPath(path)
 			if err != nil {
 				log.Log.Infof(" [getGrayData] 根据 path: %s %s %s", path, "创建节点出错：", err)
 			}
@@ -72,7 +72,7 @@ func GetGrayConfigData(f *ConfigFinder, path string, callback storageCommon.Chan
 		}
 		return err
 	}
-	if data==nil || len(data)==0{
+	if data == nil || len(data) == 0 {
 		return nil
 	}
 	if grayConfig, ok := ParseGrayConfigData(serverId, data); ok {

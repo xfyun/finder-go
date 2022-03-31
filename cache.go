@@ -3,10 +3,10 @@ package finder
 import (
 	"encoding/json"
 	"fmt"
-	common "git.iflytek.com/AIaaS/finder-go/common"
-	errors "git.iflytek.com/AIaaS/finder-go/errors"
-	"git.iflytek.com/AIaaS/finder-go/log"
-	"git.iflytek.com/AIaaS/finder-go/utils/fileutil"
+	common "github.com/xfyun/finder-go/common"
+	errors "github.com/xfyun/finder-go/errors"
+	"github.com/xfyun/finder-go/log"
+	"github.com/xfyun/finder-go/utils/fileutil"
 	"strings"
 )
 
